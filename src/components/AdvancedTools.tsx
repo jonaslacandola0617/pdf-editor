@@ -13,8 +13,9 @@ import { encryptPdf, optimizePdf } from '../lib/security'
 import { makeSearchablePdf } from '../lib/searchable'
 import { secureRedactPdf } from '../lib/redaction'
 import { embedNativeNotes } from '../lib/pdf-notes'
+import { addBatesNumbers, addFormField, addTopLevelBookmark, addUriLink, privacyCleanupPdf, type FormFieldKind } from '../lib/structure-tools'
 
-type ApplyOptions = { page?: number; rotations?: number[]; annotations?: Annotation[]; status?: string }
+type ApplyOptions = { page?: number; rotations?: number[]; annotations?: Annotation[]; metadata?: PdfMetadata; status?: string }
 type Props = {
   bytes: ArrayBuffer
   name: string
@@ -74,6 +75,17 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
   const [imageWidth, setImageWidth] = useState(35)
   const [compressionQuality, setCompressionQuality] = useState(68)
   const [crop, setCrop] = useState({ left: 0, right: 0, top: 0, bottom: 0 })
+  const [formKind, setFormKind] = useState<FormFieldKind>('text')
+  const [formName, setFormName] = useState('field_name')
+  const [formOptions, setFormOptions] = useState('Option 1, Option 2')
+  const [formRequired, setFormRequired] = useState(false)
+  const [fieldRect, setFieldRect] = useState({ x: 12, y: 18, width: 42, height: 7 })
+  const [linkUrl, setLinkUrl] = useState('https://')
+  const [linkRect, setLinkRect] = useState({ x: 12, y: 30, width: 35, height: 6 })
+  const [bookmarkTitle, setBookmarkTitle] = useState('')
+  const [batesPrefix, setBatesPrefix] = useState('DOC-')
+  const [batesStart, setBatesStart] = useState(1)
+  const [batesDigits, setBatesDigits] = useState(6)
   const replaceInput = useRef<HTMLInputElement | null>(null)
   const insertInput = useRef<HTMLInputElement | null>(null)
   const insertPosition = useRef<'before' | 'after'>('after')
@@ -145,6 +157,22 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
   const addPageFurniture = () => mutate('Adding headers and page numbers', () => addHeaderFooter(bytes, { header, footer, pageNumbers: true }))
   const optimize = () => mutate('Optimizing PDF', () => optimizePdf(bytes))
   const searchable = () => mutate('Creating searchable PDF', () => makeSearchablePdf(bytes, (page, total) => onStatus(`OCR searchable export: page ${page} of ${total}`)))
+  const createFormField = () => mutate('Adding form field', async () => (await addFormField(bytes, {
+    kind: formKind,
+    name: formName,
+    pageIndex: currentPage,
+    xPercent: fieldRect.x,
+    yPercent: fieldRect.y,
+    widthPercent: fieldRect.width,
+    heightPercent: fieldRect.height,
+    options: formOptions.split(',').map((value) => value.trim()).filter(Boolean),
+    required: formRequired,
+  })).bytes)
+  const createLink = () => mutate('Adding PDF link', () => addUriLink(bytes, { pageIndex: currentPage, url: linkUrl, xPercent: linkRect.x, yPercent: linkRect.y, widthPercent: linkRect.width, heightPercent: linkRect.height }))
+  const createBookmark = () => mutate('Adding bookmark', () => addTopLevelBookmark(bytes, bookmarkTitle || `Page ${currentPage + 1}`, currentPage))
+  const applyBates = () => mutate('Adding Bates numbers', () => addBatesNumbers(bytes, { prefix: batesPrefix, start: batesStart, digits: batesDigits }))
+  const privacyCleanup = () => mutate('Cleaning document privacy data', () => privacyCleanupPdf(bytes), { metadata: { title: '', author: '', subject: '', keywords: '' } })
+
   const strongCompress = () => mutate('Strong compression', () => rasterCompressPdf(bytes, {
     quality: compressionQuality / 100,
     onProgress: (page, total) => onStatus(`Strong compression: page ${page} of ${total}`),
@@ -200,6 +228,11 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
         <section className="advanced-card"><h3><Stamp /> Watermark & stamps</h3><input value={watermark} onChange={(e) => setWatermark(e.target.value)} placeholder="Watermark text" /><div className="advanced-row"><button onClick={() => applyWatermark()}>All pages</button><button onClick={() => applyWatermark(watermark, true)}>Current page</button></div><div className="stamp-row">{['APPROVED', 'DRAFT', 'CONFIDENTIAL'].map((stamp) => <button key={stamp} onClick={() => applyWatermark(stamp, true)}>{stamp}</button>)}</div></section>
         <section className="advanced-card"><h3><Type /> Header, footer & numbers</h3><input value={header} onChange={(e) => setHeader(e.target.value)} placeholder="Header — supports {page} and {pages}" /><input value={footer} onChange={(e) => setFooter(e.target.value)} placeholder="Footer text" /><button onClick={addPageFurniture}>Apply + page numbers</button></section>
         <section className="advanced-card"><h3><ImagePlus /> Insert image</h3><p>Place a PNG/JPG centered on the current page.</p><label>Width <input type="range" min="10" max="90" value={imageWidth} onChange={(e) => setImageWidth(Number(e.target.value))} /> {imageWidth}%</label><button onClick={() => imageInput.current?.click()}>Choose image</button><input ref={imageInput} hidden type="file" accept="image/png,image/jpeg" onChange={(e) => void addImage(e.target.files?.[0])} /></section>
+        <section className="advanced-card structure-card"><h3><Type /> Create form field</h3><p>Add a real AcroForm widget to the current page.</p><div className="advanced-row"><select aria-label="Form field type" value={formKind} onChange={(e) => setFormKind(e.target.value as FormFieldKind)}><option value="text">Text field</option><option value="checkbox">Checkbox</option><option value="dropdown">Dropdown</option><option value="list">Option list</option><option value="radio">Radio group</option></select><input aria-label="Form field name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Field name" /></div>{['dropdown','list','radio'].includes(formKind) && <input aria-label="Form field options" value={formOptions} onChange={(e) => setFormOptions(e.target.value)} placeholder="Option 1, Option 2" />}<div className="position-grid">{(['x','y','width','height'] as const).map((key) => <label key={key}>{key}<input aria-label={`Field ${key} percent`} type="number" min="0" max="100" value={fieldRect[key]} onChange={(e) => setFieldRect({ ...fieldRect, [key]: Number(e.target.value) })} /><span>%</span></label>)}</div><label className="check-row"><input type="checkbox" checked={formRequired} onChange={(e) => setFormRequired(e.target.checked)} /> Required field</label><button onClick={createFormField}>Add form field</button></section>
+        <section className="advanced-card structure-card"><h3><FileSearch /> Add web link</h3><p>Create a native clickable URI link rectangle on the current page.</p><input aria-label="Link URL" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://example.com" /><div className="position-grid">{(['x','y','width','height'] as const).map((key) => <label key={key}>{key}<input aria-label={`Link ${key} percent`} type="number" min="0" max="100" value={linkRect[key]} onChange={(e) => setLinkRect({ ...linkRect, [key]: Number(e.target.value) })} /><span>%</span></label>)}</div><button onClick={createLink}>Add clickable link</button></section>
+        <section className="advanced-card structure-card"><h3><FilePlus2 /> Bookmark current page</h3><p>Add a top-level bookmark to the PDF outline.</p><input aria-label="Bookmark title" value={bookmarkTitle} onChange={(e) => setBookmarkTitle(e.target.value)} placeholder={`Page ${currentPage + 1} bookmark`} /><button onClick={createBookmark}>Add bookmark</button></section>
+        <section className="advanced-card structure-card"><h3><Type /> Bates numbering</h3><p>Apply stable document-control IDs to every page.</p><div className="advanced-row"><input aria-label="Bates prefix" value={batesPrefix} onChange={(e) => setBatesPrefix(e.target.value)} placeholder="Prefix" /><input aria-label="Bates start" type="number" min="0" value={batesStart} onChange={(e) => setBatesStart(Number(e.target.value))} /></div><label>Digits <input aria-label="Bates digits" type="number" min="1" max="12" value={batesDigits} onChange={(e) => setBatesDigits(Number(e.target.value))} /></label><button onClick={applyBates}>Apply Bates numbers</button></section>
+        <section className="advanced-card danger-card"><h3><ShieldCheck /> Privacy cleanup</h3><p>Remove document metadata, document/page additional actions, JavaScript name trees, embedded-file name trees, file-attachment annotations, and JavaScript/Launch annotation actions.</p><button className="danger-action" onClick={privacyCleanup}>Remove privacy data & active content</button></section>
         <section className="advanced-card danger-card"><h3><ScanLine /> Secure redaction</h3><p>Rasterizes pages containing redaction marks, permanently removing the original underlying content from those pages.</p><button className="danger-action" onClick={applyRedactions}>Apply marked redactions</button></section>
         <section className="advanced-card"><h3><FileSearch /> OCR searchable PDF</h3><p>Add an invisible text layer to scanned pages so exported PDFs remain searchable outside PDF Forge.</p><button onClick={searchable}>Make PDF searchable</button></section>
         <section className="advanced-card"><h3><Sparkles /> Lossless optimize</h3><p>Recompress streams, generate object streams and linearize the PDF using local QPDF/WASM. Native text and forms are preserved.</p><button onClick={optimize}>Optimize PDF</button></section>

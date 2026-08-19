@@ -84,6 +84,7 @@ type AdvancedApplyOptions = {
   page?: number
   rotations?: number[]
   annotations?: Annotation[]
+  metadata?: PdfMetadata
   status?: string
 }
 
@@ -768,6 +769,7 @@ export default function App() {
     setBytes(next.slice(0))
     if (options.rotations) setRotations(options.rotations)
     if (options.annotations) setAnnotations(options.annotations)
+    if (options.metadata) setMetadata(options.metadata)
     if (typeof options.page === 'number') setCurrentPage(Math.max(0, options.page))
     setSelectedPages(new Set())
     setSelectedId(null)
