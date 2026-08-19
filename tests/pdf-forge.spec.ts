@@ -160,11 +160,9 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   await expect(page.locator('.ink-hitbox')).toHaveCount(2)
 
   const range = page.locator('.right-panel input.range')
-  await range.evaluate((el: HTMLInputElement) => {
-    el.value = '7'
-    el.dispatchEvent(new Event('input', { bubbles: true }))
-    el.dispatchEvent(new Event('change', { bubbles: true }))
-  })
+  await range.focus()
+  await range.press('Home')
+  for (let i = 0; i < 6; i++) await range.press('ArrowRight')
   await expect(page.locator('.right-panel')).toContainText('7px')
 
   const beforeUndo = await page.locator('.ink-hitbox').count()
