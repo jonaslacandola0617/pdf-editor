@@ -40,8 +40,14 @@ export function PdfPageCanvas({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
+  const previewRef = useRef<DragPreview | null>(null)
   const [size, setSize] = useState({ width: 1, height: 1 })
   const [preview, setPreview] = useState<DragPreview | null>(null)
+
+  const updatePreview = (next: DragPreview | null) => {
+    previewRef.current = next
+    setPreview(next)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -94,46 +100,48 @@ export function PdfPageCanvas({
       return
     }
     if (tool === 'highlight' || tool === 'rectangle') {
-      setPreview({ type: tool, start: p, end: p })
+      updatePreview({ type: tool, start: p, end: p })
       return
     }
     if (tool === 'ink' || tool === 'signature') {
-      setPreview({ type: tool, points: [p] })
+      updatePreview({ type: tool, points: [p] })
     }
   }
 
   const pointerMove = (e: React.PointerEvent) => {
-    if (!preview) return
+    const active = previewRef.current
+    if (!active) return
     const p = pointFromEvent(e)
-    if (preview.type === 'highlight' || preview.type === 'rectangle') {
-      setPreview({ ...preview, end: p })
+    if (active.type === 'highlight' || active.type === 'rectangle') {
+      updatePreview({ ...active, end: p })
     } else {
-      setPreview({ ...preview, points: [...(preview.points || []), p] })
+      updatePreview({ ...active, points: [...(active.points || []), p] })
     }
   }
 
   const pointerUp = () => {
-    if (!preview) return
-    if ((preview.type === 'highlight' || preview.type === 'rectangle') && preview.start && preview.end) {
-      const x = Math.min(preview.start.x, preview.end.x)
-      const y = Math.min(preview.start.y, preview.end.y)
-      const width = Math.max(0.02, Math.abs(preview.end.x - preview.start.x))
-      const height = Math.max(0.018, Math.abs(preview.end.y - preview.start.y))
+    const active = previewRef.current
+    if (!active) return
+    if ((active.type === 'highlight' || active.type === 'rectangle') && active.start && active.end) {
+      const x = Math.min(active.start.x, active.end.x)
+      const y = Math.min(active.start.y, active.end.y)
+      const width = Math.max(0.02, Math.abs(active.end.x - active.start.x))
+      const height = Math.max(0.018, Math.abs(active.end.y - active.start.y))
       onAdd({
-        id: crypto.randomUUID(), page: pageIndex, type: preview.type,
+        id: crypto.randomUUID(), page: pageIndex, type: active.type,
         x, y, width, height, color, strokeWidth,
       })
-    } else if ((preview.type === 'ink' || preview.type === 'signature') && (preview.points?.length || 0) > 1) {
-      const xs = preview.points!.map((p) => p.x)
-      const ys = preview.points!.map((p) => p.y)
+    } else if ((active.type === 'ink' || active.type === 'signature') && (active.points?.length || 0) > 1) {
+      const xs = active.points!.map((p) => p.x)
+      const ys = active.points!.map((p) => p.y)
       onAdd({
-        id: crypto.randomUUID(), page: pageIndex, type: preview.type,
+        id: crypto.randomUUID(), page: pageIndex, type: active.type,
         x: Math.min(...xs), y: Math.min(...ys), color,
-        strokeWidth: preview.type === 'signature' ? Math.max(2, strokeWidth) : strokeWidth,
-        points: preview.points,
+        strokeWidth: active.type === 'signature' ? Math.max(2, strokeWidth) : strokeWidth,
+        points: active.points,
       })
     }
-    setPreview(null)
+    updatePreview(null)
   }
 
   const rectStyle = (ann: Annotation) => ({
@@ -167,7 +175,7 @@ export function PdfPageCanvas({
       onPointerDown={pointerDown}
       onPointerMove={pointerMove}
       onPointerUp={pointerUp}
-      onPointerCancel={() => setPreview(null)}
+      onPointerCancel={() => updatePreview(null)}
     >
       <canvas ref={canvasRef} />
       <div className="annotation-layer">
