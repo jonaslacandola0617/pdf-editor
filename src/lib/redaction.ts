@@ -20,7 +20,8 @@ export async function secureRedactPdf(
   rotations: number[],
   onProgress?: (page: number, total: number) => void,
 ) {
-  const sourceJs = await rawPdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise
+  const task = rawPdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) })
+  const sourceJs = await task.promise
   const sourcePdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const output = await PDFDocument.create()
 
@@ -69,6 +70,6 @@ export async function secureRedactPdf(
     const result = await output.save({ useObjectStreams: true })
     return result.buffer as ArrayBuffer
   } finally {
-    await sourceJs.destroy()
+    await task.destroy()
   }
 }
