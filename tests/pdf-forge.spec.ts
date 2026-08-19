@@ -157,7 +157,7 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   await expect(page.locator('.ink-hitbox')).toHaveCount(1)
 
   await page.getByTitle('Signature').click()
-  await dragOnPdf(page, 0.20, 0.83, 0.48, 0.88)
+  await dragOnPdf(page, 0.62, 0.54, 0.82, 0.61)
   await expect(page.locator('.ink-hitbox')).toHaveCount(2)
 
   // Selected signature properties should update.
