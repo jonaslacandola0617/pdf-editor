@@ -225,6 +225,9 @@ export default function App() {
         setSelectedPages((previous) => new Set([...previous].filter((index) => index < document.numPages)))
       })
       .catch((error) => {
+        if (cancelled) return
+        const name = error && typeof error === 'object' && 'name' in error ? String((error as { name?: unknown }).name) : ''
+        if (name === 'AbortException' || name === 'WorkerTransportDestroyedException') return
         console.error(error)
         setStatus('Could not open this PDF. It may be encrypted or damaged.')
       })

@@ -108,7 +108,7 @@ export function AllTools() {
       subtitle: 'Permanent local PDF operations.',
       actions: [
         { label: 'Document tools', description: 'Watermarks, page numbers, OCR export, optimize, protect and print.', icon: WandSparkles, run: () => activateTitle('Document tools') },
-        { label: 'Create PDF widgets', description: 'Author text, checkbox, dropdown, list, or radio AcroForm fields.', icon: FormInput, run: () => activateTitle('Document tools') },
+        { label: 'Create PDF widgets', description: 'Author interactive text, checkbox, dropdown, list, and radio widgets.', icon: FormInput, run: () => activateTitle('Document tools') },
         { label: 'Add links & bookmarks', description: 'Add native URI links and PDF outline bookmarks.', icon: FileInput, run: () => activateTitle('Document tools') },
         { label: 'Bates numbering', description: 'Apply document-control identifiers across pages.', icon: Type, run: () => activateTitle('Document tools') },
         { label: 'Privacy cleanup', description: 'Remove metadata, embedded-file references, and unsafe active actions.', icon: Info, run: () => activateTitle('Document tools') },
