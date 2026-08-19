@@ -1,5 +1,5 @@
-export type Tool = 'select' | 'editText' | 'text' | 'highlight' | 'rectangle' | 'ink' | 'signature'
-export type AnnotationType = 'text' | 'highlight' | 'rectangle' | 'ink' | 'signature'
+export type Tool = 'select' | 'editText' | 'text' | 'highlight' | 'rectangle' | 'redaction' | 'ink' | 'signature'
+export type AnnotationType = 'text' | 'highlight' | 'rectangle' | 'redaction' | 'ink' | 'signature'
 
 export type Point = { x: number; y: number }
 
