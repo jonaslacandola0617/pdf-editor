@@ -76,10 +76,11 @@ export function AllTools() {
   const sections: Array<{ title: string; subtitle: string; actions: ToolAction[] }> = [
     {
       title: 'Edit & annotate',
-      subtitle: 'Add markup directly on the page.',
+      subtitle: 'Edit real PDF text or add markup.',
       actions: [
-        { label: 'Select', description: 'Select existing annotations.', icon: MousePointer2, run: () => activateTitle('Select') },
-        { label: 'Add text', description: 'Place editable text on a page.', icon: Type, run: () => activateTitle('Add text') },
+        { label: 'Select', description: 'Select PDF Forge annotations.', icon: MousePointer2, run: () => activateTitle('Select') },
+        { label: 'Edit existing text', description: 'Change text already embedded in the PDF.', icon: PenLine, run: () => activateTitle('Edit existing text') },
+        { label: 'Add text', description: 'Place a new editable text annotation.', icon: Type, run: () => activateTitle('Add text') },
         { label: 'Highlight', description: 'Mark an area with color.', icon: Highlighter, run: () => activateTitle('Highlight') },
         { label: 'Rectangle', description: 'Draw an outlined box.', icon: Shapes, run: () => activateTitle('Rectangle') },
         { label: 'Draw', description: 'Add freehand ink.', icon: PenLine, run: () => activateTitle('Draw') },
