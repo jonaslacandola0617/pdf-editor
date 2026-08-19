@@ -18,20 +18,25 @@ jobs:
         with:
           ref: qa/browser-verification
 
-      - name: Wait for Signature tool state before drawing
+      - name: Use native input setter for range QA
         run: |
           python - <<'PY'
           from pathlib import Path
           test = Path('tests/pdf-forge.spec.ts')
           text = test.read_text()
-          old = """  await page.getByTitle('Signature').click()
-  await dragOnPdf(page, 0.62, 0.54, 0.82, 0.61)"""
-          new = """  const signatureTool = page.getByTitle('Signature')
-  await signatureTool.click()
-  await expect(signatureTool).toHaveClass(/active/)
-  await dragOnPdf(page, 0.62, 0.54, 0.82, 0.61)"""
+          old = """  await range.evaluate((el: HTMLInputElement) => {
+    el.value = '7'
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+  })"""
+          new = """  await range.evaluate((el: HTMLInputElement) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    setter?.call(el, '7')
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+  })"""
           if old not in text:
-              raise SystemExit('Expected signature QA block not found')
+              raise SystemExit('Expected range QA block not found')
           test.write_text(text.replace(old, new, 1))
           PY
 
@@ -40,5 +45,5 @@ jobs:
           git config user.name "PDF Forge QA"
           git config user.email "actions@users.noreply.github.com"
           git add tests/pdf-forge.spec.ts
-          git commit -m "Wait for signature tool activation in browser QA"
+          git commit -m "Use native range setter in browser QA"
           git push origin HEAD:qa/browser-verification
