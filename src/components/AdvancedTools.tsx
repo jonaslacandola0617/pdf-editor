@@ -8,6 +8,7 @@ import {
   addHeaderFooter, addImageToPage, addWatermark, cropPage, downloadBytes, flattenAnnotations,
   insertBlankPage, reorderPdf, replacePageWithFile,
 } from '../lib/pdf'
+import { insertFilesAt, rasterCompressPdf } from '../lib/document-extra'
 import { encryptPdf, optimizePdf } from '../lib/security'
 import { makeSearchablePdf } from '../lib/searchable'
 import { secureRedactPdf } from '../lib/redaction'
@@ -26,8 +27,8 @@ type Props = {
   onStatus: (status: string) => void
 }
 
-function remapInsert(annotations: Annotation[], index: number) {
-  return annotations.map((ann) => ({ ...ann, page: ann.page >= index ? ann.page + 1 : ann.page }))
+function remapInsert(annotations: Annotation[], index: number, count = 1) {
+  return annotations.map((ann) => ({ ...ann, page: ann.page >= index ? ann.page + count : ann.page }))
 }
 
 function inverseRotatePoint(x: number, y: number, rotation: number): Point {
@@ -70,8 +71,11 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
   const [footer, setFooter] = useState('')
   const [password, setPassword] = useState('')
   const [imageWidth, setImageWidth] = useState(35)
+  const [compressionQuality, setCompressionQuality] = useState(68)
   const [crop, setCrop] = useState({ left: 0, right: 0, top: 0, bottom: 0 })
   const replaceInput = useRef<HTMLInputElement | null>(null)
+  const insertInput = useRef<HTMLInputElement | null>(null)
+  const insertPosition = useRef<'before' | 'after'>('after')
   const imageInput = useRef<HTMLInputElement | null>(null)
 
   const mutate = async (label: string, task: () => Promise<ArrayBuffer>, options?: ApplyOptions) => {
@@ -99,6 +103,32 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
     annotations: remapInsert(annotations, index),
   })
 
+  const chooseInsert = (position: 'before' | 'after') => {
+    insertPosition.current = position
+    insertInput.current?.click()
+  }
+
+  const insertExternal = async (files: FileList | null) => {
+    if (!files?.length || busy) return
+    const index = insertPosition.current === 'before' ? currentPage : currentPage + 1
+    onBeforeMutate(); setBusy('Inserting pages'); onStatus('Inserting PDF/image pages…')
+    try {
+      const result = await insertFilesAt(bytes, index, Array.from(files))
+      onApply(result.bytes, {
+        page: index,
+        rotations: [...rotations.slice(0, index), ...Array(result.inserted).fill(0), ...rotations.slice(index)],
+        annotations: remapInsert(annotations, index, result.inserted),
+        status: `Inserted ${result.inserted} page${result.inserted === 1 ? '' : 's'}`,
+      })
+    } catch (error) {
+      console.error(error)
+      onStatus(error instanceof Error ? error.message : 'Could not insert these pages.')
+    } finally {
+      setBusy('')
+      if (insertInput.current) insertInput.current.value = ''
+    }
+  }
+
   const replaceCurrent = async (file: File | undefined) => {
     if (!file) return
     await mutate('Replacing page', () => replacePageWithFile(bytes, currentPage, file), { annotations: annotations.filter((ann) => ann.page !== currentPage) })
@@ -109,6 +139,10 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
   const addPageFurniture = () => mutate('Adding headers and page numbers', () => addHeaderFooter(bytes, { header, footer, pageNumbers: true }))
   const optimize = () => mutate('Optimizing PDF', () => optimizePdf(bytes))
   const searchable = () => mutate('Creating searchable PDF', () => makeSearchablePdf(bytes, (page, total) => onStatus(`OCR searchable export: page ${page} of ${total}`)))
+  const strongCompress = () => mutate('Strong compression', () => rasterCompressPdf(bytes, {
+    quality: compressionQuality / 100,
+    onProgress: (page, total) => onStatus(`Strong compression: page ${page} of ${total}`),
+  }))
 
   const applyRedactions = () => {
     const marks = annotations.filter((ann) => ann.type === 'redaction')
@@ -155,14 +189,15 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
       <header><div><span className="eyebrow">COMPLETE TOOLSET</span><h2>Document tools</h2><p>Permanent PDF operations run locally in your browser.</p></div><button className="icon-btn" disabled={Boolean(busy)} onClick={() => setOpen(false)}><X /></button></header>
       {busy && <div className="advanced-busy"><Sparkles /> {busy}…</div>}
       <div className="advanced-grid">
-        <section className="advanced-card"><h3><FilePlus2 /> Pages</h3><p>Build and replace document pages.</p><div className="advanced-row"><button onClick={() => insertAt(currentPage)}>Blank before</button><button onClick={() => insertAt(currentPage + 1)}>Blank after</button></div><button onClick={() => replaceInput.current?.click()}>Replace current page</button><input ref={replaceInput} hidden type="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => void replaceCurrent(e.target.files?.[0])} /></section>
+        <section className="advanced-card"><h3><FilePlus2 /> Pages</h3><p>Build, insert and replace document pages.</p><div className="advanced-row"><button onClick={() => insertAt(currentPage)}>Blank before</button><button onClick={() => insertAt(currentPage + 1)}>Blank after</button></div><div className="advanced-row"><button onClick={() => chooseInsert('before')}>Insert file before</button><button onClick={() => chooseInsert('after')}>Insert file after</button></div><button onClick={() => replaceInput.current?.click()}>Replace current page</button><input ref={insertInput} hidden multiple type="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => void insertExternal(e.target.files)} /><input ref={replaceInput} hidden type="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => void replaceCurrent(e.target.files?.[0])} /></section>
         <section className="advanced-card"><h3><Crop /> Crop page</h3><p>Set visible crop margins for the current page.</p><div className="crop-grid">{(['top', 'right', 'bottom', 'left'] as const).map((side) => <label key={side}>{side}<input type="number" min="0" max="45" value={crop[side]} onChange={(e) => setCrop({ ...crop, [side]: Number(e.target.value) })} /><span>%</span></label>)}</div><button onClick={applyCrop}>Apply crop</button></section>
         <section className="advanced-card"><h3><Stamp /> Watermark & stamps</h3><input value={watermark} onChange={(e) => setWatermark(e.target.value)} placeholder="Watermark text" /><div className="advanced-row"><button onClick={() => applyWatermark()}>All pages</button><button onClick={() => applyWatermark(watermark, true)}>Current page</button></div><div className="stamp-row">{['APPROVED', 'DRAFT', 'CONFIDENTIAL'].map((stamp) => <button key={stamp} onClick={() => applyWatermark(stamp, true)}>{stamp}</button>)}</div></section>
         <section className="advanced-card"><h3><Type /> Header, footer & numbers</h3><input value={header} onChange={(e) => setHeader(e.target.value)} placeholder="Header — supports {page} and {pages}" /><input value={footer} onChange={(e) => setFooter(e.target.value)} placeholder="Footer text" /><button onClick={addPageFurniture}>Apply + page numbers</button></section>
         <section className="advanced-card"><h3><ImagePlus /> Insert image</h3><p>Place a PNG/JPG centered on the current page.</p><label>Width <input type="range" min="10" max="90" value={imageWidth} onChange={(e) => setImageWidth(Number(e.target.value))} /> {imageWidth}%</label><button onClick={() => imageInput.current?.click()}>Choose image</button><input ref={imageInput} hidden type="file" accept="image/png,image/jpeg" onChange={(e) => void addImage(e.target.files?.[0])} /></section>
         <section className="advanced-card danger-card"><h3><ScanLine /> Secure redaction</h3><p>Rasterizes pages containing redaction marks, permanently removing the original underlying content from those pages.</p><button className="danger-action" onClick={applyRedactions}>Apply marked redactions</button></section>
         <section className="advanced-card"><h3><FileSearch /> OCR searchable PDF</h3><p>Add an invisible text layer to scanned pages so exported PDFs remain searchable outside PDF Forge.</p><button onClick={searchable}>Make PDF searchable</button></section>
-        <section className="advanced-card"><h3><Sparkles /> Optimize</h3><p>Recompress streams, generate object streams and linearize the PDF using local QPDF/WASM.</p><button onClick={optimize}>Optimize PDF</button></section>
+        <section className="advanced-card"><h3><Sparkles /> Lossless optimize</h3><p>Recompress streams, generate object streams and linearize the PDF using local QPDF/WASM. Native text and forms are preserved.</p><button onClick={optimize}>Optimize PDF</button></section>
+        <section className="advanced-card"><h3><Sparkles /> Strong compression</h3><p>For scans and image-heavy PDFs. Rasterizes pages to JPEG, so native text, links and forms become page imagery. OCR can be added again afterward.</p><label>JPEG quality <input type="range" min="40" max="90" value={compressionQuality} onChange={(e) => setCompressionQuality(Number(e.target.value))} /> {compressionQuality}%</label><button onClick={strongCompress}>Compress aggressively</button></section>
         <section className="advanced-card"><h3><FileLock2 /> Password protect</h3><p>Export a separate AES-256 encrypted copy. Your editable local original stays open.</p><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Open password" /><button onClick={() => void protect()}><ShieldCheck /> Export protected PDF</button></section>
         <section className="advanced-card"><h3><Printer /> Print</h3><p>Print the finalized PDF. Pending rotations, annotations and redactions are applied first.</p><button onClick={() => void print()}>Print document</button></section>
       </div>
