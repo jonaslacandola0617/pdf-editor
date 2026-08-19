@@ -5,6 +5,7 @@ import {
   PDFHexString,
   PDFName,
   PDFNumber,
+  PDFString,
 } from 'pdf-lib'
 
 export type PageLabelStyle = 'decimal' | 'roman-upper' | 'roman-lower' | 'letters-upper' | 'letters-lower' | 'none'
@@ -43,30 +44,48 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
 }
 
-function pageLabelsDict(pdf: PDFDocument, create = false) {
-  const key = PDFName.of('PageLabels')
-  const existing = pdf.catalog.lookupMaybe(key, PDFDict)
-  if (existing || !create) return existing || null
-  const dict = pdf.context.obj({ Nums: [] }) as PDFDict
-  pdf.catalog.set(key, dict)
-  return dict
+function textValue(value: unknown) {
+  if (value instanceof PDFString || value instanceof PDFHexString) return value.decodeText()
+  return ''
+}
+
+function pageLabelsDict(pdf: PDFDocument) {
+  return pdf.catalog.lookupMaybe(PDFName.of('PageLabels'), PDFDict) || null
+}
+
+function collectNumberTreeRules(node: PDFDict, output: PageLabelRule[], seen = new Set<PDFDict>()) {
+  if (seen.has(node)) return
+  seen.add(node)
+
+  const nums = node.lookupMaybe(PDFName.of('Nums'), PDFArray)
+  if (nums) {
+    for (let index = 0; index + 1 < nums.size(); index += 2) {
+      const pageNumber = nums.lookup(index, PDFNumber)?.asNumber()
+      const dict = nums.lookup(index + 1, PDFDict)
+      if (typeof pageNumber !== 'number' || !dict) continue
+      const styleName = dict.get(PDFName.of('S'))?.toString() || ''
+      const prefix = textValue(dict.lookup(PDFName.of('P')))
+      const startNumber = dict.lookupMaybe(PDFName.of('St'), PDFNumber)?.asNumber() || 1
+      output.push({ startPage: pageNumber, style: NAME_TO_STYLE[styleName] || 'none', prefix, startNumber })
+    }
+  }
+
+  const kids = node.lookupMaybe(PDFName.of('Kids'), PDFArray)
+  if (!kids) return
+  for (let index = 0; index < kids.size(); index++) {
+    const child = kids.lookup(index, PDFDict)
+    if (child) collectNumberTreeRules(child, output, seen)
+  }
 }
 
 function directRules(pdf: PDFDocument): PageLabelRule[] {
   const root = pageLabelsDict(pdf)
-  const nums = root?.lookupMaybe(PDFName.of('Nums'), PDFArray)
-  if (!nums) return []
+  if (!root) return []
   const rules: PageLabelRule[] = []
-  for (let index = 0; index + 1 < nums.size(); index += 2) {
-    const pageNumber = nums.lookup(index, PDFNumber)?.asNumber()
-    const dict = nums.lookup(index + 1, PDFDict)
-    if (typeof pageNumber !== 'number' || !dict) continue
-    const styleName = dict.get(PDFName.of('S'))?.toString() || ''
-    const prefix = dict.lookupMaybe(PDFName.of('P'), PDFHexString)?.decodeText() || ''
-    const startNumber = dict.lookupMaybe(PDFName.of('St'), PDFNumber)?.asNumber() || 1
-    rules.push({ startPage: pageNumber, style: NAME_TO_STYLE[styleName] || 'none', prefix, startNumber })
-  }
-  return rules.sort((a, b) => a.startPage - b.startPage)
+  collectNumberTreeRules(root, rules)
+  const deduped = new Map<number, PageLabelRule>()
+  rules.forEach((rule) => deduped.set(rule.startPage, rule))
+  return [...deduped.values()].sort((a, b) => a.startPage - b.startPage)
 }
 
 function writeRules(pdf: PDFDocument, rules: PageLabelRule[]) {
@@ -77,15 +96,18 @@ function writeRules(pdf: PDFDocument, rules: PageLabelRule[]) {
     pdf.catalog.delete(PDFName.of('PageLabels'))
     return
   }
-  const nums: unknown[] = []
+
+  const nums = pdf.context.obj([]) as PDFArray
   normalized.forEach((rule) => {
-    const dict: Record<string, unknown> = {}
-    if (rule.style !== 'none') dict.S = PDFName.of(STYLE_TO_NAME[rule.style])
-    if (rule.prefix) dict.P = PDFHexString.fromText(rule.prefix)
-    if (rule.startNumber !== 1 && rule.style !== 'none') dict.St = PDFNumber.of(Math.max(1, Math.floor(rule.startNumber)))
-    nums.push(PDFNumber.of(rule.startPage), pdf.context.obj(dict))
+    const dict = pdf.context.obj({}) as PDFDict
+    if (rule.style !== 'none') dict.set(PDFName.of('S'), PDFName.of(STYLE_TO_NAME[rule.style]))
+    if (rule.prefix) dict.set(PDFName.of('P'), PDFHexString.fromText(rule.prefix))
+    if (rule.startNumber !== 1 && rule.style !== 'none') dict.set(PDFName.of('St'), PDFNumber.of(Math.max(1, Math.floor(rule.startNumber))))
+    nums.push(PDFNumber.of(rule.startPage))
+    nums.push(dict)
   })
-  const root = pdf.context.obj({ Nums: nums }) as PDFDict
+  const root = pdf.context.obj({}) as PDFDict
+  root.set(PDFName.of('Nums'), nums)
   pdf.catalog.set(PDFName.of('PageLabels'), root)
 }
 
