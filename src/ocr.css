@@ -1,0 +1,96 @@
+.ocr-activity {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1000;
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 11px;
+  align-items: center;
+  padding: 12px 13px;
+  border: 1px solid #3a3a40;
+  border-radius: 12px;
+  background: rgba(25,25,28,.96);
+  color: #ededf0;
+  box-shadow: 0 18px 44px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter: blur(18px);
+}
+
+.ocr-activity.done,
+.ocr-activity.cached {
+  border-color: rgba(74,222,128,.28);
+}
+
+.ocr-activity.error {
+  border-color: rgba(248,113,113,.42);
+}
+
+.ocr-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(229,72,63,.12);
+  color: #ff756c;
+}
+
+.ocr-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.ocr-copy {
+  min-width: 0;
+}
+
+.ocr-copy > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ocr-copy strong {
+  font-size: 12px;
+}
+
+.ocr-copy span,
+.ocr-activity > b {
+  color: #7f7f89;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ocr-copy p {
+  margin: 3px 0 0;
+  color: #aaaab3;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ocr-progress {
+  height: 3px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #303035;
+}
+
+.ocr-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d94038, #ff756c);
+  transition: width .18s ease;
+}
+
+@media (max-width: 700px) {
+  .ocr-activity {
+    right: 12px;
+    bottom: 12px;
+  }
+}
