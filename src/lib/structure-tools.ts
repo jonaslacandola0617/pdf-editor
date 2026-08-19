@@ -84,7 +84,9 @@ export async function addFormField(bytes: ArrayBuffer, options: FormFieldCreateO
   } else if (options.kind === 'list') {
     const field = form.createOptionList(name)
     const values = (options.options || []).map((value) => value.trim()).filter(Boolean)
-    field.setOptions(values.length ? values : ['Option 1', 'Option 2'])
+    const choices = values.length ? values : ['Option 1', 'Option 2']
+    field.setOptions(choices)
+    field.select(choices[0])
     if (options.required) field.enableRequired()
     field.addToPage(page, appearance)
   } else {
@@ -104,6 +106,7 @@ export async function addFormField(bytes: ArrayBuffer, options: FormFieldCreateO
         borderWidth: 1,
       })
     })
+    field.select(choices[0])
   }
 
   form.updateFieldAppearances(font)
