@@ -182,7 +182,7 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
             <button disabled={Boolean(busy)} onClick={() => {
               const parsed = Number(targetDraft)
               const pageIndex = targetDraft.trim() && Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed) - 1) : undefined
-              void mutate('Updating bookmark', () => updateNativeBookmark(bytes, item.path, bookmarkDrafts[key] ?? '', pageIndex))
+              void mutate('Renaming bookmark', () => updateNativeBookmark(bytes, item.path, bookmarkDrafts[key] ?? '', pageIndex))
             }}><Save /> Rename</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void mutate('Deleting bookmark', () => deleteNativeBookmark(bytes, item.path))}><Trash2 /> Delete</button>
           </div>
