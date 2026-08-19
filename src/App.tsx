@@ -12,9 +12,11 @@ import {
   createPdfFromFiles, downloadBytes, duplicatePage, extractPages, fileSize, flattenAnnotations,
   mergePdfs, parsePageRange, readFormFields, readMetadata, reorderPdf, updateFormField,
 } from './lib/pdf'
+import { pickNativeTextObject, replaceNativeTextObject } from './lib/pdfium-edit'
 import { deleteDocument, listDocuments, saveDocument } from './lib/storage'
-import type { Annotation, FormFieldState, LibraryDocument, PdfMetadata, Tool } from './types'
+import type { Annotation, FormFieldState, LibraryDocument, NativeTextSelection, PdfMetadata, Point, Tool } from './types'
 import './styles.css'
+import './native-edit.css'
 
 type Panel = 'pages' | 'library' | 'forms' | 'info'
 type HistorySnapshot = {
@@ -90,6 +92,9 @@ function App() {
   const [rotations, setRotations] = useState<number[]>([])
   const [annotations, setAnnotations] = useState<Annotation[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [nativeSelection, setNativeSelection] = useState<NativeTextSelection | null>(null)
+  const [nativeDraft, setNativeDraft] = useState('')
+  const [nativeBusy, setNativeBusy] = useState(false)
   const [tool, setTool] = useState<Tool>('select')
   const [color, setColor] = useState('#111111')
   const [strokeWidth, setStrokeWidth] = useState(2)
@@ -143,6 +148,11 @@ function App() {
     return () => clearTimeout(timer)
   }, [activeId, annotations, bytes, metadata, name, pageCount, refreshLibrary, rotations])
 
+  useEffect(() => {
+    setNativeSelection(null)
+    setNativeDraft('')
+  }, [currentPage])
+
   const snapshot = useCallback((): HistorySnapshot | null => bytes ? {
     bytes: bytes.slice(0), annotations: structuredClone(annotations), rotations: [...rotations], metadata: { ...metadata },
   } : null, [annotations, bytes, metadata, rotations])
@@ -160,6 +170,8 @@ function App() {
     setRotations([...snap.rotations])
     setMetadata({ ...snap.metadata })
     setSelectedId(null)
+    setNativeSelection(null)
+    setNativeDraft('')
   }
 
   const undo = useCallback(() => {
@@ -180,6 +192,15 @@ function App() {
     restore(next)
   }, [future, snapshot])
 
+  const chooseTool = (next: Tool) => {
+    setTool(next)
+    if (next === 'editText') setSelectedId(null)
+    if (next !== 'editText') {
+      setNativeSelection(null)
+      setNativeDraft('')
+    }
+  }
+
   const loadNewDocument = async (docName: string, raw: ArrayBuffer, existing?: LibraryDocument) => {
     const id = existing?.id || crypto.randomUUID()
     let meta = existing?.metadata || EMPTY_META
@@ -192,6 +213,8 @@ function App() {
     setMetadata(meta)
     setCurrentPage(0)
     setSelectedId(null)
+    setNativeSelection(null)
+    setNativeDraft('')
     setHistory([])
     setFuture([])
     setPanel('pages')
@@ -235,6 +258,7 @@ function App() {
   const closeDocument = () => {
     setActiveId(null); setBytes(null); setPdf(null); setName('Untitled.pdf'); setAnnotations([]); setRotations([])
     setCurrentPage(0); setHistory([]); setFuture([]); setPanel('library'); setSelectedId(null)
+    setNativeSelection(null); setNativeDraft('')
   }
 
   const mergeFiles = async (files: FileList | null) => {
@@ -254,6 +278,7 @@ function App() {
 
   const rotatePage = (delta: number) => {
     pushHistory()
+    setNativeSelection(null)
     setRotations((r) => r.map((v, i) => i === currentPage ? (v + delta + 360) % 360 : v))
   }
 
@@ -296,6 +321,7 @@ function App() {
     pushHistory()
     setAnnotations((a) => [...a, ann])
     setSelectedId(ann.id)
+    setNativeSelection(null)
     setTool('select')
   }
 
@@ -311,6 +337,50 @@ function App() {
     setAnnotations((a) => a.filter((ann) => ann.id !== selectedId))
     setSelectedId(null)
   }, [pushHistory, selectedId])
+
+  const pickNativeText = async (displayPoint: Point, hint: string) => {
+    if (!bytes || nativeBusy) return
+    setNativeBusy(true)
+    setNativeSelection(null)
+    setNativeDraft('')
+    setStatus('Finding editable PDF text…')
+    try {
+      const rotation = rotations[currentPage] || 0
+      const point = inverseRotatePoint(displayPoint.x, displayPoint.y, rotation)
+      const picked = await pickNativeTextObject(bytes, currentPage, point, hint)
+      setNativeSelection(picked)
+      setNativeDraft(picked?.text || '')
+      setSelectedId(null)
+      setStatus(picked
+        ? 'Text object selected — edit it in the right panel'
+        : 'No editable PDF text object at that spot')
+    } catch (error) {
+      console.error(error)
+      setStatus('That text could not be opened for editing.')
+    } finally {
+      setNativeBusy(false)
+    }
+  }
+
+  const applyNativeTextEdit = async () => {
+    if (!bytes || !nativeSelection || nativeBusy || nativeDraft === nativeSelection.text || !nativeDraft.length) return
+    pushHistory()
+    setNativeBusy(true)
+    setStatus('Updating existing PDF text…')
+    try {
+      const next = await replaceNativeTextObject(bytes, nativeSelection, nativeDraft)
+      setBytes(next)
+      setSearchMatches([])
+      setNativeSelection(null)
+      setNativeDraft('')
+      setStatus('Existing PDF text updated')
+    } catch (error) {
+      console.error(error)
+      setStatus(error instanceof Error ? error.message : 'Could not update this PDF text object.')
+    } finally {
+      setNativeBusy(false)
+    }
+  }
 
   const exportPdf = useCallback(async () => {
     if (!bytes) return
@@ -401,7 +471,7 @@ function App() {
       if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected()
       if (e.key === 'ArrowRight' || e.key === 'PageDown') setCurrentPage((p) => Math.min(pageCount - 1, p + 1))
       if (e.key === 'ArrowLeft' || e.key === 'PageUp') setCurrentPage((p) => Math.max(0, p - 1))
-      if (e.key === 'Escape') { setTool('select'); setSelectedId(null) }
+      if (e.key === 'Escape') { setTool('select'); setSelectedId(null); setNativeSelection(null); setNativeDraft('') }
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
@@ -549,12 +619,13 @@ function App() {
         <section className="editor-column">
           <div className="editor-toolbar">
             <div className="tool-group">
-              <button className={tool === 'select' ? 'active' : ''} onClick={() => setTool('select')} title="Select"><MousePointer2 /></button>
-              <button className={tool === 'text' ? 'active' : ''} onClick={() => setTool('text')} title="Add text"><Type /></button>
-              <button className={tool === 'highlight' ? 'active' : ''} onClick={() => setTool('highlight')} title="Highlight"><Highlighter /></button>
-              <button className={tool === 'rectangle' ? 'active' : ''} onClick={() => setTool('rectangle')} title="Rectangle"><Shapes /></button>
-              <button className={tool === 'ink' ? 'active' : ''} onClick={() => setTool('ink')} title="Draw"><PenLine /></button>
-              <button className={tool === 'signature' ? 'active' : ''} onClick={() => setTool('signature')} title="Signature"><span className="signature-icon">⌁</span></button>
+              <button className={tool === 'select' ? 'active' : ''} onClick={() => chooseTool('select')} title="Select"><MousePointer2 /></button>
+              <button className={tool === 'editText' ? 'active' : ''} onClick={() => chooseTool('editText')} title="Edit existing text"><PenLine /></button>
+              <button className={tool === 'text' ? 'active' : ''} onClick={() => chooseTool('text')} title="Add text"><Type /></button>
+              <button className={tool === 'highlight' ? 'active' : ''} onClick={() => chooseTool('highlight')} title="Highlight"><Highlighter /></button>
+              <button className={tool === 'rectangle' ? 'active' : ''} onClick={() => chooseTool('rectangle')} title="Rectangle"><Shapes /></button>
+              <button className={tool === 'ink' ? 'active' : ''} onClick={() => chooseTool('ink')} title="Draw"><PenLine /></button>
+              <button className={tool === 'signature' ? 'active' : ''} onClick={() => chooseTool('signature')} title="Signature"><span className="signature-icon">⌁</span></button>
             </div>
             <span className="divider" />
             <div className="search-box"><Search /><input value={searchText} onChange={(e) => setSearchText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && searchPdf()} placeholder="Find in document" />{searchMatches.length > 0 && <><span>{searchMatchIndex + 1}/{searchMatches.length}</span><button onClick={() => cycleSearch(-1)}><ChevronLeft /></button><button onClick={() => cycleSearch(1)}><ChevronRight /></button></>}</div>
@@ -564,12 +635,19 @@ function App() {
           </div>
 
           <div className="document-stage">
-            <div className="stage-top-hint">{tool === 'select' ? status : tool === 'text' ? 'Click anywhere on the page to add text' : tool === 'highlight' || tool === 'rectangle' ? 'Drag on the page to place the annotation' : 'Draw directly on the page'}</div>
+            <div className="stage-top-hint">{
+              tool === 'select' ? status
+                : tool === 'editText' ? (nativeBusy ? 'Loading PDF text engine…' : nativeSelection ? 'Edit the selected PDF text in the right panel' : 'Click existing PDF text to edit it')
+                  : tool === 'text' ? 'Click anywhere on the page to add new text'
+                    : tool === 'highlight' || tool === 'rectangle' ? 'Drag on the page to place the annotation'
+                      : 'Draw directly on the page'
+            }</div>
             <div className="page-scroll">
               <PdfPageCanvas
                 pdf={pdf} pageIndex={currentPage} zoom={zoom} rotation={rotations[currentPage] || 0}
                 annotations={pageAnnotations} tool={tool} color={color} strokeWidth={strokeWidth} fontSize={fontSize}
-                selectedId={selectedId} onSelect={setSelectedId} onAdd={addAnnotation}
+                selectedId={selectedId} nativeSelection={nativeSelection} onSelect={setSelectedId} onAdd={addAnnotation}
+                onPickNativeText={pickNativeText}
               />
             </div>
             <div className="floating-nav">
@@ -585,12 +663,41 @@ function App() {
         </section>
 
         <aside className="right-panel">
-          <div className="panel-heading"><div><span className="eyebrow">{selected ? 'SELECTION' : 'TOOLS'}</span><h3>{selected ? selected.type[0].toUpperCase() + selected.type.slice(1) : 'Appearance'}</h3></div>{selected && <button className="icon-btn small danger" onClick={deleteSelected}><Trash2 /></button>}</div>
-          {selected?.type === 'text' && <label className="property-field">Text<textarea rows={5} value={selected.text || ''} onChange={(e) => setAnnotations((a) => a.map((ann) => ann.id === selected.id ? { ...ann, text: e.target.value } : ann))} onBlur={() => {}} /></label>}
-          <div className="property-section"><span>Color</span><div className="color-grid">{COLORS.map((c) => <button key={c} className={(selected?.color || color) === c ? 'active' : ''} style={{ background: c }} onClick={() => selected ? updateSelected({ color: c }) : setColor(c)} aria-label={`Color ${c}`} />)}<label className="custom-color"><input type="color" value={selected?.color || color} onChange={(e) => selected ? updateSelected({ color: e.target.value }) : setColor(e.target.value)} /></label></div></div>
-          {(selected?.type === 'text' || (!selected && tool === 'text')) && <label className="property-field">Font size <div className="stepper"><button onClick={() => selected ? updateSelected({ fontSize: Math.max(8, (selected.fontSize || 18) - 1) }) : setFontSize((s) => Math.max(8, s - 1))}><Minus /></button><input type="number" value={selected?.fontSize || fontSize} onChange={(e) => selected ? updateSelected({ fontSize: Number(e.target.value) }) : setFontSize(Number(e.target.value))} /><button onClick={() => selected ? updateSelected({ fontSize: (selected.fontSize || 18) + 1 }) : setFontSize((s) => s + 1)}><Plus /></button></div></label>}
-          {(selected?.type === 'rectangle' || selected?.type === 'ink' || selected?.type === 'signature' || (!selected && ['rectangle', 'ink', 'signature'].includes(tool))) && <label className="property-field">Stroke width <input className="range" type="range" min="1" max="12" step="1" value={selected?.strokeWidth || strokeWidth} onChange={(e) => selected ? updateSelected({ strokeWidth: Number(e.target.value) }) : setStrokeWidth(Number(e.target.value))} /><strong>{selected?.strokeWidth || strokeWidth}px</strong></label>}
-          {!selected && <div className="right-help"><strong>Editing tips</strong><p>Use the page thumbnails to drag pages into a new order. Drop another PDF or image over the editor to append it.</p><p><kbd>Ctrl</kbd> + <kbd>S</kbd> exports. <kbd>Ctrl</kbd> + <kbd>Z</kbd> undoes. Arrow keys move between pages.</p></div>}
+          <div className="panel-heading"><div><span className="eyebrow">{nativeSelection ? 'PDF TEXT' : selected ? 'SELECTION' : 'TOOLS'}</span><h3>{nativeSelection ? 'Edit existing text' : selected ? selected.type[0].toUpperCase() + selected.type.slice(1) : 'Appearance'}</h3></div>{selected && !nativeSelection && <button className="icon-btn small danger" onClick={deleteSelected}><Trash2 /></button>}</div>
+
+          {nativeSelection ? (
+            <div className="native-text-editor">
+              <label className="property-field">Existing PDF text
+                <textarea
+                  rows={7}
+                  value={nativeDraft}
+                  disabled={nativeBusy}
+                  onChange={(e) => setNativeDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') void applyNativeTextEdit()
+                  }}
+                />
+              </label>
+              <div className="native-edit-meta">
+                <span>Page {nativeSelection.page + 1}</span>
+                {nativeSelection.fontSize ? <span>Original size {Math.round(nativeSelection.fontSize * 10) / 10} pt</span> : null}
+              </div>
+              <p className="native-edit-note">This changes the underlying PDF text object. PDFs do not reflow like Word, so a much longer replacement can overlap nearby content. The original embedded font also controls which characters can be written.</p>
+              {!nativeDraft.length && <p className="native-edit-warning">Deleting a native text object completely is not enabled yet. Enter replacement text instead.</p>}
+              <div className="native-edit-actions">
+                <button className="soft-btn" disabled={nativeBusy} onClick={() => { setNativeSelection(null); setNativeDraft('') }}>Cancel</button>
+                <button className="primary" disabled={nativeBusy || !nativeDraft.length || nativeDraft === nativeSelection.text} onClick={() => void applyNativeTextEdit()}>{nativeBusy ? 'Applying…' : 'Apply to PDF'}</button>
+              </div>
+            </div>
+          ) : <>
+            {selected?.type === 'text' && <label className="property-field">Text<textarea rows={5} value={selected.text || ''} onChange={(e) => setAnnotations((a) => a.map((ann) => ann.id === selected.id ? { ...ann, text: e.target.value } : ann))} onBlur={() => {}} /></label>}
+            <div className="property-section"><span>Color</span><div className="color-grid">{COLORS.map((c) => <button key={c} className={(selected?.color || color) === c ? 'active' : ''} style={{ background: c }} onClick={() => selected ? updateSelected({ color: c }) : setColor(c)} aria-label={`Color ${c}`} />)}<label className="custom-color"><input type="color" value={selected?.color || color} onChange={(e) => selected ? updateSelected({ color: e.target.value }) : setColor(e.target.value)} /></label></div></div>
+            {(selected?.type === 'text' || (!selected && tool === 'text')) && <label className="property-field">Font size <div className="stepper"><button onClick={() => selected ? updateSelected({ fontSize: Math.max(8, (selected.fontSize || 18) - 1) }) : setFontSize((s) => Math.max(8, s - 1))}><Minus /></button><input type="number" value={selected?.fontSize || fontSize} onChange={(e) => selected ? updateSelected({ fontSize: Number(e.target.value) }) : setFontSize(Number(e.target.value))} /><button onClick={() => selected ? updateSelected({ fontSize: (selected.fontSize || 18) + 1 }) : setFontSize((s) => s + 1)}><Plus /></button></div></label>}
+            {(selected?.type === 'rectangle' || selected?.type === 'ink' || selected?.type === 'signature' || (!selected && ['rectangle', 'ink', 'signature'].includes(tool))) && <label className="property-field">Stroke width <input className="range" type="range" min="1" max="12" step="1" value={selected?.strokeWidth || strokeWidth} onChange={(e) => selected ? updateSelected({ strokeWidth: Number(e.target.value) }) : setStrokeWidth(Number(e.target.value))} /><strong>{selected?.strokeWidth || strokeWidth}px</strong></label>}
+            {!selected && tool === 'editText' && <div className="right-help native-edit-help"><strong>Edit existing PDF text</strong><p>Click text already printed on the page. PDF Forge will select the underlying PDF text object and open its real contents here.</p><p>Scanned/image text can be searched with OCR, but it is not a native text object and cannot be rewritten directly.</p></div>}
+            {!selected && tool !== 'editText' && <div className="right-help"><strong>Editing tips</strong><p>Use the page thumbnails to drag pages into a new order. Drop another PDF or image over the editor to append it.</p><p><kbd>Ctrl</kbd> + <kbd>S</kbd> exports. <kbd>Ctrl</kbd> + <kbd>Z</kbd> undoes. Arrow keys move between pages.</p></div>}
+          </>}
+
           <div className="quick-actions">
             <span>Page {currentPage + 1}</span>
             <div><button onClick={() => movePage(currentPage, currentPage - 1)} disabled={currentPage === 0}><ArrowUp /></button><button onClick={() => movePage(currentPage, currentPage + 1)} disabled={currentPage === pageCount - 1}><ArrowDown /></button></div>

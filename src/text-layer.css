@@ -33,6 +33,16 @@
   user-select: text;
 }
 
+.tool-editText .pdf-text-layer.textLayer :is(span, br) {
+  cursor: text;
+}
+
+.tool-editText .pdf-text-layer.textLayer span:hover {
+  background: rgba(59, 130, 246, 0.16);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45);
+  border-radius: 2px;
+}
+
 .pdf-text-layer.textLayer > :not(.markedContent),
 .pdf-text-layer.textLayer .markedContent span:not(.markedContent) {
   z-index: 1;
@@ -65,7 +75,30 @@
   padding: 1px;
 }
 
-/* Keep the text layer below PDF Forge annotations. */
+.native-text-selection {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  border: 2px solid rgba(59, 130, 246, 0.9);
+  background: rgba(59, 130, 246, 0.13);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.72), 0 5px 16px rgba(15, 23, 42, 0.2);
+  border-radius: 3px;
+}
+
+/* An empty annotation layer must not block the real PDF text underneath it. */
 .pdf-page .annotation-layer {
   z-index: 3;
+}
+
+.tool-editText .annotation-layer {
+  pointer-events: none;
+}
+
+/* In Select mode, native text remains selectable while actual annotations stay interactive. */
+.tool-select .annotation-layer {
+  pointer-events: none;
+}
+
+.tool-select .annotation-layer .annotation {
+  pointer-events: auto;
 }
