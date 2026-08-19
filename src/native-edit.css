@@ -1,0 +1,10 @@
+.native-text-editor { display: grid; gap: 12px; }
+.native-text-editor .property-field textarea { min-height: 136px; resize: vertical; line-height: 1.45; }
+.native-edit-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.native-edit-meta span { border: 1px solid #313137; background: #202024; color: #9d9da6; border-radius: 999px; padding: 4px 7px; font-size: 10px; }
+.native-edit-note, .native-edit-warning { margin: 0; border-radius: 8px; padding: 9px 10px; font-size: 10px; line-height: 1.55; }
+.native-edit-note { border: 1px solid rgba(59,130,246,.2); background: rgba(59,130,246,.07); color: #aab5ca; }
+.native-edit-warning { border: 1px solid rgba(245,158,11,.25); background: rgba(245,158,11,.08); color: #d9bc81; }
+.native-edit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.native-edit-actions .primary, .native-edit-actions .soft-btn { width: 100%; }
+.native-edit-help { border-color: rgba(59,130,246,.22); }
