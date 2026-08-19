@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - qa/browser-verification
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
