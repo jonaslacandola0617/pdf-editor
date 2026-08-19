@@ -70,8 +70,8 @@ test('All Tools exposes and activates existing editor features', async ({ page }
   await launcher.click()
   await page.locator('.all-tools-drawer').getByRole('button', { name: /^Document tools/ }).click()
   await expect(page.locator('.advanced-modal')).toBeVisible()
-  await page.locator('.advanced-modal').getByRole('button').first().press('Escape').catch(() => undefined)
-  await page.keyboard.press('Escape')
+  await page.locator('.advanced-modal > header .icon-btn').click()
+  await expect(page.locator('.advanced-modal')).toHaveCount(0)
 
   const beforeSave = await latestDocumentTimestamp(page)
   await page.waitForTimeout(25)
