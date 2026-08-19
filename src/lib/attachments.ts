@@ -5,7 +5,6 @@ import {
   PDFHexString,
   PDFName,
   PDFRawStream,
-  PDFStream,
   PDFString,
   decodePDFRawStream,
 } from 'pdf-lib'
@@ -18,7 +17,6 @@ export type PdfAttachmentInfo = {
 }
 
 type RawAttachment = {
-  node: PDFDict
   names: PDFArray
   pairIndex: number
   name: string
@@ -30,16 +28,13 @@ function textValue(value: unknown) {
   return ''
 }
 
-function collectNameLeaves(pdf: PDFDocument, node: PDFDict, output: PDFDict[], seen = new Set<string>()) {
-  const marker = node.toString()
-  if (seen.has(marker)) return
-  seen.add(marker)
+function collectNameLeaves(node: PDFDict, output: PDFDict[]) {
   if (node.has(PDFName.of('Names'))) output.push(node)
   const kids = node.lookupMaybe(PDFName.of('Kids'), PDFArray)
   if (!kids) return
   for (let index = 0; index < kids.size(); index++) {
     const child = kids.lookup(index, PDFDict)
-    if (child) collectNameLeaves(pdf, child, output, seen)
+    if (child) collectNameLeaves(child, output)
   }
 }
 
@@ -48,7 +43,7 @@ function rawAttachments(pdf: PDFDocument): RawAttachment[] {
   const embedded = namesRoot?.lookupMaybe(PDFName.of('EmbeddedFiles'), PDFDict)
   if (!embedded) return []
   const leaves: PDFDict[] = []
-  collectNameLeaves(pdf, embedded, leaves)
+  collectNameLeaves(embedded, leaves)
   const result: RawAttachment[] = []
   leaves.forEach((node) => {
     const names = node.lookupMaybe(PDFName.of('Names'), PDFArray)
@@ -58,16 +53,18 @@ function rawAttachments(pdf: PDFDocument): RawAttachment[] {
       const fileSpec = names.lookup(pairIndex + 1, PDFDict)
       if (!fileSpec) continue
       const name = textValue(nameValue) || textValue(fileSpec.lookup(PDFName.of('UF'))) || textValue(fileSpec.lookup(PDFName.of('F'))) || `attachment-${result.length + 1}`
-      result.push({ node, names, pairIndex, name, fileSpec })
+      result.push({ names, pairIndex, name, fileSpec })
     }
   })
   return result
 }
 
-function attachmentData(fileSpec: PDFDict) {
+function attachmentData(pdf: PDFDocument, fileSpec: PDFDict) {
   const ef = fileSpec.lookupMaybe(PDFName.of('EF'), PDFDict)
   if (!ef) return new Uint8Array()
-  const stream = ef.lookup(PDFName.of('UF'), PDFStream) || ef.lookup(PDFName.of('F'), PDFStream)
+  const streamRef = ef.get(PDFName.of('UF')) || ef.get(PDFName.of('F'))
+  if (!streamRef) return new Uint8Array()
+  const stream = pdf.context.lookup(streamRef)
   if (!(stream instanceof PDFRawStream)) return new Uint8Array()
   return decodePDFRawStream(stream).decode()
 }
@@ -78,7 +75,7 @@ export async function listPdfAttachments(bytes: ArrayBuffer): Promise<PdfAttachm
     id: `${index}:${item.name}`,
     name: item.name,
     description: textValue(item.fileSpec.lookup(PDFName.of('Desc'))),
-    size: attachmentData(item.fileSpec).byteLength,
+    size: attachmentData(pdf, item.fileSpec).byteLength,
   }))
 }
 
@@ -109,7 +106,7 @@ export async function extractPdfAttachment(bytes: ArrayBuffer, id: string) {
   const index = Number(id.split(':', 1)[0])
   const item = Number.isFinite(index) ? items[index] : undefined
   if (!item) throw new Error('This attachment no longer exists.')
-  const data = attachmentData(item.fileSpec)
+  const data = attachmentData(pdf, item.fileSpec)
   if (!data.byteLength) throw new Error('This attachment stream could not be decoded.')
   return { name: item.name, data }
 }
