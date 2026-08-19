@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFStream, PDFString, StandardFonts, decodePDFRawStream } from 'pdf-lib'
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFString, StandardFonts, decodePDFRawStream } from 'pdf-lib'
 import { readFile, writeFile } from 'node:fs/promises'
 
 async function makePdf(path: string) {
@@ -28,13 +28,13 @@ function textValue(value: unknown) {
   return ''
 }
 
-function nameTreeLeaves(pdf: PDFDocument, node: PDFDict, output: PDFDict[]) {
+function nameTreeLeaves(node: PDFDict, output: PDFDict[]) {
   if (node.has(PDFName.of('Names'))) output.push(node)
   const kids = node.lookupMaybe(PDFName.of('Kids'), PDFArray)
   if (!kids) return
   for (let index = 0; index < kids.size(); index++) {
     const child = kids.lookup(index, PDFDict)
-    if (child) nameTreeLeaves(pdf, child, output)
+    if (child) nameTreeLeaves(child, output)
   }
 }
 
@@ -44,7 +44,7 @@ async function extractAttachments(path: string) {
   const embedded = namesRoot?.lookupMaybe(PDFName.of('EmbeddedFiles'), PDFDict)
   if (!embedded) return [] as Array<{ name: string; data: Uint8Array }>
   const leaves: PDFDict[] = []
-  nameTreeLeaves(pdf, embedded, leaves)
+  nameTreeLeaves(embedded, leaves)
   const result: Array<{ name: string; data: Uint8Array }> = []
   for (const leaf of leaves) {
     const names = leaf.lookupMaybe(PDFName.of('Names'), PDFArray)
@@ -53,7 +53,8 @@ async function extractAttachments(path: string) {
       const name = textValue(names.lookup(index))
       const spec = names.lookup(index + 1, PDFDict)
       const ef = spec?.lookupMaybe(PDFName.of('EF'), PDFDict)
-      const stream = ef?.lookup(PDFName.of('F'), PDFStream) as PDFRawStream | undefined
+      const streamRef = ef?.get(PDFName.of('UF')) || ef?.get(PDFName.of('F'))
+      const stream = streamRef ? pdf.context.lookup(streamRef) : undefined
       if (stream instanceof PDFRawStream) result.push({ name, data: decodePDFRawStream(stream).decode() })
     }
   }
@@ -84,7 +85,7 @@ test('adds, extracts and removes a real embedded PDF attachment', async ({ page 
   await expect(modal).toBeVisible()
   await modal.getByLabel('Attachment description').fill('QA text attachment')
   const payload = Buffer.from('ATTACHMENT PAYLOAD 8833\nsecond line\n', 'utf8')
-  await modal.locator('input[type="file"]').setInputFiles({ name: 'evidence.txt', mimeType: 'text/plain', buffer: payload })
+  await modal.locator('.attachment-manager input[type="file"]').setInputFiles({ name: 'evidence.txt', mimeType: 'text/plain', buffer: payload })
   await expect(modal.locator('.attachment-list')).toContainText('evidence.txt', { timeout: 20_000 })
   await expect(modal.locator('.attachment-list')).toContainText('QA text attachment')
 
@@ -117,28 +118,29 @@ test('imports a reusable local PNG signature and embeds it as a page image', asy
   await makePdf(source)
   await openFile(page, source)
 
-  await page.getByTitle('Image signatures').click()
-  const modal = page.locator('.image-signature-modal')
+  await page.getByTitle('Embedded PDF objects').click()
+  const modal = page.locator('.native-object-modal')
   await expect(modal).toBeVisible()
-  await modal.getByLabel('Preset name').fill('QA Image Signature')
+  const manager = modal.locator('.image-signature-manager')
+  await manager.getByLabel('Preset name').fill('QA Image Signature')
 
-  const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8Dwn4GBgYGJAQoAHgQCAaYvJ9sAAAAASUVORK5CYII=', 'base64')
-  await modal.locator('input[type="file"]').setInputFiles({ name: 'signature.png', mimeType: 'image/png', buffer: onePixelPng })
-  await expect(modal).toContainText('QA Image Signature', { timeout: 20_000 })
+  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8Dwn4GBgYGJAQoAHgQCAaYvJ9sAAAAASUVORK5CYII=', 'base64')
+  await manager.locator('input[type="file"]').setInputFiles({ name: 'signature.png', mimeType: 'image/png', buffer: tinyPng })
+  await expect(manager).toContainText('QA Image Signature', { timeout: 20_000 })
   await expect.poll(() => page.evaluate(() => localStorage.getItem('pdf-forge-image-signatures') || '')).toContain('QA Image Signature')
 
-  await modal.getByLabel('Image signature X percent').fill('50')
-  await modal.getByLabel('Image signature Y percent').fill('70')
-  await modal.getByLabel('Image signature width percent').fill('25')
-  await modal.getByLabel('Image signature opacity').fill('90')
-  await modal.getByRole('button', { name: 'Place on page 1' }).click()
+  await manager.getByLabel('Image signature X percent').fill('50')
+  await manager.getByLabel('Image signature Y percent').fill('70')
+  await manager.getByLabel('Image signature width percent').fill('25')
+  await manager.getByLabel('Image signature opacity').fill('90')
+  await manager.getByRole('button', { name: 'Place on page 1' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('QA Image Signature placed on page 1', { timeout: 20_000 })
-  await modal.getByTitle('Close image signatures').click()
+  await modal.getByTitle('Close embedded objects').click()
 
   const exported = testInfo.outputPath('image-signature-export.pdf')
   await exportPdf(page, exported)
   expect(await imageXObjectCount(exported)).toBeGreaterThan(0)
 
-  await page.getByTitle('Image signatures').click()
-  await expect(modal.getByRole('button', { name: 'QA Image Signature' })).toBeVisible()
+  await page.getByTitle('Embedded PDF objects').click()
+  await expect(modal.locator('.image-signature-manager').getByRole('button', { name: 'QA Image Signature' })).toBeVisible()
 })
