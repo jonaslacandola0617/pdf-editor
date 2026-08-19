@@ -142,5 +142,5 @@ test('imports a reusable local PNG signature and embeds it as a page image', asy
   expect(await imageXObjectCount(exported)).toBeGreaterThan(0)
 
   await page.getByTitle('Embedded PDF objects').click()
-  await expect(modal.locator('.image-signature-manager').getByRole('button', { name: 'QA Image Signature' })).toBeVisible()
+  await expect(modal.locator('.image-signature-manager').getByRole('button', { name: 'QA Image Signature', exact: true })).toBeVisible()
 })
