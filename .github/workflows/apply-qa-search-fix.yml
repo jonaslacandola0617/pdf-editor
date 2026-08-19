@@ -18,16 +18,20 @@ jobs:
         with:
           ref: qa/browser-verification
 
-      - name: Move signature QA stroke away from floating navigation
+      - name: Wait for Signature tool state before drawing
         run: |
           python - <<'PY'
           from pathlib import Path
           test = Path('tests/pdf-forge.spec.ts')
           text = test.read_text()
-          old = "await dragOnPdf(page, 0.20, 0.83, 0.48, 0.88)"
-          new = "await dragOnPdf(page, 0.62, 0.54, 0.82, 0.61)"
+          old = """  await page.getByTitle('Signature').click()
+  await dragOnPdf(page, 0.62, 0.54, 0.82, 0.61)"""
+          new = """  const signatureTool = page.getByTitle('Signature')
+  await signatureTool.click()
+  await expect(signatureTool).toHaveClass(/active/)
+  await dragOnPdf(page, 0.62, 0.54, 0.82, 0.61)"""
           if old not in text:
-              raise SystemExit('Expected signature test coordinates not found')
+              raise SystemExit('Expected signature QA block not found')
           test.write_text(text.replace(old, new, 1))
           PY
 
@@ -36,5 +40,5 @@ jobs:
           git config user.name "PDF Forge QA"
           git config user.email "actions@users.noreply.github.com"
           git add tests/pdf-forge.spec.ts
-          git commit -m "Keep signature QA stroke clear of floating controls"
+          git commit -m "Wait for signature tool activation in browser QA"
           git push origin HEAD:qa/browser-verification
