@@ -152,7 +152,7 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
         const geometry = linkGeometryDrafts[key] || item.geometry
         return <div className="native-object-row native-link-row" key={key}>
           <div className="native-object-meta"><ExternalLink /><span>Page {item.pageIndex + 1} · Native link rectangle</span></div>
-          <label className="native-object-field">URL<input aria-label={`Native link page ${item.pageIndex + 1}`} value={linkDrafts[key] ?? ''} onChange={(event) => setLinkDrafts((items) => ({ ...items, [key]: event.target.value }))} /></label>
+          <input aria-label={`Native link page ${item.pageIndex + 1}`} value={linkDrafts[key] ?? ''} onChange={(event) => setLinkDrafts((items) => ({ ...items, [key]: event.target.value }))} />
           <div className="native-link-geometry">
             <label>Left %<input aria-label={`Native link X percent page ${item.pageIndex + 1}`} type="number" min="0" max="99.9" step="0.1" value={geometry.x} onChange={(event) => updateGeometryDraft(key, 'x', event.target.value)} /></label>
             <label>Top %<input aria-label={`Native link Y percent page ${item.pageIndex + 1}`} type="number" min="0" max="99.9" step="0.1" value={geometry.y} onChange={(event) => updateGeometryDraft(key, 'y', event.target.value)} /></label>
@@ -161,7 +161,7 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
           </div>
           <p className="native-object-help">Geometry is measured from the page’s top-left corner and written back to the native PDF /Rect.</p>
           <div className="native-object-actions">
-            <button disabled={Boolean(busy)} onClick={() => void mutate('Updating native link', () => updateNativeLink(bytes, item.pageIndex, item.annotationIndex, linkDrafts[key] ?? '', geometry))}><Save /> Save link</button>
+            <button disabled={Boolean(busy)} onClick={() => void mutate('Updating native link', () => updateNativeLink(bytes, item.pageIndex, item.annotationIndex, linkDrafts[key] ?? '', geometry))}><Save /> Save</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void mutate('Deleting native link', () => deleteNativeLink(bytes, item.pageIndex, item.annotationIndex))}><Trash2 /> Delete</button>
           </div>
         </div>
@@ -175,7 +175,7 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
         const targetDraft = bookmarkPageDraftsState[key] ?? ''
         return <div className="native-object-row native-bookmark-row" key={key} style={{ marginLeft: `${Math.min(4, item.depth) * 12}px` }}>
           <div className="native-object-meta"><Bookmark /><span>Outline level {item.depth + 1} · {item.pageIndex === null ? 'No resolved page target' : `Page ${item.pageIndex + 1}`}</span></div>
-          <label className="native-object-field">Title<input aria-label={`Native bookmark ${key || 'root'}`} value={bookmarkDrafts[key] ?? ''} onChange={(event) => setBookmarkDrafts((items) => ({ ...items, [key]: event.target.value }))} /></label>
+          <input aria-label={`Native bookmark ${key || 'root'}`} value={bookmarkDrafts[key] ?? ''} onChange={(event) => setBookmarkDrafts((items) => ({ ...items, [key]: event.target.value }))} />
           <label className="native-bookmark-target">Target page<input aria-label={`Native bookmark target page ${key || 'root'}`} type="number" min="1" step="1" placeholder="Keep unresolved destination" value={targetDraft} onChange={(event) => setBookmarkPageDrafts((items) => ({ ...items, [key]: event.target.value }))} /></label>
           <p className="native-object-help">Changing the page preserves the bookmark’s existing destination view style when one is available.</p>
           <div className="native-object-actions">
@@ -183,7 +183,7 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
               const parsed = Number(targetDraft)
               const pageIndex = targetDraft.trim() && Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed) - 1) : undefined
               void mutate('Updating bookmark', () => updateNativeBookmark(bytes, item.path, bookmarkDrafts[key] ?? '', pageIndex))
-            }}><Save /> Save bookmark</button>
+            }}><Save /> Rename</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void mutate('Deleting bookmark', () => deleteNativeBookmark(bytes, item.path))}><Trash2 /> Delete</button>
           </div>
         </div>
