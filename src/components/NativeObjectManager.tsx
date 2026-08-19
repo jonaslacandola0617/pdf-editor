@@ -7,11 +7,12 @@ import {
   listNativeBookmarks,
   listNativeComments,
   listNativeLinks,
-  renameNativeBookmark,
+  updateNativeBookmark,
   updateNativeComment,
   updateNativeLink,
   type NativeBookmarkInfo,
   type NativeCommentInfo,
+  type NativeLinkGeometry,
   type NativeLinkInfo,
 } from '../lib/native-objects'
 
@@ -28,6 +29,14 @@ function keyForComment(item: NativeCommentInfo) { return `${item.pageIndex}:${it
 function keyForLink(item: NativeLinkInfo) { return `${item.pageIndex}:${item.annotationIndex}` }
 function keyForBookmark(item: NativeBookmarkInfo) { return item.path.join('.') }
 
+function geometryDrafts(items: NativeLinkInfo[]) {
+  return Object.fromEntries(items.map((item) => [keyForLink(item), { ...item.geometry }])) as Record<string, NativeLinkGeometry>
+}
+
+function bookmarkPageDrafts(items: NativeBookmarkInfo[]) {
+  return Object.fromEntries(items.map((item) => [keyForBookmark(item), item.pageIndex === null ? '' : String(item.pageIndex + 1)])) as Record<string, string>
+}
+
 export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }: Props) {
   const [tab, setTab] = useState<Tab>('comments')
   const [comments, setComments] = useState<NativeCommentInfo[]>([])
@@ -35,9 +44,22 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
   const [bookmarks, setBookmarks] = useState<NativeBookmarkInfo[]>([])
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({})
   const [linkDrafts, setLinkDrafts] = useState<Record<string, string>>({})
+  const [linkGeometryDrafts, setLinkGeometryDrafts] = useState<Record<string, NativeLinkGeometry>>({})
   const [bookmarkDrafts, setBookmarkDrafts] = useState<Record<string, string>>({})
+  const [bookmarkPageDraftsState, setBookmarkPageDrafts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState('')
+
+  const hydrate = (nextComments: NativeCommentInfo[], nextLinks: NativeLinkInfo[], nextBookmarks: NativeBookmarkInfo[]) => {
+    setComments(nextComments)
+    setLinks(nextLinks)
+    setBookmarks(nextBookmarks)
+    setCommentDrafts(Object.fromEntries(nextComments.map((item) => [keyForComment(item), item.text])))
+    setLinkDrafts(Object.fromEntries(nextLinks.map((item) => [keyForLink(item), item.url])))
+    setLinkGeometryDrafts(geometryDrafts(nextLinks))
+    setBookmarkDrafts(Object.fromEntries(nextBookmarks.map((item) => [keyForBookmark(item), item.title])))
+    setBookmarkPageDrafts(bookmarkPageDrafts(nextBookmarks))
+  }
 
   const reload = async (source = bytes) => {
     setLoading(true)
@@ -47,12 +69,7 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
         listNativeLinks(source),
         listNativeBookmarks(source),
       ])
-      setComments(nextComments)
-      setLinks(nextLinks)
-      setBookmarks(nextBookmarks)
-      setCommentDrafts(Object.fromEntries(nextComments.map((item) => [keyForComment(item), item.text])))
-      setLinkDrafts(Object.fromEntries(nextLinks.map((item) => [keyForLink(item), item.url])))
-      setBookmarkDrafts(Object.fromEntries(nextBookmarks.map((item) => [keyForBookmark(item), item.title])))
+      hydrate(nextComments, nextLinks, nextBookmarks)
     } catch (error) {
       console.error(error)
       onStatus('Could not inspect native PDF objects in this document.')
@@ -66,13 +83,7 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
     setLoading(true)
     void Promise.all([listNativeComments(bytes), listNativeLinks(bytes), listNativeBookmarks(bytes)])
       .then(([nextComments, nextLinks, nextBookmarks]) => {
-        if (cancelled) return
-        setComments(nextComments)
-        setLinks(nextLinks)
-        setBookmarks(nextBookmarks)
-        setCommentDrafts(Object.fromEntries(nextComments.map((item) => [keyForComment(item), item.text])))
-        setLinkDrafts(Object.fromEntries(nextLinks.map((item) => [keyForLink(item), item.url])))
-        setBookmarkDrafts(Object.fromEntries(nextBookmarks.map((item) => [keyForBookmark(item), item.title])))
+        if (!cancelled) hydrate(nextComments, nextLinks, nextBookmarks)
       })
       .catch((error) => { if (!cancelled) { console.error(error); onStatus('Could not inspect native PDF objects in this document.') } })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -94,6 +105,17 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
     } finally {
       setBusy('')
     }
+  }
+
+  const updateGeometryDraft = (key: string, field: keyof NativeLinkGeometry, value: string) => {
+    const numeric = Number(value)
+    setLinkGeometryDrafts((items) => ({
+      ...items,
+      [key]: {
+        ...(items[key] || { x: 0, y: 0, width: 10, height: 5 }),
+        [field]: Number.isFinite(numeric) ? numeric : 0,
+      },
+    }))
   }
 
   const counts = useMemo(() => ({ comments: comments.length, links: links.length, bookmarks: bookmarks.length }), [bookmarks.length, comments.length, links.length])
@@ -127,11 +149,19 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
     {!loading && tab === 'links' && <div className="native-object-list">
       {links.map((item) => {
         const key = keyForLink(item)
-        return <div className="native-object-row" key={key}>
-          <div className="native-object-meta"><ExternalLink /><span>Page {item.pageIndex + 1}</span></div>
+        const geometry = linkGeometryDrafts[key] || item.geometry
+        return <div className="native-object-row native-link-row" key={key}>
+          <div className="native-object-meta"><ExternalLink /><span>Page {item.pageIndex + 1} · Native link rectangle</span></div>
           <input aria-label={`Native link page ${item.pageIndex + 1}`} value={linkDrafts[key] ?? ''} onChange={(event) => setLinkDrafts((items) => ({ ...items, [key]: event.target.value }))} />
+          <div className="native-link-geometry">
+            <label>Left %<input aria-label={`Native link X percent page ${item.pageIndex + 1}`} type="number" min="0" max="99.9" step="0.1" value={geometry.x} onChange={(event) => updateGeometryDraft(key, 'x', event.target.value)} /></label>
+            <label>Top %<input aria-label={`Native link Y percent page ${item.pageIndex + 1}`} type="number" min="0" max="99.9" step="0.1" value={geometry.y} onChange={(event) => updateGeometryDraft(key, 'y', event.target.value)} /></label>
+            <label>Width %<input aria-label={`Native link width percent page ${item.pageIndex + 1}`} type="number" min="0.1" max="100" step="0.1" value={geometry.width} onChange={(event) => updateGeometryDraft(key, 'width', event.target.value)} /></label>
+            <label>Height %<input aria-label={`Native link height percent page ${item.pageIndex + 1}`} type="number" min="0.1" max="100" step="0.1" value={geometry.height} onChange={(event) => updateGeometryDraft(key, 'height', event.target.value)} /></label>
+          </div>
+          <p className="native-object-help">Geometry is measured from the page’s top-left corner and written back to the native PDF /Rect.</p>
           <div className="native-object-actions">
-            <button disabled={Boolean(busy)} onClick={() => void mutate('Updating native link', () => updateNativeLink(bytes, item.pageIndex, item.annotationIndex, linkDrafts[key] ?? ''))}><Save /> Save</button>
+            <button disabled={Boolean(busy)} onClick={() => void mutate('Updating native link', () => updateNativeLink(bytes, item.pageIndex, item.annotationIndex, linkDrafts[key] ?? '', geometry))}><Save /> Save</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void mutate('Deleting native link', () => deleteNativeLink(bytes, item.pageIndex, item.annotationIndex))}><Trash2 /> Delete</button>
           </div>
         </div>
@@ -142,11 +172,18 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
     {!loading && tab === 'bookmarks' && <div className="native-object-list">
       {bookmarks.map((item) => {
         const key = keyForBookmark(item)
-        return <div className="native-object-row" key={key} style={{ marginLeft: `${Math.min(4, item.depth) * 12}px` }}>
-          <div className="native-object-meta"><Bookmark /><span>Outline level {item.depth + 1}</span></div>
+        const targetDraft = bookmarkPageDraftsState[key] ?? ''
+        return <div className="native-object-row native-bookmark-row" key={key} style={{ marginLeft: `${Math.min(4, item.depth) * 12}px` }}>
+          <div className="native-object-meta"><Bookmark /><span>Outline level {item.depth + 1} · {item.pageIndex === null ? 'No resolved page target' : `Page ${item.pageIndex + 1}`}</span></div>
           <input aria-label={`Native bookmark ${key || 'root'}`} value={bookmarkDrafts[key] ?? ''} onChange={(event) => setBookmarkDrafts((items) => ({ ...items, [key]: event.target.value }))} />
+          <label className="native-bookmark-target">Target page<input aria-label={`Native bookmark target page ${key || 'root'}`} type="number" min="1" step="1" placeholder="Keep unresolved destination" value={targetDraft} onChange={(event) => setBookmarkPageDrafts((items) => ({ ...items, [key]: event.target.value }))} /></label>
+          <p className="native-object-help">Changing the page preserves the bookmark’s existing destination view style when one is available.</p>
           <div className="native-object-actions">
-            <button disabled={Boolean(busy)} onClick={() => void mutate('Renaming bookmark', () => renameNativeBookmark(bytes, item.path, bookmarkDrafts[key] ?? ''))}><Save /> Rename</button>
+            <button disabled={Boolean(busy)} onClick={() => {
+              const parsed = Number(targetDraft)
+              const pageIndex = targetDraft.trim() && Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed) - 1) : undefined
+              void mutate('Renaming bookmark', () => updateNativeBookmark(bytes, item.path, bookmarkDrafts[key] ?? '', pageIndex))
+            }}><Save /> Rename</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void mutate('Deleting bookmark', () => deleteNativeBookmark(bytes, item.path))}><Trash2 /> Delete</button>
           </div>
         </div>
