@@ -97,7 +97,6 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   await expect(stageStatus(page)).toContainText('1 matching page', { timeout: 20_000 })
   await expect(pageNumber(page)).toHaveValue('2')
 
-  // Reorder page 1 to position 3 and prove content moved by searching it.
   const thumbs = page.locator('.thumb-drag-wrap')
   await thumbs.nth(0).dragTo(thumbs.nth(2))
   await expect(page.locator('.thumbnail')).toHaveCount(3)
@@ -136,14 +135,12 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   const extracted = await PDFDocument.load(await readFile(extractedPath))
   expect(extracted.getPageCount()).toBe(2)
 
-  // Text annotation.
   await page.getByTitle('Add text').click()
   await page.locator('.pdf-page').click({ position: { x: 250, y: 220 } })
   await expect(page.locator('.text-annotation')).toHaveCount(1)
   await page.locator('.right-panel textarea').fill('QA NOTE 8844')
   await expect(page.locator('.text-annotation')).toContainText('QA NOTE 8844')
 
-  // Highlight, rectangle, ink, and signature.
   await page.getByTitle('Highlight').click()
   await dragOnPdf(page, 0.18, 0.40, 0.48, 0.46)
   await expect(page.locator('.box-annotation.highlight')).toHaveCount(1)
@@ -156,11 +153,12 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   await dragOnPdf(page, 0.20, 0.72, 0.50, 0.78)
   await expect(page.locator('.ink-hitbox')).toHaveCount(1)
 
-  await page.getByTitle('Signature').click()
+  const signatureTool = page.getByTitle('Signature')
+  await signatureTool.click()
+  await expect(signatureTool).toHaveClass(/active/)
   await dragOnPdf(page, 0.62, 0.54, 0.82, 0.61)
   await expect(page.locator('.ink-hitbox')).toHaveCount(2)
 
-  // Selected signature properties should update.
   const range = page.locator('.right-panel input.range')
   await range.evaluate((el: HTMLInputElement) => {
     el.value = '7'
@@ -169,14 +167,12 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   })
   await expect(page.locator('.right-panel')).toContainText('7px')
 
-  // Undo and redo the last supported change.
   const beforeUndo = await page.locator('.ink-hitbox').count()
   await page.keyboard.press('Control+z')
   await expect(page.locator('.ink-hitbox')).toHaveCount(beforeUndo)
   await page.keyboard.press('Control+Shift+z')
   await expect(page.locator('.ink-hitbox')).toHaveCount(beforeUndo)
 
-  // Metadata and export.
   await page.getByTitle('Document info').click()
   await page.locator('.meta-form label').filter({ hasText: 'Title' }).locator('input').fill('QA Export Verified')
   await page.locator('.meta-form label').filter({ hasText: 'Author' }).locator('input').fill('Browser QA')
@@ -191,7 +187,6 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   expect(exported.getTitle()).toBe('QA Export Verified')
   expect(exported.getAuthor()).toBe('Browser QA')
 
-  // Reopen exported PDF and prove the added text was embedded into the PDF content.
   await page.getByTitle('Close document').click()
   await expect(page.locator('.welcome')).toBeVisible()
   await page.locator('input[type="file"]').first().setInputFiles(exportedPath)
@@ -270,7 +265,6 @@ test('image-only document is recognized by OCR locally, searchable, and cached',
   test.setTimeout(240_000)
   const scanPng = testInfo.outputPath('scan.png')
 
-  // Generate a real raster image with no embedded text layer.
   await page.setViewportSize({ width: 1400, height: 900 })
   await page.setContent(`<!doctype html><html><body style="margin:0;background:white;font-family:Arial,sans-serif">
     <div style="padding:140px 100px;color:#000">
@@ -326,7 +320,6 @@ test('image-only document is recognized by OCR locally, searchable, and cached',
   expect(cached.some((record) => record.words > 0)).toBeTruthy()
   expect(outboundWrites, 'OCR must not upload document/page data to an external service').toEqual([])
 
-  // Refresh, restore the local PDF, and confirm the cached OCR text remains usable.
   await page.waitForTimeout(400)
   await page.reload()
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 })
