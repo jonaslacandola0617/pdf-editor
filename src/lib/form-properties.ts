@@ -1,4 +1,4 @@
-import { PDFDocument, PDFHexString, PDFName, PDFString } from 'pdf-lib'
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRef, PDFString } from 'pdf-lib'
 
 export type FormFieldPropertyInfo = {
   name: string
@@ -102,11 +102,33 @@ export async function updateFormFieldProperties(bytes: ArrayBuffer, originalName
   }
 }
 
+function removeDanglingPageAnnotations(pdf: PDFDocument) {
+  pdf.getPages().forEach((page) => {
+    const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)
+    if (!annots) return
+    for (let index = annots.size() - 1; index >= 0; index--) {
+      const raw = annots.get(index)
+      if (!raw) {
+        annots.remove(index)
+        continue
+      }
+      try {
+        const resolved = raw instanceof PDFRef ? pdf.context.lookup(raw) : raw
+        if (!(resolved instanceof PDFDict)) annots.remove(index)
+      } catch {
+        annots.remove(index)
+      }
+    }
+    if (!annots.size()) page.node.delete(PDFName.of('Annots'))
+  })
+}
+
 export async function deleteFormField(bytes: ArrayBuffer, name: string) {
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const form = pdf.getForm()
   const field = form.getFieldMaybe(name)
   if (!field) throw new Error('This form field no longer exists.')
   form.removeField(field)
+  removeDanglingPageAnnotations(pdf)
   return (await pdf.save({ useObjectStreams: true })).buffer as ArrayBuffer
 }
