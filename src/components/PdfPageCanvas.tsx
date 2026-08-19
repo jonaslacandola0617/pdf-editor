@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { pdfjsLib, type PDFDocumentProxy } from '../lib/pdfjs'
-import type { Annotation, Point, Tool } from '../types'
+import type { Annotation, NativeTextSelection, Point, Tool } from '../types'
 import '../text-layer.css'
 
 type Props = {
@@ -14,8 +14,10 @@ type Props = {
   strokeWidth: number
   fontSize: number
   selectedId: string | null
+  nativeSelection: NativeTextSelection | null
   onSelect: (id: string | null) => void
   onAdd: (annotation: Annotation) => void
+  onPickNativeText: (point: Point, hint: string) => void
 }
 
 type DragPreview = {
@@ -97,6 +99,36 @@ function markSearchMatches(container: HTMLElement, query: string) {
   }
 }
 
+function forwardRotatePoint(x: number, y: number, rotation: number) {
+  const r = ((rotation % 360) + 360) % 360
+  if (r === 90) return { x: 1 - y, y: x }
+  if (r === 180) return { x: 1 - x, y: 1 - y }
+  if (r === 270) return { x: y, y: 1 - x }
+  return { x, y }
+}
+
+function displaySelectionBounds(selection: NativeTextSelection, rotation: number) {
+  const corners = [
+    forwardRotatePoint(selection.x, selection.y, rotation),
+    forwardRotatePoint(selection.x + selection.width, selection.y, rotation),
+    forwardRotatePoint(selection.x, selection.y + selection.height, rotation),
+    forwardRotatePoint(selection.x + selection.width, selection.y + selection.height, rotation),
+  ]
+  const xs = corners.map((point) => point.x)
+  const ys = corners.map((point) => point.y)
+  return {
+    x: Math.min(...xs),
+    y: Math.min(...ys),
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+  }
+}
+
+function textHintFromTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return ''
+  return target.closest('.pdf-text-layer span')?.textContent?.trim() || ''
+}
+
 export function PdfPageCanvas({
   pdf,
   pageIndex,
@@ -108,8 +140,10 @@ export function PdfPageCanvas({
   strokeWidth,
   fontSize,
   selectedId,
+  nativeSelection,
   onSelect,
   onAdd,
+  onPickNativeText,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const textLayerRef = useRef<HTMLDivElement | null>(null)
@@ -142,8 +176,6 @@ export function PdfPageCanvas({
     let renderTask: CancelableRenderTask | null = null
 
     const render = async () => {
-      // Page-count-changing operations can update editor state before the replacement
-      // PDFDocumentProxy finishes loading. Never ask the old proxy for an invalid page.
       if (pageIndex < 0 || pageIndex >= pdf.numPages) return
       const page = await pdf.getPage(pageIndex + 1)
       if (cancelled) return
@@ -227,6 +259,11 @@ export function PdfPageCanvas({
   }
 
   const pointerDown = (e: React.PointerEvent) => {
+    if (tool === 'editText') {
+      onPickNativeText(pointFromEvent(e), textHintFromTarget(e.target))
+      return
+    }
+
     if (tool === 'select') {
       const p = pointFromEvent(e)
       const ink = [...annotations].reverse().find((ann) =>
@@ -332,6 +369,10 @@ export function PdfPageCanvas({
     )
   }
 
+  const nativeBounds = nativeSelection?.page === pageIndex
+    ? displaySelectionBounds(nativeSelection, rotation)
+    : null
+
   return (
     <div
       ref={wrapRef}
@@ -343,7 +384,19 @@ export function PdfPageCanvas({
       onPointerCancel={() => updatePreview(null)}
     >
       <canvas ref={canvasRef} />
-      <div ref={textLayerRef} className={`pdf-text-layer textLayer ${tool === 'select' ? 'interactive' : ''}`} />
+      <div ref={textLayerRef} className={`pdf-text-layer textLayer ${tool === 'select' || tool === 'editText' ? 'interactive' : ''}`} />
+      {nativeBounds && (
+        <div
+          className="native-text-selection"
+          aria-hidden="true"
+          style={{
+            left: `${nativeBounds.x * 100}%`,
+            top: `${nativeBounds.y * 100}%`,
+            width: `${nativeBounds.width * 100}%`,
+            height: `${nativeBounds.height * 100}%`,
+          }}
+        />
+      )}
       <div className="annotation-layer">
         {annotations.map((ann) => {
           const selected = ann.id === selectedId
