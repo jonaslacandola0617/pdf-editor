@@ -60,7 +60,7 @@ async function normalizedImage(file: File) {
   const context = canvas.getContext('2d')
   if (!context) throw new Error('Could not resize this signature image.')
   context.drawImage(image, 0, 0, width, height)
-  const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+  const mimeType: 'image/png' | 'image/jpeg' = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
   return { dataUrl: canvas.toDataURL(mimeType, mimeType === 'image/jpeg' ? 0.88 : undefined), width, height, mimeType }
 }
 
