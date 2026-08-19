@@ -83,10 +83,7 @@ export function OcrTextOverlay({ pdf, pageIndex, rotation, searchQuery }: Props)
       return <span
         key={`${index}-${word.text}`}
         className={matches.has(index) ? 'ocr-word ocr-search-hit' : 'ocr-word'}
-        style={{
-          left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.width * 100}%`, height: `${box.height * 100}%`,
-          fontSize: `${Math.max(5, box.height * 100)}cqh`,
-        }}
+        style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.width * 100}%`, height: `${box.height * 100}%` }}
         title={word.confidence < 60 ? `OCR confidence ${Math.round(word.confidence)}%` : undefined}
       >{word.text}</span>
     })}
