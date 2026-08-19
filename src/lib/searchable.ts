@@ -14,7 +14,8 @@ function winAnsiSafe(value: string) {
 }
 
 export async function makeSearchablePdf(bytes: ArrayBuffer, onProgress?: (page: number, total: number) => void) {
-  const source = await rawPdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise
+  const task = rawPdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) })
+  const source = await task.promise
   const output = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const font = await output.embedFont(StandardFonts.Helvetica)
   const fingerprint = source.fingerprints?.[0] || `pdf-${source.numPages}`
@@ -52,6 +53,6 @@ export async function makeSearchablePdf(bytes: ArrayBuffer, onProgress?: (page: 
     }
     return (await output.save({ useObjectStreams: true })).buffer as ArrayBuffer
   } finally {
-    await source.destroy()
+    await task.destroy()
   }
 }
