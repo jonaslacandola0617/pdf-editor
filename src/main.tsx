@@ -1,7 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { OcrActivity } from './components/OcrActivity'
 import './acrobat-polish.css'
+import './ocr.css'
 
 const RESUME_KEY = 'pdf-forge-resume-editor'
 
@@ -55,6 +57,7 @@ function installEditorResume() {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
+    <OcrActivity />
   </StrictMode>,
 )
 
