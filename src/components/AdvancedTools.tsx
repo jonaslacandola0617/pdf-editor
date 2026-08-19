@@ -12,6 +12,7 @@ import { insertFilesAt, rasterCompressPdf } from '../lib/document-extra'
 import { encryptPdf, optimizePdf } from '../lib/security'
 import { makeSearchablePdf } from '../lib/searchable'
 import { secureRedactPdf } from '../lib/redaction'
+import { embedNativeNotes } from '../lib/pdf-notes'
 
 type ApplyOptions = { page?: number; rotations?: number[]; annotations?: Annotation[]; status?: string }
 type Props = {
@@ -88,13 +89,18 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
 
   const prepareFinal = async () => {
     const redactions = annotations.filter((ann) => ann.type === 'redaction')
-    const ordinary = annotations.filter((ann) => ann.type !== 'redaction')
+    const notes = annotations.filter((ann) => ann.type === 'note')
+    const ordinary = annotations.filter((ann) => ann.type !== 'redaction' && ann.type !== 'note')
+    let finalized: Uint8Array
     if (redactions.length) {
       const flattened = await flattenAnnotations(bytes, forExport(ordinary, rotations), metadata)
-      return new Uint8Array(await secureRedactPdf(toArrayBuffer(flattened), redactions, rotations))
+      finalized = new Uint8Array(await secureRedactPdf(toArrayBuffer(flattened), redactions, rotations))
+    } else {
+      const rotated = rotations.some(Boolean) ? await reorderPdf(bytes, Array.from({ length: pageCount }, (_, i) => i), rotations) : bytes
+      finalized = await flattenAnnotations(rotated, forExport(ordinary, rotations), metadata)
     }
-    const rotated = rotations.some(Boolean) ? await reorderPdf(bytes, Array.from({ length: pageCount }, (_, i) => i), rotations) : bytes
-    return flattenAnnotations(rotated, forExport(ordinary, rotations), metadata)
+    if (!notes.length) return finalized
+    return new Uint8Array(await embedNativeNotes(toArrayBuffer(finalized), notes))
   }
 
   const insertAt = (index: number) => mutate('Inserting blank page', () => insertBlankPage(bytes, index, 'match'), {

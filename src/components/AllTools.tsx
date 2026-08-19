@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   Copy, Download, FileInput, Files, FormInput, Highlighter, Info, Library, Menu,
-  MousePointer2, PenLine, RotateCcw, RotateCw, Save, ScanLine, Search, Shapes, Split,
-  Trash2, Type, Upload, WandSparkles, X,
+  Bookmark, MousePointer2, PenLine, RotateCcw, RotateCw, Save, ScanLine, Search, Shapes, Split,
+  StickyNote, Trash2, Type, Upload, WandSparkles, X,
 } from 'lucide-react'
 
 type ToolAction = {
@@ -81,6 +81,7 @@ export function AllTools() {
         { label: 'Select', description: 'Select, move and resize annotations.', icon: MousePointer2, run: () => activateTitle('Select') },
         { label: 'Edit existing text', description: 'Change text already embedded in the PDF.', icon: PenLine, run: () => activateTitle('Edit existing text') },
         { label: 'Add text', description: 'Place a new editable text annotation.', icon: Type, run: () => activateTitle('Add text') },
+        { label: 'Sticky note', description: 'Add a standard PDF comment at a page location.', icon: StickyNote, run: () => activateTitle('Sticky note') },
         { label: 'Highlight', description: 'Mark an area with color.', icon: Highlighter, run: () => activateTitle('Highlight') },
         { label: 'Rectangle', description: 'Draw an outlined box.', icon: Shapes, run: () => activateTitle('Rectangle') },
         { label: 'Redact', description: 'Mark sensitive areas for destructive redaction.', icon: ScanLine, run: () => activateTitle('Redact') },
@@ -107,6 +108,7 @@ export function AllTools() {
       subtitle: 'Permanent local PDF operations.',
       actions: [
         { label: 'Document tools', description: 'Watermarks, page numbers, OCR export, optimize, protect and print.', icon: WandSparkles, run: () => activateTitle('Document tools') },
+        { label: 'Bookmarks & favorites', description: 'Navigate the PDF outline and favorite local documents.', icon: Bookmark, run: () => activateTitle('Bookmarks & favorites') },
         { label: 'Search / OCR', description: 'Find text; scans use local OCR.', icon: Search, run: focusSearch },
         { label: 'Form fields', description: 'Fill detected AcroForm fields.', icon: FormInput, run: () => activateTitle('Form fields') },
         { label: 'Document info', description: 'Edit title, author and keywords.', icon: Info, run: () => activateTitle('Document info') },
