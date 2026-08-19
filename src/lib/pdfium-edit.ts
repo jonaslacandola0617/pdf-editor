@@ -1,4 +1,6 @@
+import pdfiumWasmUrl from '@hyzyla/pdfium/pdfium.wasm?url'
 import type { NativeTextSelection } from '../types'
+import { expandWasmFunctionTable } from './wasm-table'
 
 type PdfiumRuntime = {
   HEAPU8: Uint8Array
@@ -36,10 +38,19 @@ type PdfiumLibraryUnsafe = {
 
 let libraryPromise: Promise<PdfiumLibraryUnsafe> | null = null
 
+async function getPatchedPdfiumBinary() {
+  const response = await fetch(pdfiumWasmUrl)
+  if (!response.ok) throw new Error('Could not load the local PDFium editing engine.')
+  return expandWasmFunctionTable(await response.arrayBuffer(), 8)
+}
+
 async function getLibrary(): Promise<PdfiumLibraryUnsafe> {
   if (!libraryPromise) {
-    libraryPromise = import('@hyzyla/pdfium/browser/base64').then(async ({ PDFiumLibrary }) => {
-      const library = await PDFiumLibrary.init({ disableBase64Warning: true })
+    libraryPromise = Promise.all([
+      import('@hyzyla/pdfium'),
+      getPatchedPdfiumBinary(),
+    ]).then(async ([{ PDFiumLibrary }, wasmBinary]) => {
+      const library = await PDFiumLibrary.init({ wasmBinary })
       return library as unknown as PdfiumLibraryUnsafe
     }).catch((error) => {
       libraryPromise = null
@@ -226,9 +237,6 @@ function installWriteCallback(module: PdfiumRuntime, callback: (self: number, da
   const table = module.wasmExports.__indirect_function_table
   if (!table) throw new Error('PDFium did not expose its WebAssembly function table.')
 
-  // This PDFium build gives the table a fixed maximum, so growing it is not
-  // guaranteed to work. Reuse a currently empty, non-zero slot first. Slot 0 is
-  // intentionally skipped because C/C++ treats function pointer 0 as null.
   let ptr = -1
   for (let i = table.length - 1; i >= 1; i--) {
     if (table.get(i) === null) {
