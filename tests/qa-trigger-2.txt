@@ -1,0 +1,1 @@
+Re-run browser QA after the verified search-race fix and corrected AcroForm selector.
