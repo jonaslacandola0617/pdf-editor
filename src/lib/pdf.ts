@@ -319,13 +319,13 @@ export async function flattenAnnotations(
     }
   }
 
-  try {
-    pdf.getForm().flatten()
-  } catch {
-    // Some PDFs contain malformed form structures; annotations can still export.
-  }
-
   return await pdf.save({ useObjectStreams: true })
+}
+
+export async function flattenFormFields(bytes: ArrayBuffer) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  pdf.getForm().flatten()
+  return (await pdf.save({ useObjectStreams: true })).buffer as ArrayBuffer
 }
 
 export async function readMetadata(bytes: ArrayBuffer): Promise<PdfMetadata> {
