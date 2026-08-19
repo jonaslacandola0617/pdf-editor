@@ -85,7 +85,20 @@
   border-radius: 3px;
 }
 
-/* Keep the text layer below PDF Forge annotations. */
+/* An empty annotation layer must not block the real PDF text underneath it. */
 .pdf-page .annotation-layer {
   z-index: 3;
+}
+
+.tool-editText .annotation-layer {
+  pointer-events: none;
+}
+
+/* In Select mode, native text remains selectable while actual annotations stay interactive. */
+.tool-select .annotation-layer {
+  pointer-events: none;
+}
+
+.tool-select .annotation-layer .annotation {
+  pointer-events: auto;
 }
