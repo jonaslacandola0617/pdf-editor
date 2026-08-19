@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Archive, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronLeft, ChevronRight,
-  Copy, Download, FileInput, FileOutput, FilePlus2, Files, FormInput, Highlighter, ImagePlus,
+  Copy, Download, FileInput, FileOutput, Files, FormInput, Highlighter,
   Info, Library, Menu, Minus, MousePointer2, PenLine, Plus, Redo2, RotateCcw, RotateCw,
-  Save, Search, Shapes, Split, Trash2, Type, Undo2, Upload, X, ZoomIn, ZoomOut,
+  Save, ScanLine, Search, Shapes, Split, Trash2, Type, Undo2, Upload, X, ZoomIn, ZoomOut,
 } from 'lucide-react'
 import { PdfPageCanvas } from './components/PdfPageCanvas'
 import { Thumbnail } from './components/Thumbnail'
+import { AdvancedTools } from './components/AdvancedTools'
 import { pdfjsLib, type PDFDocumentProxy } from './lib/pdfjs'
 import {
   createPdfFromFiles, downloadBytes, duplicatePage, extractPages, fileSize, flattenAnnotations,
@@ -24,6 +25,13 @@ type HistorySnapshot = {
   annotations: Annotation[]
   rotations: number[]
   metadata: PdfMetadata
+}
+
+type AdvancedApplyOptions = {
+  page?: number
+  rotations?: number[]
+  annotations?: Annotation[]
+  status?: string
 }
 
 const EMPTY_META: PdfMetadata = { title: '', author: '', subject: '', keywords: '' }
@@ -331,6 +339,10 @@ function App() {
     setAnnotations((a) => a.map((ann) => ann.id === selectedId ? { ...ann, ...patch } : ann))
   }
 
+  const updateAnnotationLive = (id: string, patch: Partial<Annotation>) => {
+    setAnnotations((items) => items.map((ann) => ann.id === id ? { ...ann, ...patch } : ann))
+  }
+
   const deleteSelected = useCallback(() => {
     if (!selectedId) return
     pushHistory()
@@ -351,9 +363,7 @@ function App() {
       setNativeSelection(picked)
       setNativeDraft(picked?.text || '')
       setSelectedId(null)
-      setStatus(picked
-        ? 'Text object selected — edit it in the right panel'
-        : 'No editable PDF text object at that spot')
+      setStatus(picked ? 'Text object selected — edit it in the right panel' : 'No editable PDF text object at that spot')
     } catch (error) {
       console.error(error)
       setStatus('That text could not be opened for editing.')
@@ -404,6 +414,32 @@ function App() {
     setStatus('Saved to local library')
   }
 
+  const applyAdvancedMutation = (next: ArrayBuffer, options: AdvancedApplyOptions = {}) => {
+    setBytes(next.slice(0))
+    if (options.rotations) setRotations(options.rotations)
+    if (options.annotations) setAnnotations(options.annotations)
+    if (typeof options.page === 'number') setCurrentPage(Math.max(0, options.page))
+    setSelectedId(null)
+    setNativeSelection(null)
+    setNativeDraft('')
+    setSearchMatches([])
+    if (options.status) setStatus(options.status)
+    void readFormFields(next).then(setFormFields).catch(() => setFormFields([]))
+  }
+
+  const fitView = async (mode: 'page' | 'width') => {
+    if (!pdf) return
+    try {
+      const page = await pdf.getPage(currentPage + 1)
+      const viewport = page.getViewport({ scale: 1, rotation: rotations[currentPage] || 0 })
+      const scroller = document.querySelector<HTMLElement>('.page-scroll')
+      if (!scroller) return
+      const widthScale = Math.max(0.4, (scroller.clientWidth - 80) / viewport.width)
+      const heightScale = Math.max(0.4, (scroller.clientHeight - 125) / viewport.height)
+      setZoom(Math.min(2.4, mode === 'width' ? widthScale : Math.min(widthScale, heightScale)))
+    } catch { /* ignore transient page reloads */ }
+  }
+
   const runExtract = async () => {
     if (!bytes) return
     const indices = parsePageRange(extractRange, pageCount)
@@ -415,30 +451,30 @@ function App() {
   }
 
   const searchPdf = useCallback(async () => {
-  if (!bytes || !searchText.trim()) { setSearchMatches([]); return }
-  const q = searchText.trim().toLowerCase()
-  const found: number[] = []
-  setStatus('Searching…')
-  const task = pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) })
-  try {
-    const searchDoc = await task.promise
-    for (let i = 0; i < searchDoc.numPages; i++) {
-      const page = await searchDoc.getPage(i + 1)
-      const content = await page.getTextContent()
-      const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ').toLowerCase()
-      if (text.includes(q)) found.push(i)
+    if (!bytes || !searchText.trim()) { setSearchMatches([]); return }
+    const q = searchText.trim().toLowerCase()
+    const found: number[] = []
+    setStatus('Searching…')
+    const task = pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) })
+    try {
+      const searchDoc = await task.promise
+      for (let i = 0; i < searchDoc.numPages; i++) {
+        const page = await searchDoc.getPage(i + 1)
+        const content = await page.getTextContent()
+        const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ').toLowerCase()
+        if (text.includes(q)) found.push(i)
+      }
+      setSearchMatches(found); setSearchMatchIndex(0)
+      if (found.length) setCurrentPage(found[0])
+      setStatus(found.length ? `${found.length} matching page${found.length === 1 ? '' : 's'}` : 'No matches')
+    } catch (error) {
+      console.error(error)
+      setSearchMatches([])
+      setStatus('Search failed for this document.')
+    } finally {
+      void task.destroy()
     }
-    setSearchMatches(found); setSearchMatchIndex(0)
-    if (found.length) setCurrentPage(found[0])
-    setStatus(found.length ? `${found.length} matching page${found.length === 1 ? '' : 's'}` : 'No matches')
-  } catch (error) {
-    console.error(error)
-    setSearchMatches([])
-    setStatus('Search failed for this document.')
-  } finally {
-    void task.destroy()
-  }
-}, [bytes, searchText])
+  }, [bytes, searchText])
 
   const cycleSearch = (delta: number) => {
     if (!searchMatches.length) return
@@ -500,7 +536,7 @@ function App() {
           <div className="hero-copy">
             <span className="eyebrow">YOUR PDF WORKSPACE</span>
             <h1>Edit PDFs without<br /><em>giving them away.</em></h1>
-            <p>Open, organize, annotate, fill, merge, split and export PDFs directly in your browser. Your core editing workflow stays on your device.</p>
+            <p>Open, organize, annotate, edit text, OCR, redact, protect, optimize and export PDFs directly in your browser.</p>
             <div className="hero-actions">
               <button className="primary large" onClick={() => fileInput.current?.click()}><Upload size={18} /> Open PDF or images</button>
               <span>or drop files anywhere</span>
@@ -522,7 +558,7 @@ function App() {
           </div>
         </section>
         <section className="feature-strip">
-          <span><PenLine /> Annotate & sign</span><span><Menu /> Organize pages</span><span><Split /> Merge & extract</span><span><FormInput /> Fill forms</span>
+          <span><PenLine /> Edit & sign</span><span><Menu /> Organize pages</span><span><ScanLine /> OCR & redact</span><span><FormInput /> Fill forms</span>
         </section>
         <input ref={fileInput} hidden type="file" accept="application/pdf,image/png,image/jpeg" multiple onChange={(e) => e.target.files && importFiles(e.target.files)} />
       </main>
@@ -566,14 +602,9 @@ function App() {
             </div>
             <div className="thumbnail-list">
               {Array.from({ length: pageCount }, (_, i) => (
-                <div
-                  key={`${i}-${rotations[i] || 0}`}
-                  className="thumb-drag-wrap"
-                  draggable
-                  onDragStart={() => setDragPage(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => { if (dragPage !== null) movePage(dragPage, i); setDragPage(null) }}
-                >
+                <div key={`${i}-${rotations[i] || 0}`} className="thumb-drag-wrap" draggable
+                  onDragStart={() => setDragPage(i)} onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { if (dragPage !== null) movePage(dragPage, i); setDragPage(null) }}>
                   <Thumbnail pdf={pdf} pageIndex={i} rotation={rotations[i] || 0} active={currentPage === i} onClick={() => setCurrentPage(i)} />
                 </div>
               ))}
@@ -624,6 +655,7 @@ function App() {
               <button className={tool === 'text' ? 'active' : ''} onClick={() => chooseTool('text')} title="Add text"><Type /></button>
               <button className={tool === 'highlight' ? 'active' : ''} onClick={() => chooseTool('highlight')} title="Highlight"><Highlighter /></button>
               <button className={tool === 'rectangle' ? 'active' : ''} onClick={() => chooseTool('rectangle')} title="Rectangle"><Shapes /></button>
+              <button className={tool === 'redaction' ? 'active' : ''} onClick={() => chooseTool('redaction')} title="Redact"><ScanLine /></button>
               <button className={tool === 'ink' ? 'active' : ''} onClick={() => chooseTool('ink')} title="Draw"><PenLine /></button>
               <button className={tool === 'signature' ? 'active' : ''} onClick={() => chooseTool('signature')} title="Signature"><span className="signature-icon">⌁</span></button>
             </div>
@@ -632,6 +664,11 @@ function App() {
             <div className="toolbar-spacer" />
             <button className="soft-btn" onClick={() => mergeInput.current?.click()}><FileInput /> Merge</button>
             <button className="soft-btn" onClick={() => { setExtractRange(String(currentPage + 1)); setExtractOpen(true) }}><Split /> Extract</button>
+            <AdvancedTools
+              bytes={bytes} name={name} pageCount={pageCount} currentPage={currentPage}
+              rotations={rotations} annotations={annotations} metadata={metadata}
+              onBeforeMutate={pushHistory} onApply={applyAdvancedMutation} onStatus={setStatus}
+            />
           </div>
 
           <div className="document-stage">
@@ -640,14 +677,15 @@ function App() {
                 : tool === 'editText' ? (nativeBusy ? 'Loading PDF text engine…' : nativeSelection ? 'Edit the selected PDF text in the right panel' : 'Click existing PDF text to edit it')
                   : tool === 'text' ? 'Click anywhere on the page to add new text'
                     : tool === 'highlight' || tool === 'rectangle' ? 'Drag on the page to place the annotation'
-                      : 'Draw directly on the page'
+                      : tool === 'redaction' ? 'Drag over sensitive content, then apply secure redactions from Tools'
+                        : 'Draw directly on the page'
             }</div>
             <div className="page-scroll">
               <PdfPageCanvas
                 pdf={pdf} pageIndex={currentPage} zoom={zoom} rotation={rotations[currentPage] || 0}
                 annotations={pageAnnotations} tool={tool} color={color} strokeWidth={strokeWidth} fontSize={fontSize}
                 selectedId={selectedId} nativeSelection={nativeSelection} onSelect={setSelectedId} onAdd={addAnnotation}
-                onPickNativeText={pickNativeText}
+                onPickNativeText={pickNativeText} onBeginAnnotationEdit={pushHistory} onUpdateAnnotation={updateAnnotationLive}
               />
             </div>
             <div className="floating-nav">
@@ -655,6 +693,8 @@ function App() {
               <span><input value={currentPage + 1} onChange={(e) => setCurrentPage(Math.max(0, Math.min(pageCount - 1, Number(e.target.value) - 1 || 0)))} /> / {pageCount}</span>
               <button onClick={() => setCurrentPage((p) => Math.min(pageCount - 1, p + 1))} disabled={currentPage === pageCount - 1}><ChevronRight /></button>
               <span className="divider" />
+              <button title="Fit page" onClick={() => void fitView('page')}><span>Fit</span></button>
+              <button title="Fit width" onClick={() => void fitView('width')}><span>W</span></button>
               <button onClick={() => setZoom((z) => Math.max(0.4, z - 0.1))}><ZoomOut /></button>
               <span>{Math.round(zoom * 100)}%</span>
               <button onClick={() => setZoom((z) => Math.min(2.4, z + 0.1))}><ZoomIn /></button>
@@ -668,40 +708,25 @@ function App() {
           {nativeSelection ? (
             <div className="native-text-editor">
               <label className="property-field">Existing PDF text
-                <textarea
-                  rows={7}
-                  value={nativeDraft}
-                  disabled={nativeBusy}
-                  onChange={(e) => setNativeDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') void applyNativeTextEdit()
-                  }}
-                />
+                <textarea rows={7} value={nativeDraft} disabled={nativeBusy} onChange={(e) => setNativeDraft(e.target.value)}
+                  onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') void applyNativeTextEdit() }} />
               </label>
-              <div className="native-edit-meta">
-                <span>Page {nativeSelection.page + 1}</span>
-                {nativeSelection.fontSize ? <span>Original size {Math.round(nativeSelection.fontSize * 10) / 10} pt</span> : null}
-              </div>
+              <div className="native-edit-meta"><span>Page {nativeSelection.page + 1}</span>{nativeSelection.fontSize ? <span>Original size {Math.round(nativeSelection.fontSize * 10) / 10} pt</span> : null}</div>
               <p className="native-edit-note">This changes the underlying PDF text object. PDFs do not reflow like Word, so a much longer replacement can overlap nearby content. The original embedded font also controls which characters can be written.</p>
-              {!nativeDraft.length && <p className="native-edit-warning">Deleting a native text object completely is not enabled yet. Enter replacement text instead.</p>}
-              <div className="native-edit-actions">
-                <button className="soft-btn" disabled={nativeBusy} onClick={() => { setNativeSelection(null); setNativeDraft('') }}>Cancel</button>
-                <button className="primary" disabled={nativeBusy || !nativeDraft.length || nativeDraft === nativeSelection.text} onClick={() => void applyNativeTextEdit()}>{nativeBusy ? 'Applying…' : 'Apply to PDF'}</button>
-              </div>
+              {!nativeDraft.length && <p className="native-edit-warning">Deleting a native text object completely is not enabled in this build yet. Enter replacement text instead.</p>}
+              <div className="native-edit-actions"><button className="soft-btn" disabled={nativeBusy} onClick={() => { setNativeSelection(null); setNativeDraft('') }}>Cancel</button><button className="primary" disabled={nativeBusy || !nativeDraft.length || nativeDraft === nativeSelection.text} onClick={() => void applyNativeTextEdit()}>{nativeBusy ? 'Applying…' : 'Apply to PDF'}</button></div>
             </div>
           ) : <>
-            {selected?.type === 'text' && <label className="property-field">Text<textarea rows={5} value={selected.text || ''} onChange={(e) => setAnnotations((a) => a.map((ann) => ann.id === selected.id ? { ...ann, text: e.target.value } : ann))} onBlur={() => {}} /></label>}
-            <div className="property-section"><span>Color</span><div className="color-grid">{COLORS.map((c) => <button key={c} className={(selected?.color || color) === c ? 'active' : ''} style={{ background: c }} onClick={() => selected ? updateSelected({ color: c }) : setColor(c)} aria-label={`Color ${c}`} />)}<label className="custom-color"><input type="color" value={selected?.color || color} onChange={(e) => selected ? updateSelected({ color: e.target.value }) : setColor(e.target.value)} /></label></div></div>
+            {selected?.type === 'text' && <label className="property-field">Text<textarea rows={5} value={selected.text || ''} onChange={(e) => setAnnotations((a) => a.map((ann) => ann.id === selected.id ? { ...ann, text: e.target.value } : ann))} /></label>}
+            {selected?.type === 'redaction' ? <div className="right-help"><strong>Redaction mark</strong><p>This red box is only a mark. Use <b>Tools → Apply marked redactions</b> to destructively remove the underlying page content.</p></div> : <div className="property-section"><span>Color</span><div className="color-grid">{COLORS.map((c) => <button key={c} className={(selected?.color || color) === c ? 'active' : ''} style={{ background: c }} onClick={() => selected ? updateSelected({ color: c }) : setColor(c)} aria-label={`Color ${c}`} />)}<label className="custom-color"><input type="color" value={selected?.color || color} onChange={(e) => selected ? updateSelected({ color: e.target.value }) : setColor(e.target.value)} /></label></div></div>}
             {(selected?.type === 'text' || (!selected && tool === 'text')) && <label className="property-field">Font size <div className="stepper"><button onClick={() => selected ? updateSelected({ fontSize: Math.max(8, (selected.fontSize || 18) - 1) }) : setFontSize((s) => Math.max(8, s - 1))}><Minus /></button><input type="number" value={selected?.fontSize || fontSize} onChange={(e) => selected ? updateSelected({ fontSize: Number(e.target.value) }) : setFontSize(Number(e.target.value))} /><button onClick={() => selected ? updateSelected({ fontSize: (selected.fontSize || 18) + 1 }) : setFontSize((s) => s + 1)}><Plus /></button></div></label>}
             {(selected?.type === 'rectangle' || selected?.type === 'ink' || selected?.type === 'signature' || (!selected && ['rectangle', 'ink', 'signature'].includes(tool))) && <label className="property-field">Stroke width <input className="range" type="range" min="1" max="12" step="1" value={selected?.strokeWidth || strokeWidth} onChange={(e) => selected ? updateSelected({ strokeWidth: Number(e.target.value) }) : setStrokeWidth(Number(e.target.value))} /><strong>{selected?.strokeWidth || strokeWidth}px</strong></label>}
             {!selected && tool === 'editText' && <div className="right-help native-edit-help"><strong>Edit existing PDF text</strong><p>Click text already printed on the page. PDF Forge will select the underlying PDF text object and open its real contents here.</p><p>Scanned/image text can be searched with OCR, but it is not a native text object and cannot be rewritten directly.</p></div>}
-            {!selected && tool !== 'editText' && <div className="right-help"><strong>Editing tips</strong><p>Use the page thumbnails to drag pages into a new order. Drop another PDF or image over the editor to append it.</p><p><kbd>Ctrl</kbd> + <kbd>S</kbd> exports. <kbd>Ctrl</kbd> + <kbd>Z</kbd> undoes. Arrow keys move between pages.</p></div>}
+            {!selected && tool === 'redaction' && <div className="right-help"><strong>Secure redaction</strong><p>Drag over sensitive areas. The marks stay reversible until you choose <b>Tools → Apply marked redactions</b>.</p></div>}
+            {!selected && tool !== 'editText' && tool !== 'redaction' && <div className="right-help"><strong>Editing tips</strong><p>Selected annotations can now be dragged. Box annotations expose a resize handle.</p><p><kbd>Ctrl</kbd> + <kbd>S</kbd> exports. <kbd>Ctrl</kbd> + <kbd>Z</kbd> undoes. Arrow keys move between pages.</p></div>}
           </>}
 
-          <div className="quick-actions">
-            <span>Page {currentPage + 1}</span>
-            <div><button onClick={() => movePage(currentPage, currentPage - 1)} disabled={currentPage === 0}><ArrowUp /></button><button onClick={() => movePage(currentPage, currentPage + 1)} disabled={currentPage === pageCount - 1}><ArrowDown /></button></div>
-          </div>
+          <div className="quick-actions"><span>Page {currentPage + 1}</span><div><button onClick={() => movePage(currentPage, currentPage - 1)} disabled={currentPage === 0}><ArrowUp /></button><button onClick={() => movePage(currentPage, currentPage + 1)} disabled={currentPage === pageCount - 1}><ArrowDown /></button></div></div>
         </aside>
       </section>
 
