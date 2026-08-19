@@ -345,12 +345,15 @@ function App() {
   }
 
   const searchPdf = useCallback(async () => {
-    if (!pdf || !searchText.trim()) { setSearchMatches([]); return }
-    const q = searchText.trim().toLowerCase()
-    const found: number[] = []
-    setStatus('Searching…')
-    for (let i = 0; i < pdf.numPages; i++) {
-      const page = await pdf.getPage(i + 1)
+  if (!bytes || !searchText.trim()) { setSearchMatches([]); return }
+  const q = searchText.trim().toLowerCase()
+  const found: number[] = []
+  setStatus('Searching…')
+  const task = pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) })
+  try {
+    const searchDoc = await task.promise
+    for (let i = 0; i < searchDoc.numPages; i++) {
+      const page = await searchDoc.getPage(i + 1)
       const content = await page.getTextContent()
       const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ').toLowerCase()
       if (text.includes(q)) found.push(i)
@@ -358,7 +361,14 @@ function App() {
     setSearchMatches(found); setSearchMatchIndex(0)
     if (found.length) setCurrentPage(found[0])
     setStatus(found.length ? `${found.length} matching page${found.length === 1 ? '' : 's'}` : 'No matches')
-  }, [pdf, searchText])
+  } catch (error) {
+    console.error(error)
+    setSearchMatches([])
+    setStatus('Search failed for this document.')
+  } finally {
+    void task.destroy()
+  }
+}, [bytes, searchText])
 
   const cycleSearch = (delta: number) => {
     if (!searchMatches.length) return

@@ -40,12 +40,22 @@ export function PdfPageCanvas({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
+  const previewRef = useRef<DragPreview | null>(null)
   const [size, setSize] = useState({ width: 1, height: 1 })
   const [preview, setPreview] = useState<DragPreview | null>(null)
+
+  const updatePreview = (next: DragPreview | null) => {
+    previewRef.current = next
+    setPreview(next)
+  }
 
   useEffect(() => {
     let cancelled = false
     const render = async () => {
+      // Page-count-changing operations update editor state before the replacement
+      // PDFDocumentProxy finishes loading. Never ask the old proxy for a page it
+      // does not have during that short transition.
+      if (pageIndex < 0 || pageIndex >= pdf.numPages) return
       const page = await pdf.getPage(pageIndex + 1)
       if (cancelled) return
       const viewport = page.getViewport({ scale: zoom, rotation })
@@ -62,7 +72,7 @@ export function PdfPageCanvas({
       const renderViewport = page.getViewport({ scale: zoom * ratio, rotation })
       await page.render({ canvas, canvasContext: ctx, viewport: renderViewport }).promise
     }
-    render()
+    void render()
     return () => { cancelled = true }
   }, [pdf, pageIndex, zoom, rotation])
 
@@ -84,6 +94,7 @@ export function PdfPageCanvas({
       onSelect(ink?.id || null)
       return
     }
+
     e.currentTarget.setPointerCapture(e.pointerId)
     const p = pointFromEvent(e)
     if (tool === 'text') {
@@ -94,46 +105,66 @@ export function PdfPageCanvas({
       return
     }
     if (tool === 'highlight' || tool === 'rectangle') {
-      setPreview({ type: tool, start: p, end: p })
+      updatePreview({ type: tool, start: p, end: p })
       return
     }
     if (tool === 'ink' || tool === 'signature') {
-      setPreview({ type: tool, points: [p] })
+      updatePreview({ type: tool, points: [p] })
     }
   }
 
   const pointerMove = (e: React.PointerEvent) => {
-    if (!preview) return
+    const active = previewRef.current
+    if (!active) return
     const p = pointFromEvent(e)
-    if (preview.type === 'highlight' || preview.type === 'rectangle') {
-      setPreview({ ...preview, end: p })
+    if (active.type === 'highlight' || active.type === 'rectangle') {
+      updatePreview({ ...active, end: p })
     } else {
-      setPreview({ ...preview, points: [...(preview.points || []), p] })
+      updatePreview({ ...active, points: [...(active.points || []), p] })
     }
   }
 
-  const pointerUp = () => {
-    if (!preview) return
-    if ((preview.type === 'highlight' || preview.type === 'rectangle') && preview.start && preview.end) {
-      const x = Math.min(preview.start.x, preview.end.x)
-      const y = Math.min(preview.start.y, preview.end.y)
-      const width = Math.max(0.02, Math.abs(preview.end.x - preview.start.x))
-      const height = Math.max(0.018, Math.abs(preview.end.y - preview.start.y))
+  const pointerUp = (e: React.PointerEvent) => {
+    const active = previewRef.current
+    if (!active) return
+
+    const releasedAt = pointFromEvent(e)
+    let completed = active
+    if (active.type === 'highlight' || active.type === 'rectangle') {
+      completed = { ...active, end: releasedAt }
+    } else {
+      const points = active.points || []
+      const last = points[points.length - 1]
+      const needsFinalPoint = !last || Math.hypot(last.x - releasedAt.x, last.y - releasedAt.y) > 0.0005
+      completed = { ...active, points: needsFinalPoint ? [...points, releasedAt] : points }
+    }
+
+    if ((completed.type === 'highlight' || completed.type === 'rectangle') && completed.start && completed.end) {
+      const x = Math.min(completed.start.x, completed.end.x)
+      const y = Math.min(completed.start.y, completed.end.y)
+      const width = Math.max(0.02, Math.abs(completed.end.x - completed.start.x))
+      const height = Math.max(0.018, Math.abs(completed.end.y - completed.start.y))
       onAdd({
-        id: crypto.randomUUID(), page: pageIndex, type: preview.type,
+        id: crypto.randomUUID(), page: pageIndex, type: completed.type,
         x, y, width, height, color, strokeWidth,
       })
-    } else if ((preview.type === 'ink' || preview.type === 'signature') && (preview.points?.length || 0) > 1) {
-      const xs = preview.points!.map((p) => p.x)
-      const ys = preview.points!.map((p) => p.y)
+    } else if ((completed.type === 'ink' || completed.type === 'signature') && (completed.points?.length || 0) > 1) {
+      const xs = completed.points!.map((p) => p.x)
+      const ys = completed.points!.map((p) => p.y)
       onAdd({
-        id: crypto.randomUUID(), page: pageIndex, type: preview.type,
+        id: crypto.randomUUID(), page: pageIndex, type: completed.type,
         x: Math.min(...xs), y: Math.min(...ys), color,
-        strokeWidth: preview.type === 'signature' ? Math.max(2, strokeWidth) : strokeWidth,
-        points: preview.points,
+        strokeWidth: completed.type === 'signature' ? Math.max(2, strokeWidth) : strokeWidth,
+        points: completed.points,
       })
     }
-    setPreview(null)
+    updatePreview(null)
+  }
+
+  const selectAnnotation = (e: React.PointerEvent, id: string) => {
+    if (tool !== 'select') return
+    e.stopPropagation()
+    onSelect(id)
   }
 
   const rectStyle = (ann: Annotation) => ({
@@ -167,7 +198,7 @@ export function PdfPageCanvas({
       onPointerDown={pointerDown}
       onPointerMove={pointerMove}
       onPointerUp={pointerUp}
-      onPointerCancel={() => setPreview(null)}
+      onPointerCancel={() => updatePreview(null)}
     >
       <canvas ref={canvasRef} />
       <div className="annotation-layer">
@@ -179,7 +210,7 @@ export function PdfPageCanvas({
                 key={ann.id}
                 className={`annotation text-annotation ${selected ? 'selected' : ''}`}
                 style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, color: ann.color, fontSize: ann.fontSize }}
-                onPointerDown={(e) => { e.stopPropagation(); onSelect(ann.id) }}
+                onPointerDown={(e) => selectAnnotation(e, ann.id)}
               >{ann.text}</button>
             )
           }
@@ -194,7 +225,7 @@ export function PdfPageCanvas({
                   borderColor: ann.type === 'rectangle' ? ann.color : 'transparent',
                   borderWidth: ann.type === 'rectangle' ? ann.strokeWidth || 2 : 0,
                 }}
-                onPointerDown={(e) => { e.stopPropagation(); onSelect(ann.id) }}
+                onPointerDown={(e) => selectAnnotation(e, ann.id)}
               />
             )
           }
@@ -202,7 +233,7 @@ export function PdfPageCanvas({
             <button
               key={ann.id}
               className={`annotation ink-hitbox ${selected ? 'selected' : ''}`}
-              onPointerDown={(e) => { e.stopPropagation(); onSelect(ann.id) }}
+              onPointerDown={(e) => selectAnnotation(e, ann.id)}
             >{renderInk(ann)}</button>
           )
         })}
