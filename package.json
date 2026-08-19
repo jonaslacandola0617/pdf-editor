@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hyzyla/pdfium": "2.1.13",
     "idb": "8.0.3",
     "lucide-react": "1.28.0",
     "pdf-lib": "1.17.1",
