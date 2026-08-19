@@ -2,6 +2,18 @@ import { test, expect } from '@playwright/test'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { writeFile } from 'node:fs/promises'
 
+async function latestDocumentTimestamp(page: import('@playwright/test').Page) {
+  return page.evaluate(async () => await new Promise<number>((resolve, reject) => {
+    const request = indexedDB.open('pdf-forge')
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => {
+      const get = request.result.transaction('documents', 'readonly').objectStore('documents').getAll()
+      get.onerror = () => reject(get.error)
+      get.onsuccess = () => resolve(Math.max(0, ...get.result.map((doc: any) => Number(doc.updatedAt || 0))))
+    }
+  }))
+}
+
 test('All Tools exposes and activates existing editor features', async ({ page }, testInfo) => {
   const pdf = await PDFDocument.create()
   const sheet = pdf.addPage([612, 792])
@@ -49,9 +61,11 @@ test('All Tools exposes and activates existing editor features', async ({ page }
   await page.locator('.all-tools-drawer').getByRole('button', { name: /^Pages/ }).click()
   await expect(page.getByTitle('Pages')).toHaveClass(/active/)
 
+  const beforeSave = await latestDocumentTimestamp(page)
+  await page.waitForTimeout(25)
   await launcher.click()
   await page.locator('.all-tools-drawer').getByRole('button', { name: /Save locally/ }).click()
-  await expect(page.locator('.stage-top-hint')).toContainText('Saved to local library')
+  await expect.poll(() => latestDocumentTimestamp(page)).toBeGreaterThan(beforeSave)
 
   await launcher.click()
   await expect(page.locator('.all-tools-drawer')).toBeVisible()
