@@ -74,11 +74,13 @@ function getDocument(...args: Parameters<typeof basePdfjs.getDocument>) {
   return task
 }
 
-export const pdfjsLib = new Proxy(basePdfjs, {
-  get(target, property, receiver) {
-    if (property === 'getDocument') return getDocument
-    return Reflect.get(target, property, receiver)
-  },
-}) as typeof basePdfjs
+// PDF.js is an ES module namespace object whose exports are non-configurable.
+// Wrapping that namespace in a Proxy and returning a different getDocument value
+// violates Proxy invariants in Chromium. Copy the exports onto a normal object
+// instead, then override getDocument safely.
+export const pdfjsLib = {
+  ...basePdfjs,
+  getDocument,
+} as typeof basePdfjs
 
 export type { PDFDocumentProxy } from 'pdfjs-dist'
