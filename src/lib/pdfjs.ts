@@ -36,18 +36,28 @@ function patchPage(page: PDFPageProxy, fingerprint: string, pageCount: number) {
         // This matters after PDF Forge exports annotations: the PDF may retain its
         // original document fingerprint, so an older cached OCR result must never
         // hide newly embedded native text from search.
+        const ocrFontName = 'pdf-forge-ocr'
         const ocrItem = {
           str: ocr.text,
           dir: 'ltr',
           width: 0,
           height: 0,
           transform: [1, 0, 0, 1, 0, 0],
-          fontName: 'pdf-forge-ocr',
+          fontName: ocrFontName,
           hasEOL: false,
         }
         return {
           ...native,
           items: [...native.items, ocrItem],
+          styles: {
+            ...native.styles,
+            [ocrFontName]: {
+              fontFamily: 'sans-serif',
+              ascent: 1,
+              descent: 0,
+              vertical: false,
+            },
+          },
         } as unknown as typeof native
       } catch {
         return native
