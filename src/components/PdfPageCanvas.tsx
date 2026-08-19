@@ -52,6 +52,10 @@ export function PdfPageCanvas({
   useEffect(() => {
     let cancelled = false
     const render = async () => {
+      // Page-count-changing operations update editor state before the replacement
+      // PDFDocumentProxy finishes loading. Never ask the old proxy for a page it
+      // does not have during that short transition.
+      if (pageIndex < 0 || pageIndex >= pdf.numPages) return
       const page = await pdf.getPage(pageIndex + 1)
       if (cancelled) return
       const viewport = page.getViewport({ scale: zoom, rotation })
@@ -68,7 +72,7 @@ export function PdfPageCanvas({
       const renderViewport = page.getViewport({ scale: zoom * ratio, rotation })
       await page.render({ canvas, canvasContext: ctx, viewport: renderViewport }).promise
     }
-    render()
+    void render()
     return () => { cancelled = true }
   }, [pdf, pageIndex, zoom, rotation])
 
