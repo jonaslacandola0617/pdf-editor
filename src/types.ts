@@ -1,11 +1,12 @@
-export type Tool = 'select' | 'text' | 'highlight' | 'rectangle' | 'ink' | 'signature'
+export type Tool = 'select' | 'editText' | 'text' | 'highlight' | 'rectangle' | 'ink' | 'signature'
+export type AnnotationType = 'text' | 'highlight' | 'rectangle' | 'ink' | 'signature'
 
 export type Point = { x: number; y: number }
 
 export type Annotation = {
   id: string
   page: number
-  type: Exclude<Tool, 'select'>
+  type: AnnotationType
   x: number
   y: number
   width?: number
@@ -15,6 +16,17 @@ export type Annotation = {
   fontSize?: number
   strokeWidth?: number
   points?: Point[]
+}
+
+export type NativeTextSelection = {
+  page: number
+  objectIndex: number
+  text: string
+  x: number
+  y: number
+  width: number
+  height: number
+  fontSize?: number
 }
 
 export type LibraryDocument = {
