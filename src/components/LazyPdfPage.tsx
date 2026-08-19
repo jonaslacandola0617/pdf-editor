@@ -4,7 +4,7 @@ import { PdfPageCanvas } from './PdfPageCanvas'
 import type { Annotation, NativeTextSelection, Point, Tool } from '../types'
 
 type Props = {
-  pdf: PDFDocumentProxy
+  pdf: PDFDocumentProxy | null
   pageIndex: number
   zoom: number
   rotation: number
@@ -29,6 +29,7 @@ export function LazyPdfPage(props: Props) {
   const [placeholder, setPlaceholder] = useState({ width: 595, height: 842 })
 
   useEffect(() => {
+    if (!props.pdf) return
     let cancelled = false
     void props.pdf.getPage(props.pageIndex + 1).then((page) => {
       if (cancelled) return
