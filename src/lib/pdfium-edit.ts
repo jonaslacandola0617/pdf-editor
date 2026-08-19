@@ -194,23 +194,23 @@ function wrapJsFunctionForWasm(callback: (self: number, data: number, size: numb
   // Wrap our JavaScript callback as an actual wasm function so the funcref table
   // accepts it. Signature: i32 (i32, i32, i32).
   const typeSection = [
-    1, // one function type
-    0x60, // func
-    3, 0x7f, 0x7f, 0x7f, // three i32 params
-    1, 0x7f, // one i32 result
+    1,
+    0x60,
+    3, 0x7f, 0x7f, 0x7f,
+    1, 0x7f,
   ]
   const importSection = [
-    1, // one import
-    1, 0x65, // module "e"
-    1, 0x66, // name "f"
-    0, // import kind: function
-    0, // type index 0
+    1,
+    1, 0x65,
+    1, 0x66,
+    0,
+    0,
   ]
   const exportSection = [
-    1, // one export
-    1, 0x66, // name "f"
-    0, // export kind: function
-    0, // function index 0
+    1,
+    1, 0x66,
+    0,
+    0,
   ]
   const bytes = new Uint8Array([
     0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
@@ -226,13 +226,33 @@ function installWriteCallback(module: PdfiumRuntime, callback: (self: number, da
   const table = module.wasmExports.__indirect_function_table
   if (!table) throw new Error('PDFium did not expose its WebAssembly function table.')
 
-  const ptr = table.length
-  table.grow(1)
+  // This PDFium build gives the table a fixed maximum, so growing it is not
+  // guaranteed to work. Reuse a currently empty, non-zero slot first. Slot 0 is
+  // intentionally skipped because C/C++ treats function pointer 0 as null.
+  let ptr = -1
+  for (let i = table.length - 1; i >= 1; i--) {
+    if (table.get(i) === null) {
+      ptr = i
+      break
+    }
+  }
+
+  if (ptr === -1) {
+    try {
+      const previousLength = table.length
+      table.grow(1)
+      ptr = previousLength
+    } catch {
+      throw new Error('PDFium has no free callback slot for saving this edit.')
+    }
+  }
+
+  const previous = table.get(ptr)
   table.set(ptr, wrapJsFunctionForWasm(callback))
   return {
     ptr,
     cleanup: () => {
-      try { table.set(ptr, null) } catch { /* table slots cannot always be cleared */ }
+      try { table.set(ptr, previous) } catch { /* best effort restoration */ }
     },
   }
 }
