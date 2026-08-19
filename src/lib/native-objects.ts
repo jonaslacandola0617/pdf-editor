@@ -39,6 +39,17 @@ function pageAnnotations(pdf: PDFDocument, pageIndex: number) {
   return page.node.lookupMaybe(PDFName.of('Annots'), PDFArray) || null
 }
 
+function annotationDict(pdf: PDFDocument, annots: PDFArray, index: number) {
+  const raw = annots.get(index)
+  if (!raw) return null
+  try {
+    const resolved = raw instanceof PDFRef ? pdf.context.lookup(raw) : raw
+    return resolved instanceof PDFDict ? resolved : null
+  } catch {
+    return null
+  }
+}
+
 export async function listNativeComments(bytes: ArrayBuffer): Promise<NativeCommentInfo[]> {
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const result: NativeCommentInfo[] = []
@@ -46,7 +57,7 @@ export async function listNativeComments(bytes: ArrayBuffer): Promise<NativeComm
     const annots = pageAnnotations(pdf, pageIndex)
     if (!annots) return
     for (let annotationIndex = 0; annotationIndex < annots.size(); annotationIndex++) {
-      const dict = pdf.context.lookup(annots.get(annotationIndex), PDFDict)
+      const dict = annotationDict(pdf, annots, annotationIndex)
       if (!dict) continue
       const subtype = dict.get(PDFName.of('Subtype'))?.toString()
       if (subtype !== '/Text' && subtype !== '/FreeText') continue
@@ -66,7 +77,7 @@ export async function updateNativeComment(bytes: ArrayBuffer, pageIndex: number,
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const annots = pageAnnotations(pdf, pageIndex)
   if (!annots || annotationIndex < 0 || annotationIndex >= annots.size()) throw new Error('This comment no longer exists.')
-  const dict = pdf.context.lookup(annots.get(annotationIndex), PDFDict)
+  const dict = annotationDict(pdf, annots, annotationIndex)
   const subtype = dict?.get(PDFName.of('Subtype'))?.toString()
   if (!dict || (subtype !== '/Text' && subtype !== '/FreeText')) throw new Error('This annotation is not an editable comment.')
   dict.set(PDFName.of('Contents'), PDFHexString.fromText(text))
@@ -78,7 +89,7 @@ export async function deleteNativeComment(bytes: ArrayBuffer, pageIndex: number,
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const annots = pageAnnotations(pdf, pageIndex)
   if (!annots || annotationIndex < 0 || annotationIndex >= annots.size()) throw new Error('This comment no longer exists.')
-  const dict = pdf.context.lookup(annots.get(annotationIndex), PDFDict)
+  const dict = annotationDict(pdf, annots, annotationIndex)
   const subtype = dict?.get(PDFName.of('Subtype'))?.toString()
   if (!dict || (subtype !== '/Text' && subtype !== '/FreeText')) throw new Error('This annotation is not a comment.')
   annots.remove(annotationIndex)
@@ -98,7 +109,7 @@ export async function listNativeLinks(bytes: ArrayBuffer): Promise<NativeLinkInf
     const annots = pageAnnotations(pdf, pageIndex)
     if (!annots) return
     for (let annotationIndex = 0; annotationIndex < annots.size(); annotationIndex++) {
-      const dict = pdf.context.lookup(annots.get(annotationIndex), PDFDict)
+      const dict = annotationDict(pdf, annots, annotationIndex)
       if (!dict || dict.get(PDFName.of('Subtype'))?.toString() !== '/Link') continue
       const url = uriFromLink(dict)
       if (url) result.push({ pageIndex, annotationIndex, url })
@@ -111,7 +122,7 @@ export async function updateNativeLink(bytes: ArrayBuffer, pageIndex: number, an
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const annots = pageAnnotations(pdf, pageIndex)
   if (!annots || annotationIndex < 0 || annotationIndex >= annots.size()) throw new Error('This link no longer exists.')
-  const dict = pdf.context.lookup(annots.get(annotationIndex), PDFDict)
+  const dict = annotationDict(pdf, annots, annotationIndex)
   if (!dict || dict.get(PDFName.of('Subtype'))?.toString() !== '/Link') throw new Error('This annotation is not a link.')
   const raw = url.trim()
   if (!raw) throw new Error('Enter a URL for this link.')
@@ -130,7 +141,7 @@ export async function deleteNativeLink(bytes: ArrayBuffer, pageIndex: number, an
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const annots = pageAnnotations(pdf, pageIndex)
   if (!annots || annotationIndex < 0 || annotationIndex >= annots.size()) throw new Error('This link no longer exists.')
-  const dict = pdf.context.lookup(annots.get(annotationIndex), PDFDict)
+  const dict = annotationDict(pdf, annots, annotationIndex)
   if (!dict || dict.get(PDFName.of('Subtype'))?.toString() !== '/Link') throw new Error('This annotation is not a link.')
   annots.remove(annotationIndex)
   return (await pdf.save({ useObjectStreams: true })).buffer as ArrayBuffer
