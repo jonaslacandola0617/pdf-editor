@@ -26,10 +26,7 @@ import {
   Save,
   ScanLine,
   Search,
-  Shapes,
-  Split,
-  Trash2,
-  Type,
+  Shapes, Split, StickyNote, Trash2, Type,
   Undo2,
   Upload,
   X,
@@ -57,6 +54,8 @@ import {
 import { deleteNativeTextObject, pickNativeTextObject, replaceNativeTextObject } from './lib/pdfium-edit'
 import { pdfjsLib, type PDFDocumentProxy } from './lib/pdfjs'
 import { secureRedactPdf } from './lib/redaction'
+import { embedNativeNotes } from './lib/pdf-notes'
+import { annotationFromPreset, loadSignaturePresets, presetFromAnnotation, storeSignaturePresets, type SignaturePreset } from './lib/signature-presets'
 import { decryptPdf } from './lib/security'
 import { deleteDocument, listDocuments, saveDocument } from './lib/storage'
 import type {
@@ -71,7 +70,7 @@ import type {
 import './styles.css'
 import './native-edit.css'
 
-type Panel = 'pages' | 'library' | 'forms' | 'info'
+type Panel = 'pages' | 'library' | 'forms' | 'comments' | 'info'
 type ViewMode = 'single' | 'continuous' | 'spread'
 
 type HistorySnapshot = {
@@ -166,6 +165,7 @@ export default function App() {
   const [pageCount, setPageCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(0)
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set())
+  const [signaturePresets, setSignaturePresets] = useState<SignaturePreset[]>(() => loadSignaturePresets())
   const [rotations, setRotations] = useState<number[]>([])
   const [annotations, setAnnotations] = useState<Annotation[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -601,6 +601,28 @@ export default function App() {
     setTool('select')
   }
 
+  const saveReusableSignature = (annotation: Annotation) => {
+    const label = window.prompt('Name this reusable signature', `Signature ${signaturePresets.length + 1}`)
+    if (label === null) return
+    const preset = presetFromAnnotation(annotation, label)
+    if (!preset) { setStatus('Draw a signature first.'); return }
+    const next = [preset, ...signaturePresets].slice(0, 8)
+    setSignaturePresets(next)
+    storeSignaturePresets(next)
+    setStatus('Reusable signature saved locally')
+  }
+
+  const insertSignaturePreset = (preset: SignaturePreset) => {
+    addAnnotation(annotationFromPreset(preset, currentPage, color, strokeWidth))
+    setStatus(`Inserted ${preset.name}`)
+  }
+
+  const removeSignaturePreset = (id: string) => {
+    const next = signaturePresets.filter((preset) => preset.id !== id)
+    setSignaturePresets(next)
+    storeSignaturePresets(next)
+  }
+
   const updateSelected = (patch: Partial<Annotation>) => {
     if (!selectedId) return
     pushHistory()
@@ -694,23 +716,22 @@ export default function App() {
 
   const prepareFinalPdf = useCallback(async () => {
     if (!bytes) throw new Error('No PDF is open.')
-    const redactions = annotations.filter((annotation) => annotation.type === 'redaction')
-    const ordinary = annotations.filter((annotation) => annotation.type !== 'redaction')
-
+    const redactions = annotations.filter((ann) => ann.type === 'redaction')
+    const notes = annotations.filter((ann) => ann.type === 'note')
+    const ordinary = annotations.filter((ann) => ann.type !== 'redaction' && ann.type !== 'note')
+    let finalized: Uint8Array
     if (redactions.length) {
-      const flattened = await flattenAnnotations(
-        bytes,
-        annotationsForExport(ordinary, rotations),
-        metadata,
-      )
+      const flattened = await flattenAnnotations(bytes, annotationsForExport(ordinary, rotations), metadata)
       const redacted = await secureRedactPdf(arrayBufferFrom(flattened), redactions, rotations)
-      return new Uint8Array(redacted)
+      finalized = new Uint8Array(redacted)
+    } else {
+      const rotated = rotations.some(Boolean)
+        ? await reorderPdf(bytes, Array.from({ length: pageCount }, (_, index) => index), rotations)
+        : bytes
+      finalized = await flattenAnnotations(rotated, annotationsForExport(ordinary, rotations), metadata)
     }
-
-    const rotated = rotations.some(Boolean)
-      ? await reorderPdf(bytes, Array.from({ length: pageCount }, (_, index) => index), rotations)
-      : bytes
-    return flattenAnnotations(rotated, annotationsForExport(ordinary, rotations), metadata)
+    if (!notes.length) return finalized
+    return new Uint8Array(await embedNativeNotes(arrayBufferFrom(finalized), notes))
   }, [annotations, bytes, metadata, pageCount, rotations])
 
   const exportPdf = useCallback(async () => {
@@ -1026,6 +1047,7 @@ export default function App() {
           <button className={panel === 'library' ? 'active' : ''} onClick={() => setPanel('library')} title="Library"><Library /></button>
           <button className={panel === 'pages' ? 'active' : ''} onClick={() => setPanel('pages')} title="Pages"><Files /></button>
           <button className={panel === 'forms' ? 'active' : ''} onClick={() => setPanel('forms')} title="Form fields"><FormInput /></button>
+          <button className={panel === 'comments' ? 'active' : ''} onClick={() => setPanel('comments')} title="Comments"><StickyNote /></button>
           <button className={panel === 'info' ? 'active' : ''} onClick={() => setPanel('info')} title="Document info"><Info /></button>
         </nav>
 
@@ -1174,6 +1196,28 @@ export default function App() {
             </>
           )}
 
+          {panel === 'comments' && (
+            <>
+              <div className="panel-heading">
+                <div><span className="eyebrow">COMMENTS</span><h3>Notes</h3></div>
+                <span>{annotations.filter((ann) => ann.type === 'note').length}</span>
+              </div>
+              <button className="drop-card comment-add" onClick={() => chooseTool('note')}>
+                <StickyNote /><strong>Add sticky note</strong><span>Click anywhere on a page</span>
+              </button>
+              <div className="comment-list">
+                {annotations.filter((ann) => ann.type === 'note').map((note) => (
+                  <button key={note.id} className={selectedId === note.id ? 'active' : ''} onClick={() => { setCurrentPage(note.page); setSelectedId(note.id); chooseTool('select') }}>
+                    <StickyNote /><span><strong>Page {note.page + 1}</strong><small>{note.text || 'Empty note'}</small></span>
+                  </button>
+                ))}
+                {!annotations.some((ann) => ann.type === 'note') && (
+                  <div className="empty-panel"><StickyNote /><strong>No comments yet</strong><p>Add a sticky note and it will export as a standard PDF comment.</p></div>
+                )}
+              </div>
+            </>
+          )}
+
           {panel === 'info' && (
             <>
               <div className="panel-heading"><div><span className="eyebrow">DOCUMENT</span><h3>Properties</h3></div><Info /></div>
@@ -1193,6 +1237,7 @@ export default function App() {
               <button className={tool === 'select' ? 'active' : ''} onClick={() => chooseTool('select')} title="Select"><MousePointer2 /></button>
               <button className={tool === 'editText' ? 'active' : ''} onClick={() => chooseTool('editText')} title="Edit existing text"><PenLine /></button>
               <button className={tool === 'text' ? 'active' : ''} onClick={() => chooseTool('text')} title="Add text"><Type /></button>
+              <button className={tool === 'note' ? 'active' : ''} onClick={() => chooseTool('note')} title="Sticky note"><StickyNote /></button>
               <button className={tool === 'highlight' ? 'active' : ''} onClick={() => chooseTool('highlight')} title="Highlight"><Highlighter /></button>
               <button className={tool === 'rectangle' ? 'active' : ''} onClick={() => chooseTool('rectangle')} title="Rectangle"><Shapes /></button>
               <button className={tool === 'redaction' ? 'active' : ''} onClick={() => chooseTool('redaction')} title="Redact"><ScanLine /></button>
@@ -1244,6 +1289,7 @@ export default function App() {
                     : 'Click existing PDF text to edit it'
               )}
               {tool === 'text' && 'Click anywhere on the page to add new text'}
+              {tool === 'note' && 'Click anywhere on the page to add a sticky note'}
               {(tool === 'highlight' || tool === 'rectangle') && 'Drag on the page to place the annotation'}
               {tool === 'redaction' && 'Drag over sensitive content, then apply secure redactions from Tools'}
               {(tool === 'ink' || tool === 'signature') && 'Draw directly on the page'}
@@ -1359,6 +1405,13 @@ export default function App() {
                 </label>
               )}
 
+              {selected?.type === 'note' && (
+                <label className="property-field">
+                  Comment
+                  <textarea rows={6} value={selected.text || ''} onChange={(event) => setAnnotations((items) => items.map((ann) => ann.id === selected.id ? { ...ann, text: event.target.value } : ann))} placeholder="Write a comment…" />
+                </label>
+              )}
+
               {selected?.type === 'redaction' ? (
                 <div className="right-help">
                   <strong>Redaction mark</strong>
@@ -1442,6 +1495,29 @@ export default function App() {
                   />
                   <strong>{selected?.strokeWidth || strokeWidth}px</strong>
                 </label>
+              )}
+
+              {selected?.type === 'signature' && (
+                <div className="signature-preset-panel">
+                  <strong>Reusable signature</strong>
+                  <button className="soft-btn" onClick={() => saveReusableSignature(selected)}>Save this signature</button>
+                </div>
+              )}
+              {!selected && tool === 'signature' && signaturePresets.length > 0 && (
+                <div className="signature-preset-panel">
+                  <strong>Saved signatures</strong>
+                  <div className="signature-preset-list">
+                    {signaturePresets.map((preset) => (
+                      <div key={preset.id}>
+                        <button onClick={() => insertSignaturePreset(preset)}>{preset.name}</button>
+                        <button className="preset-delete" title="Delete saved signature" onClick={() => removeSignaturePreset(preset.id)}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!selected && tool === 'note' && (
+                <div className="right-help"><strong>Sticky note</strong><p>Click a location on the page. Notes stay local while editing and export as standard PDF comment annotations.</p></div>
               )}
 
               {!selected && tool === 'editText' && (

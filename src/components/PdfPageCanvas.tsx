@@ -220,6 +220,7 @@ export function PdfPageCanvas({
     e.currentTarget.setPointerCapture(e.pointerId)
     const p = pointFromEvent(e)
     if (tool === 'text') { onAdd({ id: crypto.randomUUID(), page: pageIndex, type: 'text', x: p.x, y: p.y, text: 'Type here', color, fontSize }); return }
+    if (tool === 'note') { onAdd({ id: crypto.randomUUID(), page: pageIndex, type: 'note', x: p.x, y: p.y, text: 'New note', color: '#facc15' }); return }
     if (tool === 'highlight' || tool === 'rectangle' || tool === 'redaction') { updatePreview({ type: tool, start: p, end: p }); return }
     if (tool === 'ink' || tool === 'signature') updatePreview({ type: tool, points: [p] })
   }
@@ -291,6 +292,7 @@ export function PdfPageCanvas({
       <div className="annotation-layer">
         {annotations.map((ann) => {
           const selected = ann.id === selectedId
+          if (ann.type === 'note') return <button key={ann.id} className={`annotation note-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%` }} title={ann.text || 'Note'} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}><span>💬</span></button>
           if (ann.type === 'text') return <button key={ann.id} className={`annotation text-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, color: ann.color, fontSize: ann.fontSize }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{ann.text}</button>
           if (ann.type === 'highlight' || ann.type === 'rectangle' || ann.type === 'redaction') return <button key={ann.id} className={`annotation box-annotation ${ann.type} ${selected ? 'selected' : ''}`} style={{ ...rectStyle(ann), background: ann.type === 'highlight' ? `${ann.color}55` : ann.type === 'redaction' ? 'rgba(180,30,25,.72)' : 'transparent', borderColor: ann.type === 'rectangle' ? ann.color : ann.type === 'redaction' ? '#ff625a' : 'transparent', borderWidth: ann.type === 'rectangle' || ann.type === 'redaction' ? ann.strokeWidth || 2 : 0 }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>
             {selected && <span className="annotation-resize-handle" role="button" aria-label="Resize annotation" onPointerDown={(e) => beginAnnotationEdit(e, ann, 'resize')} />}
