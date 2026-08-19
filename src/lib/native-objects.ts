@@ -17,21 +17,38 @@ export type NativeCommentInfo = {
   author: string
 }
 
+export type NativeLinkGeometry = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export type NativeLinkInfo = {
   pageIndex: number
   annotationIndex: number
   url: string
+  geometry: NativeLinkGeometry
 }
 
 export type NativeBookmarkInfo = {
   path: number[]
   title: string
   depth: number
+  pageIndex: number | null
 }
 
 function textValue(value: unknown) {
   if (value instanceof PDFString || value instanceof PDFHexString) return value.decodeText()
   return ''
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value))
+}
+
+function rounded(value: number) {
+  return Math.round(value * 100) / 100
 }
 
 function pageAnnotations(pdf: PDFDocument, pageIndex: number) {
@@ -102,6 +119,24 @@ function uriFromLink(dict: PDFDict) {
   return textValue(action.lookup(PDFName.of('URI')))
 }
 
+function linkGeometry(pdf: PDFDocument, pageIndex: number, dict: PDFDict): NativeLinkGeometry {
+  const page = pdf.getPage(pageIndex)
+  const { width: pageWidth, height: pageHeight } = page.getSize()
+  const rect = dict.lookupMaybe(PDFName.of('Rect'), PDFArray)
+  if (!rect || pageWidth <= 0 || pageHeight <= 0) return { x: 0, y: 0, width: 10, height: 5 }
+  try {
+    const box = rect.asRectangle()
+    return {
+      x: rounded(clamp((box.x / pageWidth) * 100, 0, 100)),
+      y: rounded(clamp(((pageHeight - box.y - box.height) / pageHeight) * 100, 0, 100)),
+      width: rounded(clamp((box.width / pageWidth) * 100, 0.1, 100)),
+      height: rounded(clamp((box.height / pageHeight) * 100, 0.1, 100)),
+    }
+  } catch {
+    return { x: 0, y: 0, width: 10, height: 5 }
+  }
+}
+
 export async function listNativeLinks(bytes: ArrayBuffer): Promise<NativeLinkInfo[]> {
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const result: NativeLinkInfo[] = []
@@ -112,13 +147,19 @@ export async function listNativeLinks(bytes: ArrayBuffer): Promise<NativeLinkInf
       const dict = annotationDict(pdf, annots, annotationIndex)
       if (!dict || dict.get(PDFName.of('Subtype'))?.toString() !== '/Link') continue
       const url = uriFromLink(dict)
-      if (url) result.push({ pageIndex, annotationIndex, url })
+      if (url) result.push({ pageIndex, annotationIndex, url, geometry: linkGeometry(pdf, pageIndex, dict) })
     }
   })
   return result
 }
 
-export async function updateNativeLink(bytes: ArrayBuffer, pageIndex: number, annotationIndex: number, url: string) {
+export async function updateNativeLink(
+  bytes: ArrayBuffer,
+  pageIndex: number,
+  annotationIndex: number,
+  url: string,
+  geometry?: NativeLinkGeometry,
+) {
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const annots = pageAnnotations(pdf, pageIndex)
   if (!annots || annotationIndex < 0 || annotationIndex >= annots.size()) throw new Error('This link no longer exists.')
@@ -134,6 +175,22 @@ export async function updateNativeLink(bytes: ArrayBuffer, pageIndex: number, an
   }
   action.set(PDFName.of('S'), PDFName.of('URI'))
   action.set(PDFName.of('URI'), PDFString.of(normalized))
+
+  if (geometry) {
+    const page = pdf.getPage(pageIndex)
+    const { width: pageWidth, height: pageHeight } = page.getSize()
+    const xPercent = clamp(Number(geometry.x) || 0, 0, 99.9)
+    const yPercent = clamp(Number(geometry.y) || 0, 0, 99.9)
+    const widthPercent = clamp(Number(geometry.width) || 0.1, 0.1, 100 - xPercent)
+    const heightPercent = clamp(Number(geometry.height) || 0.1, 0.1, 100 - yPercent)
+    const x = pageWidth * xPercent / 100
+    const width = pageWidth * widthPercent / 100
+    const height = pageHeight * heightPercent / 100
+    const top = pageHeight * yPercent / 100
+    const bottom = pageHeight - top - height
+    dict.set(PDFName.of('Rect'), pdf.context.obj([x, bottom, x + width, bottom + height]))
+  }
+
   return (await pdf.save({ useObjectStreams: true })).buffer as ArrayBuffer
 }
 
@@ -193,6 +250,30 @@ function locateBookmark(pdf: PDFDocument, path: number[]): LocatedBookmark | nul
   return located
 }
 
+function destinationArray(dict: PDFDict) {
+  const direct = dict.lookupMaybe(PDFName.of('Dest'), PDFArray)
+  if (direct) return direct
+  const action = dict.lookupMaybe(PDFName.of('A'), PDFDict)
+  if (action?.get(PDFName.of('S'))?.toString() === '/GoTo') return action.lookupMaybe(PDFName.of('D'), PDFArray) || null
+  return null
+}
+
+function destinationPageIndex(pdf: PDFDocument, dict: PDFDict) {
+  const destination = destinationArray(dict)
+  if (!destination || !destination.size()) return null
+  const first = destination.get(0)
+  if (first instanceof PDFRef) {
+    const target = first.toString()
+    const index = pdf.getPages().findIndex((page) => page.ref.toString() === target)
+    return index >= 0 ? index : null
+  }
+  if (first instanceof PDFNumber) {
+    const index = Math.floor(first.asNumber())
+    return index >= 0 && index < pdf.getPageCount() ? index : null
+  }
+  return null
+}
+
 function collectBookmarks(pdf: PDFDocument, parent: PDFDict, pathPrefix: number[], depth: number, output: NativeBookmarkInfo[]) {
   let raw = parent.get(PDFName.of('First'))
   let index = 0
@@ -204,7 +285,12 @@ function collectBookmarks(pdf: PDFDocument, parent: PDFDict, pathPrefix: number[
     const dict = pdf.context.lookup(raw, PDFDict)
     if (!dict) break
     const path = [...pathPrefix, index]
-    output.push({ path, title: textValue(dict.lookup(PDFName.of('Title'))) || `Bookmark ${output.length + 1}`, depth })
+    output.push({
+      path,
+      title: textValue(dict.lookup(PDFName.of('Title'))) || `Bookmark ${output.length + 1}`,
+      depth,
+      pageIndex: destinationPageIndex(pdf, dict),
+    })
     if (dict.get(PDFName.of('First')) instanceof PDFRef) collectBookmarks(pdf, dict, path, depth + 1, output)
     raw = dict.get(PDFName.of('Next'))
     index++
@@ -261,6 +347,31 @@ export async function renameNativeBookmark(bytes: ArrayBuffer, path: number[], t
   const located = locateBookmark(pdf, path)
   if (!located) throw new Error('This bookmark no longer exists.')
   located.dict.set(PDFName.of('Title'), PDFHexString.fromText(title.trim() || 'Bookmark'))
+  return (await pdf.save({ useObjectStreams: true })).buffer as ArrayBuffer
+}
+
+export async function updateNativeBookmark(bytes: ArrayBuffer, path: number[], title: string, pageIndex?: number | null) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const located = locateBookmark(pdf, path)
+  if (!located) throw new Error('This bookmark no longer exists.')
+  located.dict.set(PDFName.of('Title'), PDFHexString.fromText(title.trim() || 'Bookmark'))
+
+  if (pageIndex !== undefined && pageIndex !== null) {
+    const index = clamp(Math.floor(pageIndex), 0, Math.max(0, pdf.getPageCount() - 1))
+    const page = pdf.getPage(index)
+    const direct = located.dict.lookupMaybe(PDFName.of('Dest'), PDFArray)
+    const action = located.dict.lookupMaybe(PDFName.of('A'), PDFDict)
+    const actionDestination = action?.get(PDFName.of('S'))?.toString() === '/GoTo'
+      ? action.lookupMaybe(PDFName.of('D'), PDFArray)
+      : null
+    const destination = direct || actionDestination
+    if (destination && destination.size()) destination.set(0, page.ref)
+    else {
+      located.dict.delete(PDFName.of('A'))
+      located.dict.set(PDFName.of('Dest'), pdf.context.obj([page.ref, PDFName.of('Fit')]))
+    }
+  }
+
   return (await pdf.save({ useObjectStreams: true })).buffer as ArrayBuffer
 }
 
