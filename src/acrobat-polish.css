@@ -1,0 +1,250 @@
+/* Acrobat-inspired desktop polish layered over the base PDF Forge theme. */
+:root {
+  --accent: #e5483f;
+  --accent-2: #ff6b61;
+  --scroll-track: #141416;
+  --scroll-thumb: #3a3a40;
+  --scroll-thumb-hover: #505057;
+}
+
+/* Consistent styled scrollbars across the document stage, panels, library and dialogs. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+  border-left: 1px solid rgba(255,255,255,.025);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  background: linear-gradient(180deg, #424248, #333338);
+  border: 2px solid var(--scroll-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5a5a61, #46464c);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--scroll-track);
+}
+
+/* Give the central document area a slightly more substantial scrollbar. */
+.page-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.page-scroll::-webkit-scrollbar-track {
+  background: #0d0d0f;
+}
+
+.page-scroll::-webkit-scrollbar-thumb {
+  border-color: #0d0d0f;
+}
+
+/* Desktop-document-editor proportions. */
+.topbar {
+  height: 56px;
+  flex-basis: 56px;
+  background: linear-gradient(180deg, #19191c, #151517);
+  box-shadow: 0 1px 0 rgba(255,255,255,.025), 0 8px 24px rgba(0,0,0,.15);
+}
+
+.workspace {
+  grid-template-columns: 48px 236px minmax(500px, 1fr) 232px;
+}
+
+.rail {
+  background: #121214;
+  padding-top: 7px;
+}
+
+.rail button {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+}
+
+.rail button.active {
+  background: #29292d;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.035);
+}
+
+.rail button.active::before {
+  left: -7px;
+  width: 3px;
+  height: 22px;
+  border-radius: 0 3px 3px 0;
+}
+
+.left-panel,
+.right-panel {
+  background: #18181b;
+}
+
+.left-panel {
+  box-shadow: 8px 0 20px rgba(0,0,0,.08);
+}
+
+.right-panel {
+  box-shadow: -8px 0 20px rgba(0,0,0,.08);
+}
+
+.panel-heading {
+  position: sticky;
+  top: -16px;
+  z-index: 4;
+  padding: 16px 0 9px;
+  margin-top: -16px;
+  background: linear-gradient(180deg, #18181b 78%, rgba(24,24,27,0));
+}
+
+.editor-toolbar {
+  background: #1b1b1e;
+  border-bottom-color: #303035;
+  box-shadow: 0 4px 14px rgba(0,0,0,.12);
+}
+
+.editor-toolbar .tool-group {
+  background: #141416;
+  border: 1px solid #2c2c31;
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.editor-toolbar .tool-group button {
+  border-radius: 6px;
+}
+
+.editor-toolbar .tool-group button.active {
+  background: #35353a;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+.document-stage {
+  background:
+    radial-gradient(circle at 50% 15%, rgba(255,255,255,.018), transparent 30%),
+    #101012;
+}
+
+.page-scroll {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.pdf-page {
+  box-shadow: 0 18px 45px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.055);
+}
+
+.floating-nav {
+  background: rgba(31,31,35,.94);
+  border-color: #3a3a40;
+  box-shadow: 0 12px 32px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter: blur(16px);
+}
+
+.thumbnail-list,
+.library-list,
+.form-list,
+.meta-form {
+  scrollbar-gutter: stable;
+}
+
+.thumbnail {
+  transition: background .14s ease, border-color .14s ease, transform .14s ease;
+}
+
+.thumbnail:hover {
+  background: #222226;
+}
+
+.thumbnail.active {
+  border-color: rgba(229,72,63,.78);
+  background: rgba(229,72,63,.09);
+}
+
+.thumbnail.active .thumb-label {
+  color: #ff8077;
+}
+
+.primary {
+  background: linear-gradient(180deg, #ef554b, #d94038);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 4px 12px rgba(204,49,42,.18);
+}
+
+.primary:hover {
+  background: linear-gradient(180deg, #f66258, #e24840);
+}
+
+.soft-btn {
+  background: linear-gradient(180deg, #29292e, #232327);
+  border-color: #36363c;
+}
+
+.soft-btn:hover {
+  background: linear-gradient(180deg, #323237, #29292e);
+  border-color: #44444b;
+}
+
+.search-box {
+  background: #131315;
+  border-color: #303035;
+}
+
+.search-box:focus-within {
+  border-color: rgba(229,72,63,.72);
+  box-shadow: 0 0 0 2px rgba(229,72,63,.10);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(229,72,63,.72) !important;
+  box-shadow: 0 0 0 2px rgba(229,72,63,.09);
+}
+
+.property-section,
+.right-help,
+.quick-actions {
+  border-color: #303035;
+}
+
+.color-grid button.active {
+  box-shadow: 0 0 0 2px #18181b, 0 0 0 3px #f2f2f4;
+}
+
+.stage-top-hint {
+  color: #8b8b94;
+}
+
+/* Keep narrow screens usable without sacrificing the desktop layout. */
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: 46px 210px minmax(440px, 1fr) 210px;
+  }
+}
+
+@media (max-width: 920px) {
+  .workspace {
+    grid-template-columns: 44px 190px minmax(400px, 1fr);
+  }
+
+  .right-panel {
+    display: none;
+  }
+}
