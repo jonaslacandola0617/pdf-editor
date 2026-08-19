@@ -242,8 +242,8 @@ test('AcroForm fields can be discovered, edited, saved locally and restored', as
   await expect(page.locator('.form-field')).toHaveCount(4)
 
   const nameField = page.locator('.form-field').filter({ hasText: 'qa_name' })
-  await nameField.locator('input[type="text"]').fill('Jonas QA')
-  await nameField.locator('input[type="text"]').press('Tab')
+  await nameField.locator('input').fill('Jonas QA')
+  await nameField.locator('input').press('Tab')
 
   const agreeField = page.locator('.form-field').filter({ hasText: 'qa_agree' })
   await agreeField.locator('input[type="checkbox"]').check()
@@ -260,7 +260,7 @@ test('AcroForm fields can be discovered, edited, saved locally and restored', as
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 })
   await page.getByTitle('Form fields').click()
 
-  await expect(page.locator('.form-field').filter({ hasText: 'qa_name' }).locator('input[type="text"]')).toHaveValue('Jonas QA')
+  await expect(page.locator('.form-field').filter({ hasText: 'qa_name' }).locator('input')).toHaveValue('Jonas QA')
   await expect(page.locator('.form-field').filter({ hasText: 'qa_agree' }).locator('input[type="checkbox"]')).toBeChecked()
   await expect(page.locator('.form-field').filter({ hasText: 'qa_choice' }).locator('select')).toHaveValue('Beta')
   await expect(page.locator('.form-field').filter({ hasText: 'qa_color' }).locator('select')).toHaveValue('Blue')
