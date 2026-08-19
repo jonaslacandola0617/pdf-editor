@@ -2,15 +2,11 @@ import type { NativeTextSelection } from '../types'
 
 type PdfiumRuntime = {
   HEAPU8: Uint8Array
-  HEAP32: Int32Array
   wasmExports: {
     malloc: (size: number) => number
     free: (ptr: number) => void
     __indirect_function_table?: WebAssembly.Table
   }
-  wasmTable?: WebAssembly.Table
-  addFunction?: (fn: (...args: number[]) => number, signature: string) => number
-  removeFunction?: (ptr: number) => void
   _FPDF_LoadPage: (document: number, pageIndex: number) => number
   _FPDF_ClosePage: (page: number) => void
   _FPDF_GetPageWidth: (page: number) => number
@@ -192,26 +188,53 @@ export async function pickNativeTextObject(
   })
 }
 
-function installWriteCallback(module: PdfiumRuntime, callback: (self: number, data: number, size: number) => number) {
-  if (module.addFunction) {
-    const ptr = module.addFunction(callback, 'iiii')
-    return { ptr, cleanup: () => module.removeFunction?.(ptr) }
-  }
+function wrapJsFunctionForWasm(callback: (self: number, data: number, size: number) => number) {
+  // Emscripten normally does this inside addFunction(). The PDFium package does
+  // not export that runtime helper, but it does export the indirect function table.
+  // Wrap our JavaScript callback as an actual wasm function so the funcref table
+  // accepts it. Signature: i32 (i32, i32, i32).
+  const typeSection = [
+    1, // one function type
+    0x60, // func
+    3, 0x7f, 0x7f, 0x7f, // three i32 params
+    1, 0x7f, // one i32 result
+  ]
+  const importSection = [
+    1, // one import
+    1, 0x65, // module "e"
+    1, 0x66, // name "f"
+    0, // import kind: function
+    0, // type index 0
+  ]
+  const exportSection = [
+    1, // one export
+    1, 0x66, // name "f"
+    0, // export kind: function
+    0, // function index 0
+  ]
+  const bytes = new Uint8Array([
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+    1, typeSection.length, ...typeSection,
+    2, importSection.length, ...importSection,
+    7, exportSection.length, ...exportSection,
+  ])
+  const instance = new WebAssembly.Instance(new WebAssembly.Module(bytes), { e: { f: callback } })
+  return instance.exports.f as CallableFunction
+}
 
-  const table = module.wasmTable || module.wasmExports.__indirect_function_table
-  const WebAssemblyFunction = (WebAssembly as unknown as { Function?: new (
-    descriptor: { parameters: string[]; results: string[] },
-    fn: (...args: number[]) => number,
-  ) => CallableFunction }).Function
-  if (!table || !WebAssemblyFunction) {
-    throw new Error('This browser cannot install the PDFium save callback.')
-  }
+function installWriteCallback(module: PdfiumRuntime, callback: (self: number, data: number, size: number) => number) {
+  const table = module.wasmExports.__indirect_function_table
+  if (!table) throw new Error('PDFium did not expose its WebAssembly function table.')
 
   const ptr = table.length
   table.grow(1)
-  const fn = new WebAssemblyFunction({ parameters: ['i32', 'i32', 'i32'], results: ['i32'] }, callback)
-  table.set(ptr, fn)
-  return { ptr, cleanup: () => table.set(ptr, null) }
+  table.set(ptr, wrapJsFunctionForWasm(callback))
+  return {
+    ptr,
+    cleanup: () => {
+      try { table.set(ptr, null) } catch { /* table slots cannot always be cleared */ }
+    },
+  }
 }
 
 function savePdfiumDocument(module: PdfiumRuntime, documentIdx: number) {
@@ -234,6 +257,7 @@ function savePdfiumDocument(module: PdfiumRuntime, documentIdx: number) {
   }
 
   const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+  if (!length) throw new Error('PDFium saved no bytes for the edited document.')
   const output = new Uint8Array(length)
   let offset = 0
   for (const chunk of chunks) {
