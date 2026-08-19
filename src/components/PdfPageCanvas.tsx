@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PDFDocumentProxy } from '../lib/pdfjs'
+import { pdfjsLib, type PDFDocumentProxy } from '../lib/pdfjs'
 import type { Annotation, Point, Tool } from '../types'
+import '../text-layer.css'
 
 type Props = {
   pdf: PDFDocumentProxy
@@ -24,6 +25,78 @@ type DragPreview = {
   points?: Point[]
 }
 
+type CancelableRenderTask = {
+  promise: Promise<unknown>
+  cancel: () => void
+}
+
+type CancelableTextLayer = {
+  render: () => Promise<unknown>
+  cancel: () => void
+  textDivs?: HTMLElement[]
+  textContentItemsStr?: string[]
+}
+
+function currentSearchQuery() {
+  return document.querySelector<HTMLInputElement>('.search-box input')?.value.trim() || ''
+}
+
+function markSearchMatches(container: HTMLElement, query: string) {
+  const normalized = query.trim().toLocaleLowerCase()
+  if (!normalized) return
+
+  const spans = Array.from(container.querySelectorAll<HTMLSpanElement>('span'))
+    .filter((span) => span.childElementCount === 0 && (span.textContent || '').length > 0)
+
+  if (!spans.length) return
+
+  const entries: Array<{ span: HTMLSpanElement; text: string; start: number; end: number }> = []
+  let combined = ''
+  for (const span of spans) {
+    const text = span.textContent || ''
+    if (combined.length) combined += ' '
+    const start = combined.length
+    combined += text
+    entries.push({ span, text, start, end: combined.length })
+  }
+
+  const haystack = combined.toLocaleLowerCase()
+  const ranges: Array<{ start: number; end: number }> = []
+  let cursor = 0
+  while (cursor <= haystack.length - normalized.length) {
+    const index = haystack.indexOf(normalized, cursor)
+    if (index === -1) break
+    ranges.push({ start: index, end: index + normalized.length })
+    cursor = index + Math.max(1, normalized.length)
+  }
+
+  if (!ranges.length) return
+
+  for (const entry of entries) {
+    const localRanges = ranges
+      .map((range) => ({
+        start: Math.max(range.start, entry.start) - entry.start,
+        end: Math.min(range.end, entry.end) - entry.start,
+      }))
+      .filter((range) => range.start < range.end)
+
+    if (!localRanges.length) continue
+
+    const fragment = document.createDocumentFragment()
+    let offset = 0
+    for (const range of localRanges) {
+      if (range.start > offset) fragment.append(document.createTextNode(entry.text.slice(offset, range.start)))
+      const mark = document.createElement('mark')
+      mark.className = 'pdf-search-hit'
+      mark.textContent = entry.text.slice(range.start, range.end)
+      fragment.append(mark)
+      offset = range.end
+    }
+    if (offset < entry.text.length) fragment.append(document.createTextNode(entry.text.slice(offset)))
+    entry.span.replaceChildren(fragment)
+  }
+}
+
 export function PdfPageCanvas({
   pdf,
   pageIndex,
@@ -39,10 +112,12 @@ export function PdfPageCanvas({
   onAdd,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const textLayerRef = useRef<HTMLDivElement | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const previewRef = useRef<DragPreview | null>(null)
   const [size, setSize] = useState({ width: 1, height: 1 })
   const [preview, setPreview] = useState<DragPreview | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const updatePreview = (next: DragPreview | null) => {
     previewRef.current = next
@@ -50,31 +125,98 @@ export function PdfPageCanvas({
   }
 
   useEffect(() => {
+    const input = document.querySelector<HTMLInputElement>('.search-box input')
+    if (!input) return
+    const sync = () => setSearchQuery(currentSearchQuery())
+    sync()
+    input.addEventListener('input', sync)
+    input.addEventListener('change', sync)
+    return () => {
+      input.removeEventListener('input', sync)
+      input.removeEventListener('change', sync)
+    }
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
+    let renderTask: CancelableRenderTask | null = null
+
     const render = async () => {
-      // Page-count-changing operations update editor state before the replacement
-      // PDFDocumentProxy finishes loading. Never ask the old proxy for a page it
-      // does not have during that short transition.
+      // Page-count-changing operations can update editor state before the replacement
+      // PDFDocumentProxy finishes loading. Never ask the old proxy for an invalid page.
       if (pageIndex < 0 || pageIndex >= pdf.numPages) return
       const page = await pdf.getPage(pageIndex + 1)
       if (cancelled) return
+
       const viewport = page.getViewport({ scale: zoom, rotation })
       const canvas = canvasRef.current
       if (!canvas) return
+
       const ratio = Math.min(window.devicePixelRatio || 1, 2)
-      canvas.width = Math.floor(viewport.width * ratio)
-      canvas.height = Math.floor(viewport.height * ratio)
+      canvas.width = Math.max(1, Math.floor(viewport.width * ratio))
+      canvas.height = Math.max(1, Math.floor(viewport.height * ratio))
       canvas.style.width = `${viewport.width}px`
       canvas.style.height = `${viewport.height}px`
       setSize({ width: viewport.width, height: viewport.height })
+
       const ctx = canvas.getContext('2d')
-      if (!ctx) return
+      if (!ctx || cancelled) return
       const renderViewport = page.getViewport({ scale: zoom * ratio, rotation })
-      await page.render({ canvas, canvasContext: ctx, viewport: renderViewport }).promise
+      renderTask = page.render({ canvas, canvasContext: ctx, viewport: renderViewport }) as CancelableRenderTask
+      await renderTask.promise
     }
-    void render()
-    return () => { cancelled = true }
+
+    void render().catch((error: unknown) => {
+      const name = error && typeof error === 'object' && 'name' in error ? String((error as { name?: unknown }).name) : ''
+      if (!cancelled && name !== 'RenderingCancelledException') console.error(error)
+    })
+
+    return () => {
+      cancelled = true
+      renderTask?.cancel()
+    }
   }, [pdf, pageIndex, zoom, rotation])
+
+  useEffect(() => {
+    let cancelled = false
+    let textLayer: CancelableTextLayer | null = null
+
+    const renderText = async () => {
+      const container = textLayerRef.current
+      if (!container) return
+      container.replaceChildren()
+      if (pageIndex < 0 || pageIndex >= pdf.numPages) return
+
+      const page = await pdf.getPage(pageIndex + 1)
+      if (cancelled) return
+      const viewport = page.getViewport({ scale: zoom, rotation })
+      const textContent = await page.getTextContent()
+      if (cancelled) return
+
+      container.style.width = `${viewport.width}px`
+      container.style.height = `${viewport.height}px`
+      container.style.setProperty('--total-scale-factor', String(viewport.scale))
+
+      textLayer = new pdfjsLib.TextLayer({
+        textContentSource: textContent,
+        container,
+        viewport,
+      }) as CancelableTextLayer
+      await textLayer.render()
+      if (cancelled) return
+      markSearchMatches(container, searchQuery)
+    }
+
+    void renderText().catch((error: unknown) => {
+      const name = error && typeof error === 'object' && 'name' in error ? String((error as { name?: unknown }).name) : ''
+      if (!cancelled && name !== 'AbortException') console.error(error)
+    })
+
+    return () => {
+      cancelled = true
+      textLayer?.cancel()
+    }
+  }, [pdf, pageIndex, zoom, rotation, searchQuery])
 
   const pointFromEvent = (e: React.PointerEvent) => {
     const rect = wrapRef.current!.getBoundingClientRect()
@@ -201,6 +343,7 @@ export function PdfPageCanvas({
       onPointerCancel={() => updatePreview(null)}
     >
       <canvas ref={canvasRef} />
+      <div ref={textLayerRef} className={`pdf-text-layer textLayer ${tool === 'select' ? 'interactive' : ''}`} />
       <div className="annotation-layer">
         {annotations.map((ann) => {
           const selected = ann.id === selectedId

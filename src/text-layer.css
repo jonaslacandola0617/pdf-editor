@@ -1,0 +1,71 @@
+/* Lightweight PDF.js text-layer styling derived from the Apache-2.0 PDF.js viewer CSS. */
+.pdf-text-layer.textLayer {
+  color-scheme: only light;
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor, 1) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+
+.pdf-text-layer.textLayer.interactive {
+  pointer-events: auto;
+  user-select: text;
+}
+
+.pdf-text-layer.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+
+.pdf-text-layer.textLayer > :not(.markedContent),
+.pdf-text-layer.textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.pdf-text-layer.textLayer .markedContent {
+  display: contents;
+}
+
+.pdf-text-layer.textLayer ::selection {
+  background: rgba(59, 130, 246, 0.32);
+  color: transparent;
+}
+
+.pdf-text-layer.textLayer br::selection {
+  background: transparent;
+}
+
+.pdf-text-layer .pdf-search-hit {
+  color: transparent;
+  background: rgba(250, 204, 21, 0.62);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.72);
+  border-radius: 2px;
+  margin: -1px;
+  padding: 1px;
+}
+
+/* Keep the text layer below PDF Forge annotations. */
+.pdf-page .annotation-layer {
+  z-index: 3;
+}

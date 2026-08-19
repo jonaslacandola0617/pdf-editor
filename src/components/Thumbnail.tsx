@@ -1,6 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { PDFDocumentProxy } from '../lib/pdfjs'
 
+type CancelableRenderTask = {
+  promise: Promise<unknown>
+  cancel: () => void
+}
+
 export function Thumbnail({
   pdf, pageIndex, rotation, active, onClick,
 }: {
@@ -11,24 +16,40 @@ export function Thumbnail({
   onClick: () => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
   useEffect(() => {
     let cancelled = false
+    let renderTask: CancelableRenderTask | null = null
+
     const run = async () => {
+      if (pageIndex < 0 || pageIndex >= pdf.numPages) return
       const page = await pdf.getPage(pageIndex + 1)
       if (cancelled) return
+
       const base = page.getViewport({ scale: 1, rotation })
       const scale = Math.min(132 / base.width, 160 / base.height)
       const viewport = page.getViewport({ scale, rotation })
       const canvas = canvasRef.current
       if (!canvas) return
+
       canvas.width = Math.max(1, Math.floor(viewport.width))
       canvas.height = Math.max(1, Math.floor(viewport.height))
       const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      await page.render({ canvas, canvasContext: ctx, viewport }).promise
+      if (!ctx || cancelled) return
+
+      renderTask = page.render({ canvas, canvasContext: ctx, viewport }) as CancelableRenderTask
+      await renderTask.promise
     }
-    run()
-    return () => { cancelled = true }
+
+    void run().catch((error: unknown) => {
+      const name = error && typeof error === 'object' && 'name' in error ? String((error as { name?: unknown }).name) : ''
+      if (!cancelled && name !== 'RenderingCancelledException') console.error(error)
+    })
+
+    return () => {
+      cancelled = true
+      renderTask?.cancel()
+    }
   }, [pdf, pageIndex, rotation])
 
   return (
