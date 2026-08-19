@@ -96,11 +96,162 @@ export async function duplicatePage(bytes: ArrayBuffer, index: number) {
   return (await out.save()).buffer as ArrayBuffer
 }
 
+export async function insertBlankPage(bytes: ArrayBuffer, index: number, size: 'match' | 'a4' | 'letter' = 'match') {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const safeIndex = Math.max(0, Math.min(pdf.getPageCount(), index))
+  let dimensions: [number, number] = [595.28, 841.89]
+  if (size === 'letter') dimensions = [612, 792]
+  if (size === 'match' && pdf.getPageCount()) {
+    const source = pdf.getPage(Math.max(0, Math.min(pdf.getPageCount() - 1, safeIndex === pdf.getPageCount() ? safeIndex - 1 : safeIndex)))
+    dimensions = [source.getWidth(), source.getHeight()]
+  }
+  pdf.insertPage(safeIndex, dimensions)
+  return (await pdf.save()).buffer as ArrayBuffer
+}
+
+async function embedImageFor(pdf: PDFDocument, file: File) {
+  const raw = await file.arrayBuffer()
+  if (file.type.includes('png') || file.name.toLowerCase().endsWith('.png')) return pdf.embedPng(raw)
+  return pdf.embedJpg(raw)
+}
+
+export async function replacePageWithFile(bytes: ArrayBuffer, pageIndex: number, file: File) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const index = Math.max(0, Math.min(pdf.getPageCount() - 1, pageIndex))
+  const old = pdf.getPage(index)
+  const oldSize: [number, number] = [old.getWidth(), old.getHeight()]
+
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    const incoming = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true })
+    if (!incoming.getPageCount()) throw new Error('Replacement PDF has no pages.')
+    const [replacement] = await pdf.copyPages(incoming, [0])
+    pdf.removePage(index)
+    pdf.insertPage(index, replacement)
+  } else if (file.type.startsWith('image/')) {
+    const image = await embedImageFor(pdf, file)
+    const dimensions = image.scale(1)
+    const scale = Math.min(oldSize[0] / dimensions.width, oldSize[1] / dimensions.height)
+    pdf.removePage(index)
+    const page = pdf.insertPage(index, oldSize)
+    page.drawImage(image, {
+      x: (oldSize[0] - dimensions.width * scale) / 2,
+      y: (oldSize[1] - dimensions.height * scale) / 2,
+      width: dimensions.width * scale,
+      height: dimensions.height * scale,
+    })
+  } else {
+    throw new Error('Use a PDF, PNG, or JPG as the replacement page.')
+  }
+
+  return (await pdf.save()).buffer as ArrayBuffer
+}
+
+export async function cropPage(bytes: ArrayBuffer, pageIndex: number, margins: { left: number; right: number; top: number; bottom: number }) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const page = pdf.getPage(pageIndex)
+  const width = page.getWidth()
+  const height = page.getHeight()
+  const left = Math.max(0, Math.min(0.45, margins.left)) * width
+  const right = Math.max(0, Math.min(0.45, margins.right)) * width
+  const top = Math.max(0, Math.min(0.45, margins.top)) * height
+  const bottom = Math.max(0, Math.min(0.45, margins.bottom)) * height
+  const cropWidth = Math.max(36, width - left - right)
+  const cropHeight = Math.max(36, height - top - bottom)
+  page.setCropBox(left, bottom, cropWidth, cropHeight)
+  return (await pdf.save()).buffer as ArrayBuffer
+}
+
 function hexToRgb(hex: string) {
   const clean = hex.replace('#', '')
   const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
   const n = Number.parseInt(full, 16)
   return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255)
+}
+
+export async function addWatermark(
+  bytes: ArrayBuffer,
+  options: { text: string; opacity?: number; size?: number; angle?: number; color?: string; pageIndex?: number },
+) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const font = await pdf.embedFont(StandardFonts.HelveticaBold)
+  const pages = options.pageIndex === undefined ? pdf.getPages() : [pdf.getPage(options.pageIndex)]
+  const text = options.text || 'DRAFT'
+  const size = Math.max(12, Math.min(144, options.size || 52))
+  const color = hexToRgb(options.color || '#777777')
+  for (const page of pages) {
+    const width = page.getWidth()
+    const height = page.getHeight()
+    const textWidth = font.widthOfTextAtSize(text, size)
+    page.drawText(text, {
+      x: (width - textWidth) / 2,
+      y: height / 2,
+      size,
+      font,
+      color,
+      opacity: Math.max(0.05, Math.min(0.9, options.opacity ?? 0.2)),
+      rotate: degrees(options.angle ?? -35),
+    })
+  }
+  return (await pdf.save()).buffer as ArrayBuffer
+}
+
+export async function addHeaderFooter(
+  bytes: ArrayBuffer,
+  options: {
+    header?: string
+    footer?: string
+    pageNumbers?: boolean
+    startAt?: number
+    fontSize?: number
+    color?: string
+  },
+) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const font = await pdf.embedFont(StandardFonts.Helvetica)
+  const size = Math.max(7, Math.min(24, options.fontSize || 9))
+  const color = hexToRgb(options.color || '#555555')
+  const total = pdf.getPageCount()
+  const expand = (value: string, page: number) => value
+    .replaceAll('{page}', String((options.startAt || 1) + page))
+    .replaceAll('{pages}', String(total))
+
+  pdf.getPages().forEach((page, index) => {
+    const width = page.getWidth()
+    const height = page.getHeight()
+    if (options.header?.trim()) {
+      const text = expand(options.header, index)
+      page.drawText(text, { x: 28, y: height - 24, size, font, color })
+    }
+    let footer = options.footer?.trim() ? expand(options.footer, index) : ''
+    if (options.pageNumbers) footer = footer ? `${footer}    ${index + (options.startAt || 1)} / ${total}` : `${index + (options.startAt || 1)} / ${total}`
+    if (footer) {
+      const textWidth = font.widthOfTextAtSize(footer, size)
+      page.drawText(footer, { x: Math.max(28, (width - textWidth) / 2), y: 18, size, font, color })
+    }
+  })
+  return (await pdf.save()).buffer as ArrayBuffer
+}
+
+export async function addImageToPage(
+  bytes: ArrayBuffer,
+  pageIndex: number,
+  file: File,
+  options: { widthPercent?: number; xPercent?: number; yPercent?: number } = {},
+) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const page = pdf.getPage(pageIndex)
+  const image = await embedImageFor(pdf, file)
+  const natural = image.scale(1)
+  const pageWidth = page.getWidth()
+  const pageHeight = page.getHeight()
+  const targetWidth = pageWidth * Math.max(0.05, Math.min(0.95, options.widthPercent ?? 0.35))
+  const scale = targetWidth / natural.width
+  const targetHeight = natural.height * scale
+  const x = Math.max(0, Math.min(pageWidth - targetWidth, pageWidth * (options.xPercent ?? 0.5) - targetWidth / 2))
+  const yTop = pageHeight * (options.yPercent ?? 0.5)
+  const y = Math.max(0, Math.min(pageHeight - targetHeight, pageHeight - yTop - targetHeight / 2))
+  page.drawImage(image, { x, y, width: targetWidth, height: targetHeight })
+  return (await pdf.save()).buffer as ArrayBuffer
 }
 
 export async function flattenAnnotations(
@@ -133,12 +284,14 @@ export async function flattenAnnotations(
       })
     }
 
-    if (ann.type === 'highlight' || ann.type === 'rectangle') {
+    if (ann.type === 'highlight' || ann.type === 'rectangle' || ann.type === 'redaction') {
       const w = (ann.width || 0.2) * width
       const h = (ann.height || 0.06) * height
       const y = height - (ann.y * height) - h
       if (ann.type === 'highlight') {
         page.drawRectangle({ x: ann.x * width, y, width: w, height: h, color, opacity: 0.28 })
+      } else if (ann.type === 'redaction') {
+        page.drawRectangle({ x: ann.x * width, y, width: w, height: h, color: rgb(0, 0, 0), opacity: 1 })
       } else {
         page.drawRectangle({
           x: ann.x * width,
