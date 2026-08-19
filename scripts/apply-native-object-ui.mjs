@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 
+// Retrigger after the branch workflow exists.
 function patch(path, transforms) {
   let source = fs.readFileSync(path, 'utf8')
   for (const { label, from, to } of transforms) {
