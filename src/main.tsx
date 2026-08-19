@@ -6,6 +6,7 @@ import { OcrActivity } from './components/OcrActivity'
 import './acrobat-polish.css'
 import './all-tools.css'
 import './ocr.css'
+import './completion.css'
 
 const RESUME_KEY = 'pdf-forge-resume-editor'
 const WORKSPACE_KEY = 'pdf-forge-workspace'
