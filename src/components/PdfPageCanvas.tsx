@@ -5,7 +5,7 @@ import { OcrTextOverlay } from './OcrTextOverlay'
 import '../text-layer.css'
 
 type Props = {
-  pdf: PDFDocumentProxy
+  pdf: PDFDocumentProxy | null
   pageIndex: number
   zoom: number
   rotation: number
@@ -139,6 +139,7 @@ export function PdfPageCanvas({
   }, [])
 
   useEffect(() => {
+    if (!pdf) return
     let cancelled = false
     let renderTask: CancelableRenderTask | null = null
     const render = async () => {
@@ -168,6 +169,7 @@ export function PdfPageCanvas({
   }, [pdf, pageIndex, zoom, rotation])
 
   useEffect(() => {
+    if (!pdf) return
     let cancelled = false
     let textLayer: CancelableTextLayer | null = null
     const renderText = async () => {
@@ -284,7 +286,7 @@ export function PdfPageCanvas({
     <div ref={wrapRef} className={`pdf-page tool-${tool}`} style={{ width: size.width, height: size.height }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={() => { updatePreview(null); editRef.current = null }}>
       <canvas ref={canvasRef} />
       <div ref={textLayerRef} className={`pdf-text-layer textLayer ${tool === 'select' || tool === 'editText' ? 'interactive' : ''}`} />
-      <OcrTextOverlay pdf={pdf} pageIndex={pageIndex} rotation={rotation} searchQuery={searchQuery} />
+      {pdf && <OcrTextOverlay pdf={pdf} pageIndex={pageIndex} rotation={rotation} searchQuery={searchQuery} />}
       {nativeBounds && <div className="native-text-selection" aria-hidden="true" style={{ left: `${nativeBounds.x * 100}%`, top: `${nativeBounds.y * 100}%`, width: `${nativeBounds.width * 100}%`, height: `${nativeBounds.height * 100}%` }} />}
       <div className="annotation-layer">
         {annotations.map((ann) => {
