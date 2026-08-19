@@ -1,0 +1,87 @@
+name: Apply QA Search Fix
+
+on:
+  push:
+    branches:
+      - qa/browser-verification
+    paths:
+      - .github/workflows/apply-qa-search-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/browser-verification
+
+      - name: Patch search race and QA form selector
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path('src/App.tsx')
+          text = app.read_text()
+          old = """  const searchPdf = useCallback(async () => {
+              if (!pdf || !searchText.trim()) { setSearchMatches([]); return }
+              const q = searchText.trim().toLowerCase()
+              const found: number[] = []
+              setStatus('Searching…')
+              for (let i = 0; i < pdf.numPages; i++) {
+                const page = await pdf.getPage(i + 1)
+                const content = await page.getTextContent()
+                const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ').toLowerCase()
+                if (text.includes(q)) found.push(i)
+              }
+              setSearchMatches(found); setSearchMatchIndex(0)
+              if (found.length) setCurrentPage(found[0])
+              setStatus(found.length ? `${found.length} matching page${found.length === 1 ? '' : 's'}` : 'No matches')
+            }, [pdf, searchText])"""
+          # Normalize the indentation from the literal above to the source's two-space function body.
+          old = '\n'.join(line[10:] if line.startswith('          ') else line for line in old.splitlines())
+          new = """  const searchPdf = useCallback(async () => {
+            if (!bytes || !searchText.trim()) { setSearchMatches([]); return }
+            const q = searchText.trim().toLowerCase()
+            const found: number[] = []
+            setStatus('Searching…')
+            const task = pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) })
+            try {
+              const searchDoc = await task.promise
+              for (let i = 0; i < searchDoc.numPages; i++) {
+                const page = await searchDoc.getPage(i + 1)
+                const content = await page.getTextContent()
+                const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ').toLowerCase()
+                if (text.includes(q)) found.push(i)
+              }
+              setSearchMatches(found); setSearchMatchIndex(0)
+              if (found.length) setCurrentPage(found[0])
+              setStatus(found.length ? `${found.length} matching page${found.length === 1 ? '' : 's'}` : 'No matches')
+            } catch (error) {
+              console.error(error)
+              setSearchMatches([])
+              setStatus('Search failed for this document.')
+            } finally {
+              void task.destroy()
+            }
+          }, [bytes, searchText])"""
+          if old not in text:
+              raise SystemExit('Expected searchPdf block not found; refusing unsafe patch')
+          app.write_text(text.replace(old, new, 1))
+
+          test = Path('tests/pdf-forge.spec.ts')
+          q = test.read_text()
+          q = q.replace("nameField.locator('input[type=\"text\"]')", "nameField.locator('input')")
+          q = q.replace("page.locator('.form-field').filter({ hasText: 'qa_name' }).locator('input[type=\"text\"]')", "page.locator('.form-field').filter({ hasText: 'qa_name' }).locator('input')")
+          test.write_text(q)
+          PY
+
+      - name: Commit QA patch
+        run: |
+          git config user.name "PDF Forge QA"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/App.tsx tests/pdf-forge.spec.ts
+          git commit -m "Fix search race found by browser QA"
+          git push origin HEAD:qa/browser-verification
