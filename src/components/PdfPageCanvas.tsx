@@ -90,6 +90,7 @@ export function PdfPageCanvas({
       onSelect(ink?.id || null)
       return
     }
+
     e.currentTarget.setPointerCapture(e.pointerId)
     const p = pointFromEvent(e)
     if (tool === 'text') {
@@ -119,29 +120,47 @@ export function PdfPageCanvas({
     }
   }
 
-  const pointerUp = () => {
+  const pointerUp = (e: React.PointerEvent) => {
     const active = previewRef.current
     if (!active) return
-    if ((active.type === 'highlight' || active.type === 'rectangle') && active.start && active.end) {
-      const x = Math.min(active.start.x, active.end.x)
-      const y = Math.min(active.start.y, active.end.y)
-      const width = Math.max(0.02, Math.abs(active.end.x - active.start.x))
-      const height = Math.max(0.018, Math.abs(active.end.y - active.start.y))
+
+    const releasedAt = pointFromEvent(e)
+    let completed = active
+    if (active.type === 'highlight' || active.type === 'rectangle') {
+      completed = { ...active, end: releasedAt }
+    } else {
+      const points = active.points || []
+      const last = points[points.length - 1]
+      const needsFinalPoint = !last || Math.hypot(last.x - releasedAt.x, last.y - releasedAt.y) > 0.0005
+      completed = { ...active, points: needsFinalPoint ? [...points, releasedAt] : points }
+    }
+
+    if ((completed.type === 'highlight' || completed.type === 'rectangle') && completed.start && completed.end) {
+      const x = Math.min(completed.start.x, completed.end.x)
+      const y = Math.min(completed.start.y, completed.end.y)
+      const width = Math.max(0.02, Math.abs(completed.end.x - completed.start.x))
+      const height = Math.max(0.018, Math.abs(completed.end.y - completed.start.y))
       onAdd({
-        id: crypto.randomUUID(), page: pageIndex, type: active.type,
+        id: crypto.randomUUID(), page: pageIndex, type: completed.type,
         x, y, width, height, color, strokeWidth,
       })
-    } else if ((active.type === 'ink' || active.type === 'signature') && (active.points?.length || 0) > 1) {
-      const xs = active.points!.map((p) => p.x)
-      const ys = active.points!.map((p) => p.y)
+    } else if ((completed.type === 'ink' || completed.type === 'signature') && (completed.points?.length || 0) > 1) {
+      const xs = completed.points!.map((p) => p.x)
+      const ys = completed.points!.map((p) => p.y)
       onAdd({
-        id: crypto.randomUUID(), page: pageIndex, type: active.type,
+        id: crypto.randomUUID(), page: pageIndex, type: completed.type,
         x: Math.min(...xs), y: Math.min(...ys), color,
-        strokeWidth: active.type === 'signature' ? Math.max(2, strokeWidth) : strokeWidth,
-        points: active.points,
+        strokeWidth: completed.type === 'signature' ? Math.max(2, strokeWidth) : strokeWidth,
+        points: completed.points,
       })
     }
     updatePreview(null)
+  }
+
+  const selectAnnotation = (e: React.PointerEvent, id: string) => {
+    if (tool !== 'select') return
+    e.stopPropagation()
+    onSelect(id)
   }
 
   const rectStyle = (ann: Annotation) => ({
@@ -187,7 +206,7 @@ export function PdfPageCanvas({
                 key={ann.id}
                 className={`annotation text-annotation ${selected ? 'selected' : ''}`}
                 style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, color: ann.color, fontSize: ann.fontSize }}
-                onPointerDown={(e) => { e.stopPropagation(); onSelect(ann.id) }}
+                onPointerDown={(e) => selectAnnotation(e, ann.id)}
               >{ann.text}</button>
             )
           }
@@ -202,7 +221,7 @@ export function PdfPageCanvas({
                   borderColor: ann.type === 'rectangle' ? ann.color : 'transparent',
                   borderWidth: ann.type === 'rectangle' ? ann.strokeWidth || 2 : 0,
                 }}
-                onPointerDown={(e) => { e.stopPropagation(); onSelect(ann.id) }}
+                onPointerDown={(e) => selectAnnotation(e, ann.id)}
               />
             )
           }
@@ -210,7 +229,7 @@ export function PdfPageCanvas({
             <button
               key={ann.id}
               className={`annotation ink-hitbox ${selected ? 'selected' : ''}`}
-              onPointerDown={(e) => { e.stopPropagation(); onSelect(ann.id) }}
+              onPointerDown={(e) => selectAnnotation(e, ann.id)}
             >{renderInk(ann)}</button>
           )
         })}
