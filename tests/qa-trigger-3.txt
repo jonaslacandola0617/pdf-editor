@@ -1,0 +1,1 @@
+Final full QA rerun after moving the automated signature stroke away from the floating navigation overlay.
