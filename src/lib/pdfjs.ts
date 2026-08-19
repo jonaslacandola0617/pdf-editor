@@ -31,18 +31,23 @@ function patchPage(page: PDFPageProxy, fingerprint: string, pageCount: number) {
       try {
         const ocr = await recognizePdfPage(page, fingerprint, page.pageNumber, pageCount)
         if (!ocr.text.trim()) return native
+
+        // OCR is a fallback/supplement, never a replacement for real PDF text.
+        // This matters after PDF Forge exports annotations: the PDF may retain its
+        // original document fingerprint, so an older cached OCR result must never
+        // hide newly embedded native text from search.
+        const ocrItem = {
+          str: ocr.text,
+          dir: 'ltr',
+          width: 0,
+          height: 0,
+          transform: [1, 0, 0, 1, 0, 0],
+          fontName: 'pdf-forge-ocr',
+          hasEOL: false,
+        }
         return {
-          items: [{
-            str: ocr.text,
-            dir: 'ltr',
-            width: 0,
-            height: 0,
-            transform: [1, 0, 0, 1, 0, 0],
-            fontName: 'pdf-forge-ocr',
-            hasEOL: false,
-          }],
-          styles: {},
-          lang: null,
+          ...native,
+          items: [...native.items, ocrItem],
         } as unknown as typeof native
       } catch {
         return native
