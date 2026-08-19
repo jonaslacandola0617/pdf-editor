@@ -1,21 +1,17 @@
 name: Browser QA
 
 on:
-  push:
-    branches:
-      - qa/browser-verification
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
-# QA branch only: application source remains identical to main.
 jobs:
   chromium-qa:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout QA branch
+      - name: Checkout tested revision
         uses: actions/checkout@v4
 
       - name: Set up Node
