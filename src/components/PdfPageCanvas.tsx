@@ -60,7 +60,7 @@ export function PdfPageCanvas({
       const ctx = canvas.getContext('2d')
       if (!ctx) return
       const renderViewport = page.getViewport({ scale: zoom * ratio, rotation })
-      await page.render({ canvasContext: ctx, viewport: renderViewport }).promise
+      await page.render({ canvas, canvasContext: ctx, viewport: renderViewport }).promise
     }
     render()
     return () => { cancelled = true }
