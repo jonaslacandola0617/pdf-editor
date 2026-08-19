@@ -15,6 +15,8 @@ type PdfiumRuntime = {
   _FPDF_GetPageHeight: (page: number) => number
   _FPDFPage_CountObjects: (page: number) => number
   _FPDFPage_GetObject: (page: number, index: number) => number
+  _FPDFPage_RemoveObject: (page: number, object: number) => number
+  _FPDFPageObj_Destroy: (object: number) => void
   _FPDFPageObj_GetType: (object: number) => number
   _FPDFPageObj_GetBounds: (object: number, left: number, bottom: number, right: number, top: number) => number
   _FPDFText_LoadPage: (page: number) => number
@@ -26,11 +28,7 @@ type PdfiumRuntime = {
   _FPDF_SaveAsCopy: (document: number, writer: number, flags: number) => number
 }
 
-type PdfiumDocumentUnsafe = {
-  documentIdx: number
-  destroy: () => void
-}
-
+type PdfiumDocumentUnsafe = { documentIdx: number; destroy: () => void }
 type PdfiumLibraryUnsafe = {
   module: PdfiumRuntime
   loadDocument: (bytes: Uint8Array, password?: string) => Promise<PdfiumDocumentUnsafe>
@@ -46,16 +44,12 @@ async function getPatchedPdfiumBinary() {
 
 async function getLibrary(): Promise<PdfiumLibraryUnsafe> {
   if (!libraryPromise) {
-    libraryPromise = Promise.all([
-      import('@hyzyla/pdfium'),
-      getPatchedPdfiumBinary(),
-    ]).then(async ([{ PDFiumLibrary }, wasmBinary]) => {
-      const library = await PDFiumLibrary.init({ wasmBinary })
-      return library as unknown as PdfiumLibraryUnsafe
-    }).catch((error) => {
-      libraryPromise = null
-      throw error
-    })
+    libraryPromise = Promise.all([import('@hyzyla/pdfium'), getPatchedPdfiumBinary()])
+      .then(async ([{ PDFiumLibrary }, wasmBinary]) => {
+        const library = await PDFiumLibrary.init({ wasmBinary })
+        return library as unknown as PdfiumLibraryUnsafe
+      })
+      .catch((error) => { libraryPromise = null; throw error })
   }
   return libraryPromise
 }
@@ -71,7 +65,7 @@ function encodeUtf16(module: PdfiumRuntime, value: string) {
   const view = new DataView(module.HEAPU8.buffer)
   for (let i = 0; i < value.length; i++) view.setUint16(ptr + i * 2, value.charCodeAt(i), true)
   view.setUint16(ptr + value.length * 2, 0, true)
-  return { ptr, byteLength }
+  return { ptr }
 }
 
 function readTextObject(module: PdfiumRuntime, object: number, textPage: number) {
@@ -80,8 +74,7 @@ function readTextObject(module: PdfiumRuntime, object: number, textPage: number)
   const ptr = module.wasmExports.malloc(byteLength)
   try {
     const written = module._FPDFTextObj_GetText(object, textPage, ptr, byteLength)
-    if (!written) return ''
-    return decodeUtf16(module, ptr, written)
+    return written ? decodeUtf16(module, ptr, written) : ''
   } finally {
     module.wasmExports.free(ptr)
   }
@@ -132,34 +125,48 @@ function textAffinity(objectText: string, hint: string) {
 async function withDocument<T>(bytes: ArrayBuffer, run: (module: PdfiumRuntime, document: PdfiumDocumentUnsafe) => T | Promise<T>) {
   const library = await getLibrary()
   const document = await library.loadDocument(new Uint8Array(bytes.slice(0)))
-  try {
-    return await run(library.module, document)
-  } finally {
-    document.destroy()
-  }
+  try { return await run(library.module, document) } finally { document.destroy() }
 }
 
-export async function pickNativeTextObject(
-  bytes: ArrayBuffer,
-  pageIndex: number,
-  point: { x: number; y: number },
-  hint = '',
-): Promise<NativeTextSelection | null> {
+function findSelectedTextObject(module: PdfiumRuntime, page: number, selection: NativeTextSelection) {
+  const count = module._FPDFPage_CountObjects(page)
+  let object = selection.objectIndex >= 0 && selection.objectIndex < count
+    ? module._FPDFPage_GetObject(page, selection.objectIndex)
+    : 0
+  const textPage = module._FPDFText_LoadPage(page)
+  if (!textPage) throw new Error('The page text could not be loaded.')
+  try {
+    const matchesExpected = object && module._FPDFPageObj_GetType(object) === 1 &&
+      normalizedText(readTextObject(module, object, textPage)) === normalizedText(selection.text)
+    if (!matchesExpected) {
+      object = 0
+      for (let i = 0; i < count; i++) {
+        const candidate = module._FPDFPage_GetObject(page, i)
+        if (!candidate || module._FPDFPageObj_GetType(candidate) !== 1) continue
+        if (normalizedText(readTextObject(module, candidate, textPage)) === normalizedText(selection.text)) {
+          object = candidate
+          break
+        }
+      }
+    }
+  } finally {
+    module._FPDFText_ClosePage(textPage)
+  }
+  if (!object) throw new Error('The selected text object changed before it could be edited. Select it again.')
+  return object
+}
+
+export async function pickNativeTextObject(bytes: ArrayBuffer, pageIndex: number, point: { x: number; y: number }, hint = ''): Promise<NativeTextSelection | null> {
   return withDocument(bytes, (module, document) => {
     const page = module._FPDF_LoadPage(document.documentIdx, pageIndex)
     if (!page) return null
     const textPage = module._FPDFText_LoadPage(page)
-    if (!textPage) {
-      module._FPDF_ClosePage(page)
-      return null
-    }
-
+    if (!textPage) { module._FPDF_ClosePage(page); return null }
     try {
       const pageWidth = module._FPDF_GetPageWidth(page)
       const pageHeight = module._FPDF_GetPageHeight(page)
       const count = module._FPDFPage_CountObjects(page)
       let best: { score: number; selection: NativeTextSelection } | null = null
-
       for (let objectIndex = 0; objectIndex < count; objectIndex++) {
         const object = module._FPDFPage_GetObject(page, objectIndex)
         if (!object || module._FPDFPageObj_GetType(object) !== 1) continue
@@ -167,30 +174,15 @@ export async function pickNativeTextObject(
         if (!text.trim()) continue
         const bounds = readBounds(module, object, pageWidth, pageHeight)
         if (!bounds) continue
-
         const distance = distanceToRect(point.x, point.y, bounds)
         const affinity = textAffinity(text, hint)
         if (distance > 0.045 && affinity === 0) continue
-
         const area = Math.max(0.000001, bounds.width * bounds.height)
         const score = affinity * 10 - distance * 150 - area * 0.04
         if (!best || score > best.score) {
-          best = {
-            score,
-            selection: {
-              page: pageIndex,
-              objectIndex,
-              text,
-              x: bounds.x,
-              y: bounds.y,
-              width: bounds.width,
-              height: bounds.height,
-              fontSize: module._FPDFTextObj_GetFontSize?.(object) || undefined,
-            },
-          }
+          best = { score, selection: { page: pageIndex, objectIndex, text, ...bounds, fontSize: module._FPDFTextObj_GetFontSize?.(object) || undefined } }
         }
       }
-
       return best?.selection || null
     } finally {
       module._FPDFText_ClosePage(textPage)
@@ -200,29 +192,9 @@ export async function pickNativeTextObject(
 }
 
 function wrapJsFunctionForWasm(callback: (self: number, data: number, size: number) => number) {
-  // Emscripten normally does this inside addFunction(). The PDFium package does
-  // not export that runtime helper, but it does export the indirect function table.
-  // Wrap our JavaScript callback as an actual wasm function so the funcref table
-  // accepts it. Signature: i32 (i32, i32, i32).
-  const typeSection = [
-    1,
-    0x60,
-    3, 0x7f, 0x7f, 0x7f,
-    1, 0x7f,
-  ]
-  const importSection = [
-    1,
-    1, 0x65,
-    1, 0x66,
-    0,
-    0,
-  ]
-  const exportSection = [
-    1,
-    1, 0x66,
-    0,
-    0,
-  ]
+  const typeSection = [1, 0x60, 3, 0x7f, 0x7f, 0x7f, 1, 0x7f]
+  const importSection = [1, 1, 0x65, 1, 0x66, 0, 0]
+  const exportSection = [1, 1, 0x66, 0, 0]
   const bytes = new Uint8Array([
     0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
     1, typeSection.length, ...typeSection,
@@ -236,33 +208,17 @@ function wrapJsFunctionForWasm(callback: (self: number, data: number, size: numb
 function installWriteCallback(module: PdfiumRuntime, callback: (self: number, data: number, size: number) => number) {
   const table = module.wasmExports.__indirect_function_table
   if (!table) throw new Error('PDFium did not expose its WebAssembly function table.')
-
   let ptr = -1
   for (let i = table.length - 1; i >= 1; i--) {
-    if (table.get(i) === null) {
-      ptr = i
-      break
-    }
+    if (table.get(i) === null) { ptr = i; break }
   }
-
   if (ptr === -1) {
-    try {
-      const previousLength = table.length
-      table.grow(1)
-      ptr = previousLength
-    } catch {
-      throw new Error('PDFium has no free callback slot for saving this edit.')
-    }
+    try { const previousLength = table.length; table.grow(1); ptr = previousLength }
+    catch { throw new Error('PDFium has no free callback slot for saving this edit.') }
   }
-
   const previous = table.get(ptr)
   table.set(ptr, wrapJsFunctionForWasm(callback))
-  return {
-    ptr,
-    cleanup: () => {
-      try { table.set(ptr, previous) } catch { /* best effort restoration */ }
-    },
-  }
+  return { ptr, cleanup: () => { try { table.set(ptr, previous) } catch { /* best effort */ } } }
 }
 
 function savePdfiumDocument(module: PdfiumRuntime, documentIdx: number) {
@@ -277,79 +233,51 @@ function savePdfiumDocument(module: PdfiumRuntime, documentIdx: number) {
     const view = new DataView(module.HEAPU8.buffer)
     view.setInt32(writerPtr, 1, true)
     view.setInt32(writerPtr + 4, callback.ptr, true)
-    const ok = module._FPDF_SaveAsCopy(documentIdx, writerPtr, 2)
-    if (!ok) throw new Error('PDFium could not save the edited PDF.')
+    if (!module._FPDF_SaveAsCopy(documentIdx, writerPtr, 2)) throw new Error('PDFium could not save the edited PDF.')
   } finally {
     module.wasmExports.free(writerPtr)
     callback.cleanup()
   }
-
   const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
   if (!length) throw new Error('PDFium saved no bytes for the edited document.')
   const output = new Uint8Array(length)
   let offset = 0
-  for (const chunk of chunks) {
-    output.set(chunk, offset)
-    offset += chunk.length
-  }
+  for (const chunk of chunks) { output.set(chunk, offset); offset += chunk.length }
   return output.buffer
 }
 
-export async function replaceNativeTextObject(
-  bytes: ArrayBuffer,
-  selection: NativeTextSelection,
-  nextText: string,
-): Promise<ArrayBuffer> {
-  if (!nextText.length) throw new Error('Existing PDF text cannot be replaced with an empty string yet.')
-
+export async function replaceNativeTextObject(bytes: ArrayBuffer, selection: NativeTextSelection, nextText: string): Promise<ArrayBuffer> {
+  if (!nextText.length) throw new Error('Use Delete text object to remove this text completely.')
   return withDocument(bytes, (module, document) => {
     const page = module._FPDF_LoadPage(document.documentIdx, selection.page)
     if (!page) throw new Error('The selected PDF page could not be loaded.')
-
     try {
-      const count = module._FPDFPage_CountObjects(page)
-      let object = selection.objectIndex >= 0 && selection.objectIndex < count
-        ? module._FPDFPage_GetObject(page, selection.objectIndex)
-        : 0
-
-      const textPage = module._FPDFText_LoadPage(page)
-      if (!textPage) throw new Error('The page text could not be loaded.')
-      try {
-        const matchesExpected = object && module._FPDFPageObj_GetType(object) === 1 &&
-          normalizedText(readTextObject(module, object, textPage)) === normalizedText(selection.text)
-
-        if (!matchesExpected) {
-          object = 0
-          for (let i = 0; i < count; i++) {
-            const candidate = module._FPDFPage_GetObject(page, i)
-            if (!candidate || module._FPDFPageObj_GetType(candidate) !== 1) continue
-            if (normalizedText(readTextObject(module, candidate, textPage)) === normalizedText(selection.text)) {
-              object = candidate
-              break
-            }
-          }
-        }
-      } finally {
-        module._FPDFText_ClosePage(textPage)
-      }
-
-      if (!object) throw new Error('The selected text object changed before it could be edited. Select it again.')
-
+      const object = findSelectedTextObject(module, page, selection)
       const encoded = encodeUtf16(module, nextText)
       try {
-        if (!module._FPDFText_SetText(object, encoded.ptr)) {
-          throw new Error('PDFium rejected this text replacement. The embedded font may not support the new characters.')
-        }
-      } finally {
-        module.wasmExports.free(encoded.ptr)
-      }
-
-      if (!module._FPDFPage_GenerateContent(page)) {
-        throw new Error('PDFium could not regenerate this page after the text edit.')
-      }
-
+        if (!module._FPDFText_SetText(object, encoded.ptr)) throw new Error('PDFium rejected this text replacement. The embedded font may not support the new characters.')
+      } finally { module.wasmExports.free(encoded.ptr) }
+      if (!module._FPDFPage_GenerateContent(page)) throw new Error('PDFium could not regenerate this page after the text edit.')
       return savePdfiumDocument(module, document.documentIdx)
+    } finally { module._FPDF_ClosePage(page) }
+  })
+}
+
+export async function deleteNativeTextObject(bytes: ArrayBuffer, selection: NativeTextSelection): Promise<ArrayBuffer> {
+  return withDocument(bytes, (module, document) => {
+    const page = module._FPDF_LoadPage(document.documentIdx, selection.page)
+    if (!page) throw new Error('The selected PDF page could not be loaded.')
+    let removedObject = 0
+    try {
+      removedObject = findSelectedTextObject(module, page, selection)
+      if (!module._FPDFPage_RemoveObject(page, removedObject)) throw new Error('PDFium could not remove this text object.')
+      if (!module._FPDFPage_GenerateContent(page)) throw new Error('PDFium could not regenerate the page after deleting text.')
+      const saved = savePdfiumDocument(module, document.documentIdx)
+      module._FPDFPageObj_Destroy(removedObject)
+      removedObject = 0
+      return saved
     } finally {
+      if (removedObject) module._FPDFPageObj_Destroy(removedObject)
       module._FPDF_ClosePage(page)
     }
   })

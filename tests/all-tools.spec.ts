@@ -35,13 +35,19 @@ test('All Tools exposes and activates existing editor features', async ({ page }
   await expect(drawer.getByRole('heading', { name: 'All Tools' })).toBeVisible()
   await expect(drawer).toContainText('Edit & annotate')
   await expect(drawer).toContainText('Organize pages')
-  await expect(drawer).toContainText('Find & fill')
+  await expect(drawer).toContainText('Document & security')
+  await expect(drawer).toContainText('Redact')
+  await expect(drawer).toContainText('Document tools')
   await expect(drawer).toContainText('File')
-  await expect(drawer).toContainText('PDFs and OCR stay on this device.')
+  await expect(drawer).toContainText('PDFs, OCR and security tools stay on this device.')
 
   await drawer.getByRole('button', { name: /Add text/ }).click()
   await expect(drawer).toHaveCount(0)
   await expect(page.getByTitle('Add text')).toHaveClass(/active/)
+
+  await launcher.click()
+  await page.locator('.all-tools-drawer').getByRole('button', { name: /Redact/ }).click()
+  await expect(page.getByTitle('Redact')).toHaveClass(/active/)
 
   await launcher.click()
   await page.locator('.all-tools-drawer').getByRole('button', { name: /Search \/ OCR/ }).click()
@@ -60,6 +66,12 @@ test('All Tools exposes and activates existing editor features', async ({ page }
   await launcher.click()
   await page.locator('.all-tools-drawer').getByRole('button', { name: /^Pages/ }).click()
   await expect(page.getByTitle('Pages')).toHaveClass(/active/)
+
+  await launcher.click()
+  await page.locator('.all-tools-drawer').getByRole('button', { name: /^Document tools/ }).click()
+  await expect(page.locator('.advanced-modal')).toBeVisible()
+  await page.locator('.advanced-modal > header .icon-btn').click()
+  await expect(page.locator('.advanced-modal')).toHaveCount(0)
 
   const beforeSave = await latestDocumentTimestamp(page)
   await page.waitForTimeout(25)
