@@ -18,7 +18,7 @@ export type NativeCommentDetail = {
 export type NativeCommentDetailUpdate = {
   text: string
   author: string
-  geometry: NativeCommentGeometry
+  geometry?: NativeCommentGeometry
   icon?: string
   open?: boolean
   fontSize?: number
@@ -142,7 +142,7 @@ export async function updateNativeCommentDetail(bytes: ArrayBuffer, pageIndex: n
   item.dict.set(PDFName.of('Contents'), PDFHexString.fromText(update.text))
   if (update.author.trim()) item.dict.set(PDFName.of('T'), PDFHexString.fromText(update.author.trim()))
   else item.dict.delete(PDFName.of('T'))
-  setGeometry(pdf, pageIndex, item.dict, update.geometry)
+  if (update.geometry) setGeometry(pdf, pageIndex, item.dict, update.geometry)
 
   if (item.subtype === 'Text') {
     const icons = new Set(['Comment', 'Key', 'Note', 'Help', 'NewParagraph', 'Paragraph', 'Insert'])
@@ -154,8 +154,6 @@ export async function updateNativeCommentDetail(bytes: ArrayBuffer, pageIndex: n
     const [r, g, b] = parseHex(update.textColor || previous.color)
     item.dict.set(PDFName.of('DA'), PDFString.of(`/${previous.fontName || 'Helv'} ${size} Tf ${r.toFixed(4)} ${g.toFixed(4)} ${b.toFixed(4)} rg`))
     item.dict.set(PDFName.of('Q'), PDFNumber.of(update.alignment === 1 || update.alignment === 2 ? update.alignment : 0))
-    // Existing appearance streams often contain the old text/style. Removing AP
-    // asks conforming viewers to regenerate the FreeText appearance from DA/Contents.
     item.dict.delete(PDFName.of('AP'))
   }
 
