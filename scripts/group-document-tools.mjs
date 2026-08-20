@@ -26,3 +26,4 @@ for (const [from, to] of replacements) {
   src = src.replace(from, to)
 }
 fs.writeFileSync(path, src)
+// audit patch trigger
