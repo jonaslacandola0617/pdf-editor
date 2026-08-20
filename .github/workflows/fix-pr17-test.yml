@@ -1,0 +1,31 @@
+name: Fix PR17 QA assertion
+
+on:
+  push:
+    branches:
+      - feature/native-extended-annotations
+    paths:
+      - scripts/fix-pr17-test.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/native-extended-annotations
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/fix-pr17-test.mjs
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/native-annotation-completion.spec.ts
+          git diff --cached --quiet && exit 0
+          git commit -m "Fix FreeText QA decoding"
+          git push origin HEAD:feature/native-extended-annotations
