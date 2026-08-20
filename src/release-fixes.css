@@ -1,0 +1,115 @@
+/* Final release fixes discovered by the visual audit. Loaded after every other stylesheet. */
+
+/* Modal shells always retain a deliberate viewport gutter. */
+.advanced-backdrop,
+.native-object-backdrop {
+  padding: 16px !important;
+}
+
+.advanced-modal,
+.native-object-modal {
+  width: min(1120px, calc(100vw - 32px)) !important;
+  max-height: calc(100dvh - 32px) !important;
+}
+
+/* Document Tools category navigation should read as one calm segmented control. */
+.advanced-category-nav {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  overflow: visible !important;
+}
+
+.advanced-category-nav > button {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  justify-content: center !important;
+  white-space: normal !important;
+  text-align: center !important;
+}
+
+/* Cards own their action width. Avoid content-width buttons that collapse labels. */
+.advanced-card > button,
+.advanced-row > button {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  white-space: normal !important;
+  line-height: 1.25 !important;
+}
+
+.advanced-row {
+  width: 100% !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+/* Presets remain compact chips instead of becoming full-width actions. */
+.stamp-row {
+  align-items: center !important;
+}
+
+.stamp-row > button {
+  width: auto !important;
+  min-width: max-content !important;
+  max-width: 100% !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+
+/* Keep form controls and action labels from fighting for horizontal space. */
+.crop-grid,
+.position-grid {
+  min-width: 0 !important;
+}
+
+.crop-grid label,
+.position-grid label {
+  min-width: 0 !important;
+}
+
+/* At narrow widths an oversized PDF begins at the scroll origin instead of being
+   centered into negative, unreachable overflow. Pages that fit still center. */
+@media (max-width: 760px) {
+  .advanced-backdrop,
+  .native-object-backdrop {
+    padding: 6px !important;
+  }
+
+  .advanced-modal,
+  .native-object-modal {
+    width: calc(100vw - 12px) !important;
+    max-height: calc(100dvh - 12px) !important;
+  }
+
+  .advanced-category-nav {
+    display: flex !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .advanced-category-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .advanced-category-nav > button {
+    width: auto !important;
+    min-width: max-content !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+
+  .advanced-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .page-scroll {
+    justify-content: flex-start !important;
+  }
+
+  .page-scroll > .page-view,
+  .page-scroll > .lazy-page-view {
+    margin-inline: auto;
+  }
+}
