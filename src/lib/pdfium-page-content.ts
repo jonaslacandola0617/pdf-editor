@@ -18,6 +18,7 @@ type PdfiumRuntime = {
   _FPDFPageObj_GetBounds: (object: number, left: number, bottom: number, right: number, top: number) => number
   _FPDFPageObj_GetFillColor?: (object: number, r: number, g: number, b: number, a: number) => number
   _FPDFPageObj_SetFillColor?: (object: number, r: number, g: number, b: number, a: number) => number
+  _FPDFPageObj_GetMatrix?: (object: number, matrixPtr: number) => number
   _FPDFPageObj_Transform?: (object: number, a: number, b: number, c: number, d: number, e: number, f: number) => void
   _FPDFPage_RemoveObject?: (page: number, object: number) => number
   _FPDFPageObj_Destroy?: (object: number) => void
@@ -175,17 +176,38 @@ function readFill(module: PdfiumRuntime, object: number) {
   } finally { module.wasmExports.free(ptr) }
 }
 
-function readFontSize(module: PdfiumRuntime, object: number) {
+function readBaseFontSize(module: PdfiumRuntime, object: number) {
   const getter = module._FPDFTextObj_GetFontSize
   if (!getter) return undefined
   const ptr = module.wasmExports.malloc(4)
   try {
     const result = getter(object, ptr)
     const pointed = new DataView(module.HEAPU8.buffer).getFloat32(ptr, true)
-    if (result === 1 && Number.isFinite(pointed) && pointed >= 0) return pointed
-    if (Number.isFinite(result) && result > 1) return result
+    if (result === 1 && Number.isFinite(pointed) && pointed > 0) return pointed
+    if (Number.isFinite(result) && result > 0) return result
     return undefined
   } catch { return undefined }
+  finally { module.wasmExports.free(ptr) }
+}
+
+function readFontSize(module: PdfiumRuntime, object: number) {
+  const base = readBaseFontSize(module, object)
+  if (!base) return undefined
+  const getMatrix = module._FPDFPageObj_GetMatrix
+  if (!getMatrix) return base
+  const ptr = module.wasmExports.malloc(24)
+  try {
+    if (!getMatrix(object, ptr)) return base
+    const view = new DataView(module.HEAPU8.buffer)
+    const a = view.getFloat32(ptr, true)
+    const b = view.getFloat32(ptr + 4, true)
+    const c = view.getFloat32(ptr + 8, true)
+    const d = view.getFloat32(ptr + 12, true)
+    const verticalScale = Math.hypot(c, d)
+    const horizontalScale = Math.hypot(a, b)
+    const scale = verticalScale > 0.000001 ? verticalScale : horizontalScale > 0.000001 ? horizontalScale : 1
+    return base * scale
+  } catch { return base }
   finally { module.wasmExports.free(ptr) }
 }
 
