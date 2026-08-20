@@ -14,6 +14,17 @@ async function latestDocumentTimestamp(page: import('@playwright/test').Page) {
   }))
 }
 
+async function openTools(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'All Tools' }).click()
+  const drawer = page.locator('.all-tools-drawer')
+  await expect(drawer).toBeVisible()
+  return drawer
+}
+
+async function category(drawer: import('@playwright/test').Locator, name: string) {
+  await drawer.getByRole('button', { name, exact: true }).click()
+}
+
 test('All Tools exposes and activates existing editor features', async ({ page }, testInfo) => {
   const pdf = await PDFDocument.create()
   const sheet = pdf.addPage([612, 792])
@@ -28,59 +39,61 @@ test('All Tools exposes and activates existing editor features', async ({ page }
 
   const launcher = page.getByRole('button', { name: 'All Tools' })
   await expect(launcher).toBeVisible()
-  await launcher.click()
+  let drawer = await openTools(page)
 
-  const drawer = page.locator('.all-tools-drawer')
-  await expect(drawer).toBeVisible()
   await expect(drawer.getByRole('heading', { name: 'All Tools' })).toBeVisible()
   await expect(drawer).toContainText('Edit & annotate')
   await expect(drawer).toContainText('Organize pages')
   await expect(drawer).toContainText('Document & security')
-  await expect(drawer).toContainText('Redact')
-  await expect(drawer).toContainText('Document tools')
   await expect(drawer).toContainText('File')
   await expect(drawer).toContainText('PDFs, OCR and security tools stay on this device.')
+  await expect(drawer.getByPlaceholder('Search tools')).toBeVisible()
 
   await drawer.getByRole('button', { name: /Add text/ }).click()
   await expect(drawer).toHaveCount(0)
   await expect(page.getByTitle('Add text')).toHaveClass(/active/)
 
-  await launcher.click()
-  await page.locator('.all-tools-drawer').getByRole('button', { name: /Redact/ }).click()
+  drawer = await openTools(page)
+  await drawer.getByRole('button', { name: /Redact/ }).click()
   await expect(page.getByTitle('Redact')).toHaveClass(/active/)
 
-  await launcher.click()
-  await page.locator('.all-tools-drawer').getByRole('button', { name: /Search \/ OCR/ }).click()
+  drawer = await openTools(page)
+  await category(drawer, 'Document & security')
+  await drawer.getByRole('button', { name: /Search \/ OCR/ }).click()
   await expect(page.getByPlaceholder('Find in document')).toBeFocused()
 
-  await launcher.click()
-  await page.locator('.all-tools-drawer').getByRole('button', { name: /Form fields/ }).click()
+  drawer = await openTools(page)
+  await drawer.getByRole('button', { name: /Form fields/ }).click()
   await expect(page.getByTitle('Form fields')).toHaveClass(/active/)
   await expect(page.locator('.left-panel')).toContainText('Form fields')
 
-  await launcher.click()
-  await page.locator('.all-tools-drawer').getByRole('button', { name: /Document info/ }).click()
+  drawer = await openTools(page)
+  await category(drawer, 'Document & security')
+  await drawer.getByRole('button', { name: /Document info/ }).click()
   await expect(page.getByTitle('Document info')).toHaveClass(/active/)
   await expect(page.locator('.left-panel')).toContainText('Properties')
 
-  await launcher.click()
-  await page.locator('.all-tools-drawer').getByRole('button', { name: /^Pages/ }).click()
+  drawer = await openTools(page)
+  await category(drawer, 'Organize pages')
+  await drawer.getByRole('button', { name: /^Pages/ }).click()
   await expect(page.getByTitle('Pages')).toHaveClass(/active/)
 
-  await launcher.click()
-  await page.locator('.all-tools-drawer').getByRole('button', { name: /^Document tools/ }).click()
+  drawer = await openTools(page)
+  await category(drawer, 'Document & security')
+  await drawer.getByRole('button', { name: /^Document tools/ }).click()
   await expect(page.locator('.advanced-modal')).toBeVisible()
   await page.locator('.advanced-modal > header .icon-btn').click()
   await expect(page.locator('.advanced-modal')).toHaveCount(0)
 
   const beforeSave = await latestDocumentTimestamp(page)
   await page.waitForTimeout(25)
-  await launcher.click()
-  await page.locator('.all-tools-drawer').getByRole('button', { name: /Save locally/ }).click()
+  drawer = await openTools(page)
+  await category(drawer, 'File')
+  await drawer.getByRole('button', { name: /Save locally/ }).click()
   await expect.poll(() => latestDocumentTimestamp(page)).toBeGreaterThan(beforeSave)
 
-  await launcher.click()
-  await expect(page.locator('.all-tools-drawer')).toBeVisible()
+  drawer = await openTools(page)
+  await expect(drawer).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.locator('.all-tools-drawer')).toHaveCount(0)
 })
