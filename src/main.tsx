@@ -119,19 +119,79 @@ function installWorkspacePersistence() {
 
   window.addEventListener('click', scheduleSave, true)
   window.addEventListener('input', scheduleSave, true)
-  window.addEventListener('scroll', scheduleSave, true)
-  window.addEventListener('beforeunload', saveWorkspace)
+  window.addEventListener('change', scheduleSave, true)
+  window.addEventListener('scroll', (event) => {
+    const target = event.target as HTMLElement | null
+    if (target?.matches?.('.page-scroll, .left-panel, .right-panel')) scheduleSave()
+  }, true)
 
+  let restored = false
+  const tryRestore = () => {
+    if (restored || !document.querySelector('.app-shell')) return false
+    const name = document.querySelector<HTMLInputElement>('.doc-title input')?.value
+    if (!name) return false
+    restored = true
+    window.setTimeout(restoreWorkspace, 60)
+    return true
+  }
+
+  if (tryRestore()) return
   const observer = new MutationObserver(() => {
-    if (document.querySelector('.app-shell')) window.setTimeout(restoreWorkspace, 120)
+    if (tryRestore()) observer.disconnect()
   })
   observer.observe(document.body, { childList: true, subtree: true })
+  window.setTimeout(() => observer.disconnect(), 7000)
 }
 
-const root = document.getElementById('root')
-if (!root) throw new Error('Missing root element')
+function installEditorResume() {
+  const markOpen = () => localStorage.setItem(RESUME_KEY, '1')
+  const markClosed = () => localStorage.setItem(RESUME_KEY, '0')
 
-createRoot(root).render(
+  window.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null
+    if (!target) return
+
+    if (target.closest('[title="Close document"]')) {
+      saveWorkspace()
+      markClosed()
+      return
+    }
+
+    if (target.closest('.recent-row') || target.closest('.library-item > button:first-child')) {
+      markOpen()
+    }
+  }, true)
+
+  window.addEventListener('change', (event) => {
+    const target = event.target as HTMLInputElement | null
+    if (target?.type === 'file' && target.files?.length) markOpen()
+  }, true)
+
+  window.addEventListener('drop', (event) => {
+    if (event.dataTransfer?.files?.length) markOpen()
+  }, true)
+
+  if (localStorage.getItem(RESUME_KEY) !== '1') return
+
+  const tryResume = () => {
+    if (document.querySelector('.app-shell')) return true
+    const recent = document.querySelector<HTMLButtonElement>('.recent-row')
+    if (!recent) return false
+    recent.click()
+    return true
+  }
+
+  if (tryResume()) return
+
+  const observer = new MutationObserver(() => {
+    if (tryResume()) observer.disconnect()
+  })
+
+  observer.observe(document.body, { childList: true, subtree: true })
+  window.setTimeout(() => observer.disconnect(), 5000)
+}
+
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
     <AllTools />
@@ -140,13 +200,5 @@ createRoot(root).render(
   </StrictMode>,
 )
 
+installEditorResume()
 installWorkspacePersistence()
-
-try {
-  if (sessionStorage.getItem(RESUME_KEY) === '1') {
-    sessionStorage.removeItem(RESUME_KEY)
-    window.setTimeout(restoreWorkspace, 180)
-  }
-} catch {
-  // Session storage may be disabled in privacy mode.
-}
