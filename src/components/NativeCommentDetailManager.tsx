@@ -27,6 +27,9 @@ type Draft = {
 }
 
 function keyFor(item: NativeCommentDetail) { return `${item.pageIndex}:${item.annotationIndex}` }
+function geometryChanged(a: NativeCommentGeometry, b: NativeCommentGeometry) {
+  return (['x', 'y', 'width', 'height'] as const).some((field) => Math.abs(a[field] - b[field]) > 0.0001)
+}
 function draftsFor(items: NativeCommentDetail[]) {
   return Object.fromEntries(items.map((item) => [keyFor(item), {
     text: item.text,
@@ -79,7 +82,7 @@ export function NativeCommentDetailManager({ bytes, onBeforeMutate, onApply, onS
       const next = await updateNativeCommentDetail(bytes, item.pageIndex, item.annotationIndex, {
         text: draft.text,
         author: draft.author,
-        geometry: draft.geometry,
+        geometry: geometryChanged(draft.geometry, item.geometry) ? draft.geometry : undefined,
         icon: item.subtype === 'Text' ? draft.icon : undefined,
         open: item.subtype === 'Text' ? draft.open : undefined,
         fontSize: item.subtype === 'FreeText' ? Number(draft.fontSize) : undefined,
@@ -136,7 +139,7 @@ export function NativeCommentDetailManager({ bytes, onBeforeMutate, onApply, onS
             <label>Text color<input aria-label={`Native FreeText color page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="color" value={draft.textColor} onChange={(event) => patch(key, { textColor: event.target.value })} /></label>
             <label>Alignment<select aria-label={`Native FreeText alignment page ${item.pageIndex + 1} index ${item.annotationIndex}`} value={draft.alignment} onChange={(event) => patch(key, { alignment: Number(event.target.value) as 0 | 1 | 2 })}><option value={0}>Left</option><option value={1}>Center</option><option value={2}>Right</option></select></label>
           </div>}
-          <p>FreeText edits remove stale appearance streams so compliant viewers regenerate the visible text from the updated Contents/DA values.</p>
+          <p>Geometry is rewritten only when changed. FreeText edits remove stale appearance streams so compliant viewers regenerate the visible text from updated Contents/DA values.</p>
           <div className="native-comment-detail-actions"><button disabled={Boolean(busy)} onClick={() => void save(item)}><Save /> Save</button><button className="danger-action" disabled={Boolean(busy)} onClick={() => void remove(item)}><Trash2 /> Delete</button></div>
         </div>
       })}
