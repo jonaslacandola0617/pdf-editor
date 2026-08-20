@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Circle, Minus, Save, Square, Trash2 } from 'lucide-react'
-import { deleteNativeShape, listNativeShapes, updateNativeShape, type NativeShapeInfo } from '../lib/native-shapes'
+import { deleteNativeShape, listNativeShapes, updateNativeShape, type NativeShapeGeometry, type NativeShapeInfo } from '../lib/native-shapes'
 
 type Props = {
   bytes: ArrayBuffer
@@ -14,6 +14,7 @@ type Draft = {
   fillColor: string
   opacity: string
   borderWidth: string
+  geometry: NativeShapeGeometry
   x1: string
   y1: string
   x2: string
@@ -29,6 +30,7 @@ function draftsFor(items: NativeShapeInfo[]) {
     fillColor: item.fillColor,
     opacity: String(Math.round(item.opacity * 100)),
     borderWidth: String(item.borderWidth),
+    geometry: { ...item.geometry },
     x1: String(item.line?.x1 ?? ''),
     y1: String(item.line?.y1 ?? ''),
     x2: String(item.line?.x2 ?? ''),
@@ -64,8 +66,16 @@ export function NativeShapeManager({ bytes, onBeforeMutate, onApply, onStatus }:
     return () => { cancelled = true }
   }, [bytes, onStatus])
 
-  const setDraft = (key: string, field: keyof Draft, value: string) => {
+  const setDraft = (key: string, field: Exclude<keyof Draft, 'geometry'>, value: string) => {
     setDrafts((current) => ({ ...current, [key]: { ...current[key], [field]: value } }))
+  }
+
+  const setGeometry = (key: string, field: keyof NativeShapeGeometry, value: string) => {
+    const numeric = Number(value)
+    setDrafts((current) => ({
+      ...current,
+      [key]: { ...current[key], geometry: { ...current[key].geometry, [field]: Number.isFinite(numeric) ? numeric : 0 } },
+    }))
   }
 
   const save = async (item: NativeShapeInfo) => {
@@ -82,6 +92,7 @@ export function NativeShapeManager({ bytes, onBeforeMutate, onApply, onStatus }:
         fillColor: draft.fillColor,
         opacity: Math.max(0, Math.min(100, Number(draft.opacity) || 0)) / 100,
         borderWidth: Math.max(0, Number(draft.borderWidth) || 0),
+        geometry: item.subtype === 'Line' ? undefined : draft.geometry,
         line: item.subtype === 'Line' ? {
           x1: Number(draft.x1), y1: Number(draft.y1), x2: Number(draft.x2), y2: Number(draft.y2),
         } : undefined,
@@ -133,10 +144,13 @@ export function NativeShapeManager({ bytes, onBeforeMutate, onApply, onStatus }:
             <label>Opacity %<input aria-label={`Native shape opacity page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="number" min="0" max="100" step="1" value={draft.opacity} onChange={(event) => setDraft(key, 'opacity', event.target.value)} /></label>
             <label>Border width<input aria-label={`Native shape border page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="number" min="0" step="0.25" value={draft.borderWidth} onChange={(event) => setDraft(key, 'borderWidth', event.target.value)} /></label>
           </div>
+          {item.subtype !== 'Line' && <div className="native-shape-geometry">
+            {(['x', 'y', 'width', 'height'] as const).map((field) => <label key={field}>{field === 'x' ? 'Left %' : field === 'y' ? 'Top %' : `${field[0].toUpperCase()}${field.slice(1)} %`}<input aria-label={`Native shape ${field} page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="number" min="0" max="100" step="0.1" value={draft.geometry[field]} onChange={(event) => setGeometry(key, field, event.target.value)} /></label>)}
+          </div>}
           {item.subtype === 'Line' && <div className="native-line-fields">
             {(['x1', 'y1', 'x2', 'y2'] as const).map((field) => <label key={field}>{field.toUpperCase()}<input aria-label={`Native line ${field} page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="number" step="1" value={draft[field]} onChange={(event) => setDraft(key, field, event.target.value)} /></label>)}
           </div>}
-          <p>Edits preserve the native annotation subtype, rectangle and unrelated dictionary properties.</p>
+          <p>{item.subtype === 'Line' ? 'Line endpoints are written directly to the native /L array.' : 'Position and size are written directly to the native /Rect.'} Unrelated dictionary properties are preserved.</p>
           <div className="native-shape-actions">
             <button disabled={Boolean(busy)} onClick={() => void save(item)}><Save /> Save</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void remove(item)}><Trash2 /> Delete</button>
