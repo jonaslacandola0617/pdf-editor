@@ -28,6 +28,9 @@ type Draft = {
 }
 
 function keyFor(item: NativeExtendedAnnotationInfo) { return `${item.pageIndex}:${item.annotationIndex}` }
+function geometryChanged(a: AnnotationGeometry, b: AnnotationGeometry) {
+  return (['x', 'y', 'width', 'height'] as const).some((field) => Math.abs(a[field] - b[field]) > 0.0001)
+}
 function iconFor(item: NativeExtendedAnnotationInfo) {
   if (item.subtype === 'Ink') return <PenLine />
   if (item.subtype === 'Stamp') return <Stamp />
@@ -125,7 +128,7 @@ export function NativeExtendedAnnotationManager({ bytes, onBeforeMutate, onApply
         color: draft.color,
         opacity: Math.max(0, Math.min(100, Number(draft.opacity) || 0)) / 100,
         borderWidth: Math.max(0, Number(draft.borderWidth) || 0),
-        geometry: draft.geometry,
+        geometry: geometryChanged(draft.geometry, item.geometry) ? draft.geometry : undefined,
         caretSymbol: draft.caretSymbol,
         attachmentIcon: draft.attachmentIcon,
       })
@@ -206,7 +209,7 @@ export function NativeExtendedAnnotationManager({ bytes, onBeforeMutate, onApply
             <span>{item.attachment?.name || 'attachment.bin'} · {sizeLabel(item.attachment?.size || 0)}</span>
             <label>Icon<select aria-label={`Page attachment icon page ${item.pageIndex + 1} index ${item.annotationIndex}`} value={draft.attachmentIcon} onChange={(event) => patchDraft(key, { attachmentIcon: event.target.value })}><option>PushPin</option><option>Paperclip</option><option>Graph</option><option>Tag</option></select></label>
           </div>}
-          <p>Geometry uses page percentages. Ink and polygon geometry is transformed without changing the original stroke/vertex order.</p>
+          <p>Geometry uses page percentages and is rewritten only when changed. Ink and polygon transforms preserve original stroke/vertex order.</p>
           <div className="native-extended-actions">
             {item.subtype === 'FileAttachment' && <button disabled={Boolean(busy)} onClick={() => void extract(item)}><Download /> Extract</button>}
             <button disabled={Boolean(busy)} onClick={() => void save(item)}><Save /> Save</button>
