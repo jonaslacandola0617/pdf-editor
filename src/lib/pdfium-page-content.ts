@@ -27,6 +27,7 @@ type PdfiumRuntime = {
   _FPDFTextObj_GetFontSize?: (object: number, sizePtr?: number) => number
   _FPDFText_SetText: (object: number, text: number) => number
   _FPDFImageObj_GetImagePixelSize?: (object: number, widthPtr: number, heightPtr: number) => number
+  _FPDFImageObj_GetBitmap?: (object: number) => number
   _FPDFImageObj_GetRenderedBitmap?: (document: number, page: number, object: number) => number
   _FPDFImageObj_SetBitmap?: (pages: number, count: number, object: number, bitmap: number) => number
   _FPDFBitmap_CreateEx?: (width: number, height: number, format: number, buffer: number, stride: number) => number
@@ -378,27 +379,25 @@ export async function extractNativeImage(bytes: ArrayBuffer, pageIndex: number, 
   return withDocument(bytes, (module, document) => {
     const page = module._FPDF_LoadPage(document.documentIdx, pageIndex)
     if (!page) throw new Error('The PDF page could not be loaded.')
-    const renderBitmap = module._FPDFImageObj_GetRenderedBitmap; const destroyBitmap = module._FPDFBitmap_Destroy
-    if (!renderBitmap || !destroyBitmap || !module._FPDFBitmap_GetBuffer || !module._FPDFBitmap_GetWidth || !module._FPDFBitmap_GetHeight || !module._FPDFBitmap_GetStride || !module._FPDFBitmap_GetFormat) {
+    const getBitmap = module._FPDFImageObj_GetBitmap
+    if (!getBitmap || !module._FPDFBitmap_GetBuffer || !module._FPDFBitmap_GetWidth || !module._FPDFBitmap_GetHeight || !module._FPDFBitmap_GetStride || !module._FPDFBitmap_GetFormat) {
       module._FPDF_ClosePage(page); throw new Error('This PDFium build cannot extract native image bitmaps.')
     }
     try {
       const object = objectAt(module, page, objectIndex, 3)
-      const bitmap = renderBitmap(document.documentIdx, page, object)
-      if (!bitmap) throw new Error('PDFium could not render this image object.')
-      try {
-        const width = module._FPDFBitmap_GetWidth(bitmap); const height = module._FPDFBitmap_GetHeight(bitmap); const stride = module._FPDFBitmap_GetStride(bitmap); const format = module._FPDFBitmap_GetFormat(bitmap); const buffer = module._FPDFBitmap_GetBuffer(bitmap)
-        if (!width || !height || !stride || !buffer) throw new Error('The image bitmap is empty.')
-        const source = module.HEAPU8.slice(buffer, buffer + height * stride)
-        const rgba = new Uint8Array(width * height * 4); rgba.fill(255)
-        const bpp = format === 1 ? 1 : format === 2 ? 3 : 4
-        for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-          const src = y * stride + x * bpp; const dst = (y * width + x) * 4
-          if (format === 1) { rgba[dst] = source[src]; rgba[dst + 1] = source[src]; rgba[dst + 2] = source[src] }
-          else { rgba[dst] = source[src + 2]; rgba[dst + 1] = source[src + 1]; rgba[dst + 2] = source[src]; if (format === 4) rgba[dst + 3] = source[src + 3] }
-        }
-        return { width, height, rgba }
-      } finally { destroyBitmap(bitmap) }
+      const bitmap = getBitmap(object)
+      if (!bitmap) throw new Error('PDFium could not read this image object bitmap.')
+      const width = module._FPDFBitmap_GetWidth(bitmap); const height = module._FPDFBitmap_GetHeight(bitmap); const stride = module._FPDFBitmap_GetStride(bitmap); const format = module._FPDFBitmap_GetFormat(bitmap); const buffer = module._FPDFBitmap_GetBuffer(bitmap)
+      if (!width || !height || !stride || !buffer) throw new Error('The image bitmap is empty.')
+      const source = module.HEAPU8.slice(buffer, buffer + height * stride)
+      const rgba = new Uint8Array(width * height * 4); rgba.fill(255)
+      const bpp = format === 1 ? 1 : format === 2 ? 3 : 4
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const src = y * stride + x * bpp; const dst = (y * width + x) * 4
+        if (format === 1) { rgba[dst] = source[src]; rgba[dst + 1] = source[src]; rgba[dst + 2] = source[src] }
+        else { rgba[dst] = source[src + 2]; rgba[dst + 1] = source[src + 1]; rgba[dst + 2] = source[src]; if (format === 4) rgba[dst + 3] = source[src + 3] }
+      }
+      return { width, height, rgba }
     } finally { module._FPDF_ClosePage(page) }
   })
 }
