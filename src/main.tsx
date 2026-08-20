@@ -10,6 +10,7 @@ import './ocr.css'
 import './completion.css'
 import './navigation-extras.css'
 import './ux-audit.css'
+import './ux-audit-sections.css'
 
 const RESUME_KEY = 'pdf-forge-resume-editor'
 const WORKSPACE_KEY = 'pdf-forge-workspace'
