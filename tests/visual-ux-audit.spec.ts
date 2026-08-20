@@ -37,6 +37,15 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true })
 }
 
+function auditBrowserErrors(page: Page) {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  return () => expect(errors, `Unexpected browser errors: ${JSON.stringify(errors)}`).toEqual([])
+}
+
 async function expectNoViewportOverflow(page: Page) {
   const metrics = await page.evaluate(() => ({
     width: window.innerWidth,
@@ -93,7 +102,7 @@ async function expectCriticalTargets(page: Page, min: number) {
   const failures = await page.evaluate(({ min }) => {
     const selectors = [
       '.top-actions button:not([disabled])', '.rail button', '.tool-group button',
-      '.floating-nav button', '.all-tools-launcher', '.all-tools-close',
+      '.floating-nav button', '.all-tools-launcher', '.all-tools-close', '.mobile-workspace-bar button',
     ]
     const nodes = selectors.flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)))
     return nodes.filter((node) => {
@@ -109,6 +118,7 @@ async function expectCriticalTargets(page: Page, min: number) {
 }
 
 test('visual audit — welcome hierarchy at desktop and mobile widths', async ({ page }) => {
+  const assertNoErrors = auditBrowserErrors(page)
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
   await expect(page.locator('.welcome')).toBeVisible()
@@ -122,10 +132,12 @@ test('visual audit — welcome hierarchy at desktop and mobile widths', async ({
   await expectNoViewportOverflow(page)
   const cta = await page.getByRole('button', { name: /Open PDF or images/i }).boundingBox()
   expect(cta?.width || 0).toBeLessThan(360)
+  assertNoErrors()
 })
 
 test('visual audit — editor desktop hierarchy, density, focus and primary workflows', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
+  const assertNoErrors = auditBrowserErrors(page)
   await page.setViewportSize({ width: 1440, height: 900 })
   const source = testInfo.outputPath('visual-audit.pdf')
   await makeAuditPdf(source)
@@ -143,10 +155,12 @@ test('visual audit — editor desktop hierarchy, density, focus and primary work
   await search.press('Enter')
   await expect(page.locator('.search-highlight')).toBeVisible({ timeout: 20_000 })
   await shot(page, '04-editor-search-result')
+  assertNoErrors()
 })
 
 test('visual audit — progressive disclosure surfaces stay usable and unclipped', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
+  const assertNoErrors = auditBrowserErrors(page)
   await page.setViewportSize({ width: 1440, height: 900 })
   const source = testInfo.outputPath('visual-audit-tools.pdf')
   await makeAuditPdf(source)
@@ -163,6 +177,7 @@ test('visual audit — progressive disclosure surfaces stay usable and unclipped
 
   await page.getByTitle('Document tools').click()
   await expect(page.locator('.advanced-modal')).toBeVisible()
+  await expect(page.locator('.advanced-category-nav')).toBeVisible()
   await shot(page, '06-document-tools-desktop')
   const advanced = await page.locator('.advanced-modal').boundingBox()
   expect(advanced?.top || 0).toBeGreaterThanOrEqual(8)
@@ -171,15 +186,18 @@ test('visual audit — progressive disclosure surfaces stay usable and unclipped
 
   await page.getByTitle('Embedded PDF objects').click()
   await expect(page.locator('.native-object-modal')).toBeVisible()
+  await expect(page.locator('.object-section-nav')).toBeVisible()
   await shot(page, '07-objects-desktop')
   const objects = await page.locator('.native-object-modal').boundingBox()
   expect(objects?.top || 0).toBeGreaterThanOrEqual(8)
   expect(objects?.bottom || 9999).toBeLessThanOrEqual(892)
   await page.getByTitle('Close embedded objects').click()
+  assertNoErrors()
 })
 
 test('visual audit — tablet and mobile flows remain discoverable', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
+  const assertNoErrors = auditBrowserErrors(page)
   const source = testInfo.outputPath('visual-audit-responsive.pdf')
   await makeAuditPdf(source)
 
@@ -198,11 +216,19 @@ test('visual audit — tablet and mobile flows remain discoverable', async ({ pa
   const float = await page.locator('.floating-nav').boundingBox()
   expect(float?.left || -1).toBeGreaterThanOrEqual(0)
   expect(float?.right || 9999).toBeLessThanOrEqual(390)
+  await expect(page.locator('.mobile-workspace-bar')).toBeVisible()
 
   await page.getByTitle('All Tools').click()
   await shot(page, '10-all-tools-mobile')
-  await expect(page.locator('.all-tools-drawer')).toBeVisible()
-  await page.getByRole('button', { name: /Pages/i }).first().click()
+  const drawer = page.locator('.all-tools-drawer')
+  await expect(drawer).toBeVisible()
+  await drawer.getByRole('button', { name: 'Organize pages', exact: true }).click()
+  await drawer.getByRole('button', { name: /^Pages/ }).click()
   await expect(page.locator('.left-panel')).toBeVisible()
   await shot(page, '11-mobile-pages-sheet')
+
+  await page.getByTitle('Properties').click()
+  await expect(page.locator('.right-panel')).toBeVisible()
+  await shot(page, '12-mobile-properties-sheet')
+  assertNoErrors()
 })
