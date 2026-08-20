@@ -31,6 +31,12 @@ function findButtonByText(label: string) {
     .find((button) => button.textContent?.trim() === label)
 }
 
+function labelButton(button: HTMLButtonElement | undefined, label: string) {
+  if (!button) return
+  if (!button.getAttribute('aria-label')) button.setAttribute('aria-label', button.title || label)
+  if (!button.title) button.title = label
+}
+
 export function AllTools() {
   const [editorVisible, setEditorVisible] = useState(false)
   const [open, setOpen] = useState(false)
@@ -84,15 +90,65 @@ export function AllTools() {
   }, [editorVisible, mobile])
 
   useEffect(() => {
-    if (!open && !mobileSheet) return
+    if (!editorVisible) return
+    const applyAccessibleNames = () => {
+      const nav = Array.from(document.querySelectorAll<HTMLButtonElement>('.floating-nav > button'))
+      const navLabels = ['Previous page', 'Next page', 'Fit page', 'Fit width', 'Zoom out', 'Zoom in']
+      nav.forEach((button, index) => labelButton(button, navLabels[index] || 'Document navigation'))
+
+      const searchButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.search-box button'))
+      labelButton(searchButtons[0], 'Previous search result')
+      labelButton(searchButtons[1], 'Next search result')
+
+      const quick = Array.from(document.querySelectorAll<HTMLButtonElement>('.quick-actions button'))
+      labelButton(quick[0], 'Move page up')
+      labelButton(quick[1], 'Move page down')
+
+      const stepper = Array.from(document.querySelectorAll<HTMLButtonElement>('.stepper button'))
+      labelButton(stepper[0], 'Decrease font size')
+      labelButton(stepper[stepper.length - 1], 'Increase font size')
+
+      labelButton(document.querySelector<HTMLButtonElement>('.right-panel .panel-heading .icon-btn.danger') || undefined, 'Delete selected annotation')
+      labelButton(document.querySelector<HTMLButtonElement>('.advanced-modal > header .icon-btn') || undefined, 'Close document tools')
+      document.querySelector<HTMLInputElement>('.custom-color input')?.setAttribute('aria-label', 'Custom color')
+    }
+
+    applyAccessibleNames()
+    const observer = new MutationObserver(applyAccessibleNames)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [editorVisible])
+
+  useEffect(() => {
+    if (!editorVisible) return
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
-      if (open) setOpen(false)
-      else setMobileSheet(null)
+      if (open) {
+        setOpen(false)
+        setQuery('')
+        return
+      }
+      if (mobileSheet) {
+        setMobileSheet(null)
+        return
+      }
+      const objectClose = document.querySelector<HTMLButtonElement>('.native-object-modal [title="Close embedded objects"]')
+      if (objectClose) {
+        objectClose.click()
+        return
+      }
+      const advancedClose = document.querySelector<HTMLButtonElement>('.advanced-modal > header .icon-btn')
+      if (advancedClose) {
+        advancedClose.click()
+        return
+      }
+      const modal = document.querySelector<HTMLElement>('.modal-backdrop > .modal')
+      const backdrop = modal?.parentElement
+      if (backdrop) backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [mobileSheet, open])
+  }, [editorVisible, mobileSheet, open])
 
   if (!editorVisible) return null
 
@@ -225,7 +281,7 @@ export function AllTools() {
 
             <div className="all-tools-search">
               <Search size={16} />
-              <input autoFocus={mobile} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tools" aria-label="Search All Tools" />
+              <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tools" aria-label="Search All Tools" />
               {query && <button aria-label="Clear tool search" onClick={() => setQuery('')}><X size={14} /></button>}
             </div>
 
