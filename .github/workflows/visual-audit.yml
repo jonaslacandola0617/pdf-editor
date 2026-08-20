@@ -1,0 +1,33 @@
+name: Visual UX Audit
+
+on:
+  push:
+    branches:
+      - audit/ui-ux-release
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm install --no-save @playwright/test
+      - run: npx playwright install chromium
+      - run: npm run build
+      - name: Run visual audit
+        run: npx playwright test tests/visual-ux-audit.spec.ts
+      - name: Upload visual audit screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-ux-audit
+          path: |
+            visual-audit
+            playwright-report
+            test-results
+          if-no-files-found: ignore
