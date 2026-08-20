@@ -121,13 +121,13 @@ test('edits existing native text content including replacement, color, opacity, 
   await page.getByTitle('Close document').click()
   await page.locator('input[type="file"]').first().setInputFiles(exported)
   await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
-  const search = page.locator('.search-box input')
+  const search = page.getByPlaceholder('Find in document')
   await search.fill('UPDATED NATIVE CONTENT 9941')
   await search.press('Enter')
-  await expect(page.locator('.search-count')).not.toContainText('No matches', { timeout: 20_000 })
+  await expect(page.locator('.stage-top-hint')).toContainText('1 matching page', { timeout: 20_000 })
   await search.fill('DELETE CONTENT TEXT 9942')
   await search.press('Enter')
-  await expect(page.locator('.search-count')).toContainText('No matches', { timeout: 20_000 })
+  await expect(page.locator('.stage-top-hint')).toContainText('No matches', { timeout: 20_000 })
 })
 
 test('extracts, replaces, moves/resizes and deletes an existing native image page object', async ({ page }, testInfo) => {
