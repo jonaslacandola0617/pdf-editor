@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Bookmark, ChevronRight, FileHeart, Star, X } from 'lucide-react'
 import { pdfjsLib, type PDFDocumentProxy } from '../lib/pdfjs'
@@ -74,6 +74,7 @@ export function NavigationExtras() {
   const [bookmarks, setBookmarks] = useState<FlatBookmark[]>([])
   const [bookmarkDocument, setBookmarkDocument] = useState<PDFDocumentProxy | null>(null)
   const [loading, setLoading] = useState(false)
+  const wasMobile = useRef(false)
 
   useEffect(() => {
     const sync = () => {
@@ -90,6 +91,29 @@ export function NavigationExtras() {
     document.addEventListener('input', sync, true)
     return () => { observer.disconnect(); document.removeEventListener('input', sync, true) }
   }, [])
+
+  useEffect(() => {
+    if (!editorVisible) {
+      wasMobile.current = false
+      return
+    }
+
+    const fitWhenEnteringMobile = () => {
+      const mobile = window.innerWidth <= 760
+      if (mobile && !wasMobile.current) {
+        window.setTimeout(() => {
+          document.querySelector<HTMLButtonElement>('.floating-nav button[title="Fit width"]')?.click()
+          const scroller = document.querySelector<HTMLElement>('.page-scroll')
+          if (scroller) scroller.scrollLeft = 0
+        }, 80)
+      }
+      wasMobile.current = mobile
+    }
+
+    fitWhenEnteringMobile()
+    window.addEventListener('resize', fitWhenEnteringMobile)
+    return () => window.removeEventListener('resize', fitWhenEnteringMobile)
+  }, [editorVisible])
 
   useEffect(() => {
     if (!open) return
