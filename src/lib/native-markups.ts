@@ -1,6 +1,7 @@
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRef, PDFString } from 'pdf-lib'
 
 export type NativeMarkupSubtype = 'Highlight' | 'Underline' | 'StrikeOut' | 'Squiggly'
+export type NativeMarkupGeometry = { x: number; y: number; width: number; height: number }
 
 export type NativeMarkupInfo = {
   pageIndex: number
@@ -11,6 +12,7 @@ export type NativeMarkupInfo = {
   color: string
   opacity: number
   quadCount: number
+  geometry: NativeMarkupGeometry
 }
 
 export type NativeMarkupUpdate = {
@@ -18,13 +20,13 @@ export type NativeMarkupUpdate = {
   author: string
   color: string
   opacity: number
+  geometry?: NativeMarkupGeometry
 }
 
 const SUPPORTED = new Set(['/Highlight', '/Underline', '/StrikeOut', '/Squiggly'])
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
+function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(max, value)) }
+function rounded(value: number) { return Math.round(value * 100) / 100 }
 
 function textValue(value: unknown) {
   if (value instanceof PDFString || value instanceof PDFHexString) return value.decodeText()
@@ -53,9 +55,7 @@ function colorComponents(dict: PDFDict) {
   return values
 }
 
-function componentToHex(value: number) {
-  return Math.round(clamp(value, 0, 1) * 255).toString(16).padStart(2, '0')
-}
+function componentToHex(value: number) { return Math.round(clamp(value, 0, 1) * 255).toString(16).padStart(2, '0') }
 
 function colorHex(dict: PDFDict) {
   const values = colorComponents(dict)
@@ -74,6 +74,69 @@ function parseHexColor(value: string) {
   return [0, 2, 4].map((offset) => parseInt(normalized.slice(offset, offset + 2), 16) / 255)
 }
 
+function quadValues(dict: PDFDict) {
+  const quadPoints = dict.lookupMaybe(PDFName.of('QuadPoints'), PDFArray)
+  if (!quadPoints) return []
+  const values: number[] = []
+  for (let index = 0; index < quadPoints.size(); index++) {
+    const number = quadPoints.lookup(index, PDFNumber)
+    if (number) values.push(number.asNumber())
+  }
+  return values
+}
+
+type Bounds = { minX: number; minY: number; maxX: number; maxY: number }
+
+function boundsFromValues(values: number[]): Bounds | null {
+  if (values.length < 2) return null
+  let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity
+  for (let index = 0; index + 1 < values.length; index += 2) {
+    const x = values[index]; const y = values[index + 1]
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+    minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y)
+  }
+  return Number.isFinite(minX) ? { minX, minY, maxX, maxY } : null
+}
+
+function geometryFromQuads(pdf: PDFDocument, pageIndex: number, dict: PDFDict): NativeMarkupGeometry {
+  const page = pdf.getPage(pageIndex)
+  const { width: pageWidth, height: pageHeight } = page.getSize()
+  const bounds = boundsFromValues(quadValues(dict))
+  if (!bounds || pageWidth <= 0 || pageHeight <= 0) return { x: 0, y: 0, width: 10, height: 3 }
+  return {
+    x: rounded(clamp(bounds.minX / pageWidth * 100, 0, 100)),
+    y: rounded(clamp((pageHeight - bounds.maxY) / pageHeight * 100, 0, 100)),
+    width: rounded(clamp((bounds.maxX - bounds.minX) / pageWidth * 100, 0.1, 100)),
+    height: rounded(clamp((bounds.maxY - bounds.minY) / pageHeight * 100, 0.1, 100)),
+  }
+}
+
+function targetBounds(geometry: NativeMarkupGeometry, pageWidth: number, pageHeight: number): Bounds {
+  const xPercent = clamp(Number(geometry.x) || 0, 0, 99.9)
+  const yPercent = clamp(Number(geometry.y) || 0, 0, 99.9)
+  const widthPercent = clamp(Number(geometry.width) || 0.1, 0.1, 100 - xPercent)
+  const heightPercent = clamp(Number(geometry.height) || 0.1, 0.1, 100 - yPercent)
+  const minX = pageWidth * xPercent / 100
+  const width = pageWidth * widthPercent / 100
+  const height = pageHeight * heightPercent / 100
+  const maxY = pageHeight - pageHeight * yPercent / 100
+  return { minX, minY: maxY - height, maxX: minX + width, maxY }
+}
+
+function transformQuads(values: number[], from: Bounds, to: Bounds) {
+  const oldWidth = Math.max(0.000001, from.maxX - from.minX)
+  const oldHeight = Math.max(0.000001, from.maxY - from.minY)
+  const newWidth = to.maxX - to.minX
+  const newHeight = to.maxY - to.minY
+  const output: number[] = []
+  for (let index = 0; index + 1 < values.length; index += 2) {
+    const x = values[index]; const y = values[index + 1]
+    output.push(to.minX + ((x - from.minX) / oldWidth) * newWidth)
+    output.push(to.minY + ((y - from.minY) / oldHeight) * newHeight)
+  }
+  return output
+}
+
 function markupAt(pdf: PDFDocument, pageIndex: number, annotationIndex: number) {
   const page = pdf.getPage(pageIndex)
   const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)
@@ -81,7 +144,7 @@ function markupAt(pdf: PDFDocument, pageIndex: number, annotationIndex: number) 
   const dict = annotationDict(pdf, annots, annotationIndex)
   const subtypeName = dict?.get(PDFName.of('Subtype'))?.toString() || ''
   if (!dict || !SUPPORTED.has(subtypeName)) return null
-  return { annots, dict, subtype: subtypeName.slice(1) as NativeMarkupSubtype }
+  return { page, annots, dict, subtype: subtypeName.slice(1) as NativeMarkupSubtype }
 }
 
 export async function listNativeMarkups(bytes: ArrayBuffer): Promise<NativeMarkupInfo[]> {
@@ -94,7 +157,7 @@ export async function listNativeMarkups(bytes: ArrayBuffer): Promise<NativeMarku
       const dict = annotationDict(pdf, annots, annotationIndex)
       const subtypeName = dict?.get(PDFName.of('Subtype'))?.toString() || ''
       if (!dict || !SUPPORTED.has(subtypeName)) continue
-      const quadPoints = dict.lookupMaybe(PDFName.of('QuadPoints'), PDFArray)
+      const quads = quadValues(dict)
       result.push({
         pageIndex,
         annotationIndex,
@@ -103,7 +166,8 @@ export async function listNativeMarkups(bytes: ArrayBuffer): Promise<NativeMarku
         author: textValue(dict.lookup(PDFName.of('T'))),
         color: colorHex(dict),
         opacity: clamp(dict.lookupMaybe(PDFName.of('CA'), PDFNumber)?.asNumber() ?? 1, 0, 1),
-        quadCount: quadPoints ? Math.floor(quadPoints.size() / 8) : 0,
+        quadCount: Math.floor(quads.length / 8),
+        geometry: geometryFromQuads(pdf, pageIndex, dict),
       })
     }
   })
@@ -119,6 +183,18 @@ export async function updateNativeMarkup(bytes: ArrayBuffer, pageIndex: number, 
   else located.dict.delete(PDFName.of('T'))
   located.dict.set(PDFName.of('C'), pdf.context.obj(parseHexColor(update.color)))
   located.dict.set(PDFName.of('CA'), PDFNumber.of(clamp(Number(update.opacity) || 0, 0, 1)))
+
+  if (update.geometry) {
+    const current = quadValues(located.dict)
+    const from = boundsFromValues(current)
+    if (from && current.length >= 8) {
+      const { width: pageWidth, height: pageHeight } = located.page.getSize()
+      const to = targetBounds(update.geometry, pageWidth, pageHeight)
+      located.dict.set(PDFName.of('QuadPoints'), pdf.context.obj(transformQuads(current, from, to)))
+      located.dict.set(PDFName.of('Rect'), pdf.context.obj([to.minX, to.minY, to.maxX, to.maxY]))
+    }
+  }
+
   return (await pdf.save({ useObjectStreams: true })).buffer as ArrayBuffer
 }
 

@@ -1,6 +1,7 @@
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFNumber, PDFRef } from 'pdf-lib'
 
 export type NativeShapeSubtype = 'Square' | 'Circle' | 'Line'
+export type NativeShapeGeometry = { x: number; y: number; width: number; height: number }
 
 export type NativeShapeInfo = {
   pageIndex: number
@@ -10,6 +11,7 @@ export type NativeShapeInfo = {
   fillColor: string
   opacity: number
   borderWidth: number
+  geometry: NativeShapeGeometry
   line?: { x1: number; y1: number; x2: number; y2: number }
 }
 
@@ -18,14 +20,14 @@ export type NativeShapeUpdate = {
   fillColor: string
   opacity: number
   borderWidth: number
+  geometry?: NativeShapeGeometry
   line?: { x1: number; y1: number; x2: number; y2: number }
 }
 
 const SUPPORTED = new Set(['/Square', '/Circle', '/Line'])
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
+function clamp(value: number, min: number, max: number) { return Math.max(min, Math.min(max, value)) }
+function rounded(value: number) { return Math.round(value * 100) / 100 }
 
 function annotationDict(pdf: PDFDocument, annots: PDFArray, index: number) {
   const raw = annots.get(index)
@@ -49,9 +51,7 @@ function components(dict: PDFDict, key: string) {
   return values
 }
 
-function componentToHex(value: number) {
-  return Math.round(clamp(value, 0, 1) * 255).toString(16).padStart(2, '0')
-}
+function componentToHex(value: number) { return Math.round(clamp(value, 0, 1) * 255).toString(16).padStart(2, '0') }
 
 function toHex(values: number[], fallback: [number, number, number]) {
   let rgb: [number, number, number]
@@ -86,6 +86,39 @@ function linePoints(dict: PDFDict) {
   return { x1: values[0]!, y1: values[1]!, x2: values[2]!, y2: values[3]! }
 }
 
+function rectGeometry(pdf: PDFDocument, pageIndex: number, dict: PDFDict): NativeShapeGeometry {
+  const page = pdf.getPage(pageIndex)
+  const { width: pageWidth, height: pageHeight } = page.getSize()
+  const rect = dict.lookupMaybe(PDFName.of('Rect'), PDFArray)
+  if (!rect || pageWidth <= 0 || pageHeight <= 0) return { x: 0, y: 0, width: 10, height: 10 }
+  try {
+    const box = rect.asRectangle()
+    return {
+      x: rounded(clamp(box.x / pageWidth * 100, 0, 100)),
+      y: rounded(clamp((pageHeight - box.y - box.height) / pageHeight * 100, 0, 100)),
+      width: rounded(clamp(box.width / pageWidth * 100, 0.1, 100)),
+      height: rounded(clamp(box.height / pageHeight * 100, 0.1, 100)),
+    }
+  } catch {
+    return { x: 0, y: 0, width: 10, height: 10 }
+  }
+}
+
+function setRectGeometry(pdf: PDFDocument, pageIndex: number, dict: PDFDict, geometry: NativeShapeGeometry) {
+  const page = pdf.getPage(pageIndex)
+  const { width: pageWidth, height: pageHeight } = page.getSize()
+  const xPercent = clamp(Number(geometry.x) || 0, 0, 99.9)
+  const yPercent = clamp(Number(geometry.y) || 0, 0, 99.9)
+  const widthPercent = clamp(Number(geometry.width) || 0.1, 0.1, 100 - xPercent)
+  const heightPercent = clamp(Number(geometry.height) || 0.1, 0.1, 100 - yPercent)
+  const x = pageWidth * xPercent / 100
+  const width = pageWidth * widthPercent / 100
+  const height = pageHeight * heightPercent / 100
+  const top = pageHeight * yPercent / 100
+  const bottom = pageHeight - top - height
+  dict.set(PDFName.of('Rect'), pdf.context.obj([x, bottom, x + width, bottom + height]))
+}
+
 function shapeAt(pdf: PDFDocument, pageIndex: number, annotationIndex: number) {
   const page = pdf.getPage(pageIndex)
   const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)
@@ -114,6 +147,7 @@ export async function listNativeShapes(bytes: ArrayBuffer): Promise<NativeShapeI
         fillColor: toHex(components(dict, 'IC'), [1, 1, 1]),
         opacity: clamp(dict.lookupMaybe(PDFName.of('CA'), PDFNumber)?.asNumber() ?? 1, 0, 1),
         borderWidth: borderWidth(dict),
+        geometry: rectGeometry(pdf, pageIndex, dict),
         line: subtypeName === '/Line' ? linePoints(dict) : undefined,
       })
     }
@@ -136,6 +170,8 @@ export async function updateNativeShape(bytes: ArrayBuffer, pageIndex: number, a
     located.dict.set(PDFName.of('BS'), bs)
   }
   bs.set(PDFName.of('W'), PDFNumber.of(Math.max(0, Number(update.borderWidth) || 0)))
+
+  if (located.subtype !== 'Line' && update.geometry) setRectGeometry(pdf, pageIndex, located.dict, update.geometry)
 
   if (located.subtype === 'Line' && update.line) {
     const values = [update.line.x1, update.line.y1, update.line.x2, update.line.y2].map((value) => Number(value))

@@ -4,6 +4,7 @@ import {
   deleteNativeMarkup,
   listNativeMarkups,
   updateNativeMarkup,
+  type NativeMarkupGeometry,
   type NativeMarkupInfo,
 } from '../lib/native-markups'
 
@@ -19,10 +20,12 @@ type Draft = {
   author: string
   color: string
   opacity: string
+  geometry: NativeMarkupGeometry
 }
 
-function keyFor(item: NativeMarkupInfo) {
-  return `${item.pageIndex}:${item.annotationIndex}`
+function keyFor(item: NativeMarkupInfo) { return `${item.pageIndex}:${item.annotationIndex}` }
+function geometryChanged(a: NativeMarkupGeometry, b: NativeMarkupGeometry) {
+  return (['x', 'y', 'width', 'height'] as const).some((field) => Math.abs(a[field] - b[field]) > 0.0001)
 }
 
 function draftsFor(items: NativeMarkupInfo[]) {
@@ -31,6 +34,7 @@ function draftsFor(items: NativeMarkupInfo[]) {
     author: item.author,
     color: item.color,
     opacity: String(Math.round(item.opacity * 100)),
+    geometry: { ...item.geometry },
   }])) as Record<string, Draft>
 }
 
@@ -47,14 +51,9 @@ export function NativeMarkupManager({ bytes, onBeforeMutate, onApply, onStatus }
 
   const reload = async (source = bytes) => {
     setLoading(true)
-    try {
-      hydrate(await listNativeMarkups(source))
-    } catch (error) {
-      console.error(error)
-      onStatus('Could not inspect native text markup annotations in this document.')
-    } finally {
-      setLoading(false)
-    }
+    try { hydrate(await listNativeMarkups(source)) }
+    catch (error) { console.error(error); onStatus('Could not inspect native text markup annotations in this document.') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => {
@@ -67,10 +66,15 @@ export function NativeMarkupManager({ bytes, onBeforeMutate, onApply, onStatus }
     return () => { cancelled = true }
   }, [bytes, onStatus])
 
-  const setDraft = (key: string, field: keyof Draft, value: string) => {
+  const setDraft = (key: string, field: Exclude<keyof Draft, 'geometry'>, value: string) => {
+    setDrafts((current) => ({ ...current, [key]: { ...current[key], [field]: value } }))
+  }
+
+  const setGeometry = (key: string, field: keyof NativeMarkupGeometry, value: string) => {
+    const numeric = Number(value)
     setDrafts((current) => ({
       ...current,
-      [key]: { ...(current[key] || { text: '', author: '', color: '#ffe633', opacity: '100' }), [field]: value },
+      [key]: { ...current[key], geometry: { ...current[key].geometry, [field]: Number.isFinite(numeric) ? numeric : 0 } },
     }))
   }
 
@@ -88,15 +92,14 @@ export function NativeMarkupManager({ bytes, onBeforeMutate, onApply, onStatus }
         author: draft.author,
         color: draft.color,
         opacity: Math.max(0, Math.min(100, Number(draft.opacity) || 0)) / 100,
+        geometry: geometryChanged(draft.geometry, item.geometry) ? draft.geometry : undefined,
       })
       onApply(next, { status: 'Updating text markup annotation complete' })
       await reload(next)
     } catch (error) {
       console.error(error)
       onStatus(error instanceof Error ? error.message : 'Could not update this text markup annotation.')
-    } finally {
-      setBusy('')
-    }
+    } finally { setBusy('') }
   }
 
   const remove = async (item: NativeMarkupInfo) => {
@@ -112,9 +115,7 @@ export function NativeMarkupManager({ bytes, onBeforeMutate, onApply, onStatus }
     } catch (error) {
       console.error(error)
       onStatus(error instanceof Error ? error.message : 'Could not delete this text markup annotation.')
-    } finally {
-      setBusy('')
-    }
+    } finally { setBusy('') }
   }
 
   return <section className="native-markup-manager">
@@ -130,7 +131,8 @@ export function NativeMarkupManager({ bytes, onBeforeMutate, onApply, onStatus }
     {items.length > 0 && <div className="native-markup-list">
       {items.map((item) => {
         const key = keyFor(item)
-        const draft = drafts[key] || { text: item.text, author: item.author, color: item.color, opacity: String(Math.round(item.opacity * 100)) }
+        const draft = drafts[key]
+        if (!draft) return null
         return <div className="native-markup-row" key={key}>
           <div className="native-markup-meta"><Highlighter /><span>Page {item.pageIndex + 1} · {item.subtype} · {item.quadCount || 1} text region{item.quadCount === 1 ? '' : 's'}</span></div>
           <textarea aria-label={`Native markup text page ${item.pageIndex + 1} index ${item.annotationIndex}`} rows={2} placeholder="Comment text" value={draft.text} onChange={(event) => setDraft(key, 'text', event.target.value)} />
@@ -139,7 +141,10 @@ export function NativeMarkupManager({ bytes, onBeforeMutate, onApply, onStatus }
             <label>Color<input aria-label={`Native markup color page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="color" value={draft.color} onChange={(event) => setDraft(key, 'color', event.target.value)} /></label>
             <label>Opacity %<input aria-label={`Native markup opacity page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="number" min="0" max="100" step="1" value={draft.opacity} onChange={(event) => setDraft(key, 'opacity', event.target.value)} /></label>
           </div>
-          <p>Appearance changes preserve the annotation’s native subtype, rectangle and QuadPoints geometry.</p>
+          <div className="native-markup-geometry">
+            {(['x', 'y', 'width', 'height'] as const).map((field) => <label key={field}>{field === 'x' ? 'Left %' : field === 'y' ? 'Top %' : `${field[0].toUpperCase()}${field.slice(1)} %`}<input aria-label={`Native markup ${field} page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="number" min="0" max="100" step="0.1" value={draft.geometry[field]} onChange={(event) => setGeometry(key, field, event.target.value)} /></label>)}
+          </div>
+          <p>Position and size transform the existing native QuadPoints only when changed; appearance-only saves preserve the original coordinates byte-for-byte.</p>
           <div className="native-markup-actions">
             <button disabled={Boolean(busy)} onClick={() => void save(item)}><Save /> Save</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void remove(item)}><Trash2 /> Delete</button>
