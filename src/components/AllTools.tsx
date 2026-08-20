@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Bookmark, Copy, Download, FileInput, Files, FormInput, Highlighter, Info, Library, Menu,
   MousePointer2, PanelLeft, PenLine, RotateCcw, RotateCw, Save, ScanLine, Search, Shapes,
@@ -243,13 +243,12 @@ export function AllTools() {
     },
   ]
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase()
-    if (!needle) return sections.find((section) => section.id === activeSection)?.actions || []
-    return sections.flatMap((section) => section.actions).filter((action) =>
+  const needle = query.trim().toLocaleLowerCase()
+  const filtered = !needle
+    ? sections.find((section) => section.id === activeSection)?.actions || []
+    : sections.flatMap((section) => section.actions).filter((action) =>
       `${action.label} ${action.description}`.toLocaleLowerCase().includes(needle),
     )
-  }, [activeSection, query])
 
   const currentSection = sections.find((section) => section.id === activeSection) || sections[0]
 
