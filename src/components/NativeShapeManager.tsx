@@ -23,6 +23,9 @@ type Draft = {
 
 function keyFor(item: NativeShapeInfo) { return `${item.pageIndex}:${item.annotationIndex}` }
 function iconFor(subtype: NativeShapeInfo['subtype']) { return subtype === 'Circle' ? <Circle /> : subtype === 'Line' ? <Minus /> : <Square /> }
+function geometryChanged(a: NativeShapeGeometry, b: NativeShapeGeometry) {
+  return (['x', 'y', 'width', 'height'] as const).some((field) => Math.abs(a[field] - b[field]) > 0.0001)
+}
 
 function draftsFor(items: NativeShapeInfo[]) {
   return Object.fromEntries(items.map((item) => [keyFor(item), {
@@ -92,7 +95,7 @@ export function NativeShapeManager({ bytes, onBeforeMutate, onApply, onStatus }:
         fillColor: draft.fillColor,
         opacity: Math.max(0, Math.min(100, Number(draft.opacity) || 0)) / 100,
         borderWidth: Math.max(0, Number(draft.borderWidth) || 0),
-        geometry: item.subtype === 'Line' ? undefined : draft.geometry,
+        geometry: item.subtype !== 'Line' && geometryChanged(draft.geometry, item.geometry) ? draft.geometry : undefined,
         line: item.subtype === 'Line' ? {
           x1: Number(draft.x1), y1: Number(draft.y1), x2: Number(draft.x2), y2: Number(draft.y2),
         } : undefined,
@@ -150,7 +153,7 @@ export function NativeShapeManager({ bytes, onBeforeMutate, onApply, onStatus }:
           {item.subtype === 'Line' && <div className="native-line-fields">
             {(['x1', 'y1', 'x2', 'y2'] as const).map((field) => <label key={field}>{field.toUpperCase()}<input aria-label={`Native line ${field} page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="number" step="1" value={draft[field]} onChange={(event) => setDraft(key, field, event.target.value)} /></label>)}
           </div>}
-          <p>{item.subtype === 'Line' ? 'Line endpoints are written directly to the native /L array.' : 'Position and size are written directly to the native /Rect.'} Unrelated dictionary properties are preserved.</p>
+          <p>{item.subtype === 'Line' ? 'Line endpoints are written directly to the native /L array.' : 'Position and size are written to the native /Rect only when changed.'} Unrelated dictionary properties are preserved.</p>
           <div className="native-shape-actions">
             <button disabled={Boolean(busy)} onClick={() => void save(item)}><Save /> Save</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void remove(item)}><Trash2 /> Delete</button>
