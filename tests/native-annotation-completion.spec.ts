@@ -6,10 +6,8 @@ import {
   PDFHexString,
   PDFName,
   PDFNumber,
-  PDFRawStream,
   PDFString,
   StandardFonts,
-  decodePDFRawStream,
 } from 'pdf-lib'
 import { readFile, writeFile } from 'node:fs/promises'
 
@@ -34,6 +32,10 @@ function numbers(array: PDFArray | undefined) {
     if (value) result.push(value.asNumber())
   }
   return result
+}
+
+function decodeText(value: unknown) {
+  return value instanceof PDFString || value instanceof PDFHexString ? value.decodeText() : ''
 }
 
 function annotations(pdf: PDFDocument) {
@@ -157,7 +159,10 @@ test('manages Ink, Polygon, PolyLine, Stamp, Caret and page FileAttachment annot
   const inkDict = findAnnot(pdf, 'Ink')!
   expect(inkDict.get(PDFName.of('NM'))?.toString()).toContain('ink-preserve')
   expect(inkDict.lookupMaybe(PDFName.of('CA'), PDFNumber)?.asNumber()).toBeCloseTo(0.55, 5)
-  expect(numbers(inkDict.lookupMaybe(PDFName.of('C'), PDFArray))).toEqual(expect.arrayContaining([expect.closeTo(0.2, 5), expect.closeTo(0.4, 5), expect.closeTo(0.8, 5)]))
+  const inkColor = numbers(inkDict.lookupMaybe(PDFName.of('C'), PDFArray))
+  expect(inkColor[0]).toBeCloseTo(0.2, 5)
+  expect(inkColor[1]).toBeCloseTo(0.4, 5)
+  expect(inkColor[2]).toBeCloseTo(0.8, 5)
   const inkList = inkDict.lookupMaybe(PDFName.of('InkList'), PDFArray)!
   const firstPath = inkList.lookup(0, PDFArray)!
   const pathValues = numbers(firstPath)
@@ -254,9 +259,9 @@ test('edits sticky-note placement/icon/open state and FreeText typography withou
   expect(numbers(stickyDict.lookupMaybe(PDFName.of('Rect'), PDFArray))).toEqual([150, 672, 198, 720])
 
   const freeDict = findAnnot(pdf, 'FreeText')!
-  expect(freeDict.lookup(PDFName.of('Contents'))?.toString()).toContain('free text updated')
-  expect(freeDict.lookup(PDFName.of('DA'))?.toString()).toContain('18 Tf')
-  expect(freeDict.lookup(PDFName.of('DA'))?.toString()).toContain('1.0000 0.0000 0.0000 rg')
+  expect(decodeText(freeDict.lookup(PDFName.of('Contents')))).toBe('free text updated')
+  expect(decodeText(freeDict.lookup(PDFName.of('DA')))).toContain('18 Tf')
+  expect(decodeText(freeDict.lookup(PDFName.of('DA')))).toContain('1.0000 0.0000 0.0000 rg')
   expect(freeDict.lookupMaybe(PDFName.of('Q'), PDFNumber)?.asNumber()).toBe(2)
   expect(freeDict.has(PDFName.of('AP'))).toBe(false)
   expect(numbers(freeDict.lookupMaybe(PDFName.of('Rect'), PDFArray))).toEqual([180, 504, 420, 600])
