@@ -6,3 +6,4 @@ const to = "expect((freeDict.lookup(PDFName.of('Contents')) as PDFString | PDFHe
 if (!src.includes(from)) throw new Error('Expected FreeText assertion not found')
 src = src.replace(from, to)
 fs.writeFileSync(path, src)
+// one-shot patch trigger
