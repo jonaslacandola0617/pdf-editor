@@ -24,6 +24,9 @@ type Draft = {
 }
 
 function keyFor(item: NativeMarkupInfo) { return `${item.pageIndex}:${item.annotationIndex}` }
+function geometryChanged(a: NativeMarkupGeometry, b: NativeMarkupGeometry) {
+  return (['x', 'y', 'width', 'height'] as const).some((field) => Math.abs(a[field] - b[field]) > 0.0001)
+}
 
 function draftsFor(items: NativeMarkupInfo[]) {
   return Object.fromEntries(items.map((item) => [keyFor(item), {
@@ -89,7 +92,7 @@ export function NativeMarkupManager({ bytes, onBeforeMutate, onApply, onStatus }
         author: draft.author,
         color: draft.color,
         opacity: Math.max(0, Math.min(100, Number(draft.opacity) || 0)) / 100,
-        geometry: draft.geometry,
+        geometry: geometryChanged(draft.geometry, item.geometry) ? draft.geometry : undefined,
       })
       onApply(next, { status: 'Updating text markup annotation complete' })
       await reload(next)
@@ -141,7 +144,7 @@ export function NativeMarkupManager({ bytes, onBeforeMutate, onApply, onStatus }
           <div className="native-markup-geometry">
             {(['x', 'y', 'width', 'height'] as const).map((field) => <label key={field}>{field === 'x' ? 'Left %' : field === 'y' ? 'Top %' : `${field[0].toUpperCase()}${field.slice(1)} %`}<input aria-label={`Native markup ${field} page ${item.pageIndex + 1} index ${item.annotationIndex}`} type="number" min="0" max="100" step="0.1" value={draft.geometry[field]} onChange={(event) => setGeometry(key, field, event.target.value)} /></label>)}
           </div>
-          <p>Position and size transform the existing native QuadPoints, preserving region order and the annotation subtype.</p>
+          <p>Position and size transform the existing native QuadPoints only when changed; appearance-only saves preserve the original coordinates byte-for-byte.</p>
           <div className="native-markup-actions">
             <button disabled={Boolean(busy)} onClick={() => void save(item)}><Save /> Save</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void remove(item)}><Trash2 /> Delete</button>
