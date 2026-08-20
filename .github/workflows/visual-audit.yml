@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - audit/ui-ux-release
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
