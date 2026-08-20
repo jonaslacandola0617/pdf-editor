@@ -38,7 +38,7 @@ export type NativeExtendedAnnotationUpdate = {
   color: string
   opacity: number
   borderWidth: number
-  geometry: AnnotationGeometry
+  geometry?: AnnotationGeometry
   caretSymbol?: 'None' | 'P'
   attachmentIcon?: string
 }
@@ -297,19 +297,21 @@ export async function updateNativeExtendedAnnotation(
   }
   bs.set(PDFName.of('W'), PDFNumber.of(Math.max(0, Number(update.borderWidth) || 0)))
 
-  const { width: pageWidth, height: pageHeight } = located.page.getSize()
-  const oldBounds = annotationBounds(located.dict, located.subtype)
-  const newBounds = rawBoundsFromGeometry(update.geometry, pageWidth, pageHeight)
+  if (update.geometry) {
+    const { width: pageWidth, height: pageHeight } = located.page.getSize()
+    const oldBounds = annotationBounds(located.dict, located.subtype)
+    const newBounds = rawBoundsFromGeometry(update.geometry, pageWidth, pageHeight)
 
-  if (located.subtype === 'Ink' && oldBounds) {
-    const paths = inkValues(located.dict)
-    located.dict.set(PDFName.of('InkList'), pdf.context.obj(paths.map((path) => transformValues(path, oldBounds, newBounds))))
-    setRect(pdf, located.dict, newBounds)
-  } else if ((located.subtype === 'Polygon' || located.subtype === 'PolyLine') && oldBounds) {
-    located.dict.set(PDFName.of('Vertices'), pdf.context.obj(transformValues(vertexValues(located.dict), oldBounds, newBounds)))
-    setRect(pdf, located.dict, newBounds)
-  } else {
-    setRect(pdf, located.dict, newBounds)
+    if (located.subtype === 'Ink' && oldBounds) {
+      const paths = inkValues(located.dict)
+      located.dict.set(PDFName.of('InkList'), pdf.context.obj(paths.map((path) => transformValues(path, oldBounds, newBounds))))
+      setRect(pdf, located.dict, newBounds)
+    } else if ((located.subtype === 'Polygon' || located.subtype === 'PolyLine') && oldBounds) {
+      located.dict.set(PDFName.of('Vertices'), pdf.context.obj(transformValues(vertexValues(located.dict), oldBounds, newBounds)))
+      setRect(pdf, located.dict, newBounds)
+    } else {
+      setRect(pdf, located.dict, newBounds)
+    }
   }
 
   if (located.subtype === 'Caret') {
