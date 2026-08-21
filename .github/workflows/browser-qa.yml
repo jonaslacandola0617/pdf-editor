@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - 'fix/**'
+      - 'redesign/**'
   workflow_dispatch:
 
 jobs:
