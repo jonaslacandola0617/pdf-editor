@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - audit/ui-ux-release
+      - 'redesign/**'
   pull_request:
     branches:
       - main
