@@ -6,7 +6,6 @@ type OverlayState = {
   width: number
   height: number
   value: string
-  key: string
 }
 
 function setReactTextAreaValue(textarea: HTMLTextAreaElement, value: string) {
@@ -24,10 +23,43 @@ function selectionBox() {
   return document.querySelector<HTMLElement>('.native-text-selection')
 }
 
+function clickHiddenAction(selector: string) {
+  document.querySelector<HTMLButtonElement>(selector)?.click()
+}
+
 export function InlineNativeTextEditor() {
   const [overlay, setOverlay] = useState<OverlayState | null>(null)
   const editorRef = useRef<HTMLTextAreaElement | null>(null)
   const lastSelectionKey = useRef('')
+  const originalValue = useRef('')
+  const finishing = useRef(false)
+
+  const finishEdit = (mode: 'apply' | 'cancel') => {
+    if (finishing.current) return
+    finishing.current = true
+
+    if (mode === 'cancel') {
+      clickHiddenAction('.native-edit-actions .soft-btn')
+      return
+    }
+
+    const source = sourceEditor()
+    if (!source) return
+    const value = source.value.replace(/[\r\n]+/g, ' ')
+    setReactTextAreaValue(source, value)
+
+    if (value === originalValue.current) {
+      clickHiddenAction('.native-edit-actions .soft-btn')
+      return
+    }
+
+    if (!value.length) {
+      clickHiddenAction('.native-delete-button')
+      return
+    }
+
+    clickHiddenAction('.native-edit-actions .primary')
+  }
 
   useEffect(() => {
     let frame = 0
@@ -41,6 +73,8 @@ export function InlineNativeTextEditor() {
           setOverlay(null)
           document.body.classList.remove('inline-native-edit-active')
           lastSelectionKey.current = ''
+          originalValue.current = ''
+          finishing.current = false
           return
         }
 
@@ -59,11 +93,12 @@ export function InlineNativeTextEditor() {
           width: rect.width,
           height: rect.height,
           value: source.value,
-          key,
         })
 
         if (lastSelectionKey.current !== key) {
           lastSelectionKey.current = key
+          originalValue.current = source.value
+          finishing.current = false
           requestAnimationFrame(() => {
             const editor = editorRef.current
             if (!editor) return
@@ -99,6 +134,7 @@ export function InlineNativeTextEditor() {
       className="native-inline-text-input"
       aria-label="Edit selected PDF text directly on page"
       spellCheck={false}
+      rows={1}
       value={overlay.value}
       style={{
         left: overlay.left,
@@ -107,22 +143,25 @@ export function InlineNativeTextEditor() {
         minHeight: Math.max(24, overlay.height),
         fontSize: Math.max(11, overlay.height * 0.72),
       }}
+      onPointerDown={(event) => event.stopPropagation()}
       onChange={(event) => {
         const source = sourceEditor()
         if (!source) return
+        finishing.current = false
         const value = event.target.value.replace(/[\r\n]+/g, ' ')
         setReactTextAreaValue(source, value)
         setOverlay((current) => current ? { ...current, value } : current)
       }}
+      onBlur={() => finishEdit('apply')}
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault()
-          document.querySelector<HTMLButtonElement>('.native-edit-actions .soft-btn')?.click()
+          finishEdit('cancel')
           return
         }
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
           event.preventDefault()
-          document.querySelector<HTMLButtonElement>('.native-edit-actions .primary')?.click()
+          finishEdit('apply')
         }
       }}
     />
