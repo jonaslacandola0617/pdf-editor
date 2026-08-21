@@ -21,6 +21,8 @@ export type Annotation = {
 export type NativeTextSelection = {
   page: number
   objectIndex: number
+  objectIndexes?: number[]
+  objectTexts?: string[]
   text: string
   x: number
   y: number
