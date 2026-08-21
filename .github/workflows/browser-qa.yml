@@ -28,6 +28,9 @@ jobs:
       - name: Install Chromium
         run: npx playwright install chromium
 
+      - name: Run unit tests
+        run: npm run test:unit
+
       - name: Production build check
         run: npm run build
 

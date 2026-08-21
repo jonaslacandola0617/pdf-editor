@@ -1,0 +1,2 @@
+@media(max-width:760px){.top-actions .icon-btn{width:36px!important;height:36px!important}.editor-toolbar .tool-group button{width:36px!important;height:36px!important;min-width:36px!important}.mobile-workspace-bar button{min-height:42px}.mobile-workspace-bar button:focus-visible{outline-offset:-1px!important}.floating-nav button{min-width:36px!important;min-height:36px!important}}
+@media(max-width:430px){.editor-toolbar .tool-group button{width:36px!important;height:36px!important}.top-actions{gap:2px}}
