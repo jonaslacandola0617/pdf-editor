@@ -5,6 +5,7 @@ import { AllTools } from './components/AllTools'
 import { InlineNativeTextEditor } from './components/InlineNativeTextEditor'
 import { NavigationExtras } from './components/NavigationExtras'
 import { OcrActivity } from './components/OcrActivity'
+import { ProductExperience } from './components/ProductExperience'
 import './acrobat-polish.css'
 import './all-tools.css'
 import './ocr.css'
@@ -13,6 +14,7 @@ import './navigation-extras.css'
 import './ux-audit.css'
 import './ux-audit-sections.css'
 import './release-fixes.css'
+import './product-experience.css'
 
 const RESUME_KEY = 'pdf-forge-resume-editor'
 const WORKSPACE_KEY = 'pdf-forge-workspace'
@@ -199,6 +201,7 @@ createRoot(document.getElementById('root')!).render(
     <InlineNativeTextEditor />
     <NavigationExtras />
     <OcrActivity />
+    <ProductExperience />
   </StrictMode>,
 )
 
