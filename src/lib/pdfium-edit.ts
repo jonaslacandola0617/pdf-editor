@@ -34,6 +34,17 @@ type PdfiumLibraryUnsafe = {
   loadDocument: (bytes: Uint8Array, password?: string) => Promise<PdfiumDocumentUnsafe>
 }
 
+type TextObjectInfo = {
+  objectIndex: number
+  object: number
+  text: string
+  x: number
+  y: number
+  width: number
+  height: number
+  fontSize?: number
+}
+
 let libraryPromise: Promise<PdfiumLibraryUnsafe> | null = null
 
 async function getPatchedPdfiumBinary() {
@@ -122,38 +133,134 @@ function textAffinity(objectText: string, hint: string) {
   return words.some((word) => a.includes(word)) ? 0.75 : 0
 }
 
+function collectTextObjects(module: PdfiumRuntime, page: number, textPage: number, pageWidth: number, pageHeight: number) {
+  const output: TextObjectInfo[] = []
+  const count = module._FPDFPage_CountObjects(page)
+  for (let objectIndex = 0; objectIndex < count; objectIndex++) {
+    const object = module._FPDFPage_GetObject(page, objectIndex)
+    if (!object || module._FPDFPageObj_GetType(object) !== 1) continue
+    const text = readTextObject(module, object, textPage)
+    if (!text.trim()) continue
+    const bounds = readBounds(module, object, pageWidth, pageHeight)
+    if (!bounds) continue
+    output.push({
+      objectIndex,
+      object,
+      text,
+      ...bounds,
+      fontSize: module._FPDFTextObj_GetFontSize?.(object) || undefined,
+    })
+  }
+  return output
+}
+
+function verticalOverlap(a: TextObjectInfo, b: TextObjectInfo) {
+  return Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+}
+
+function sameTextLine(a: TextObjectInfo, b: TextObjectInfo) {
+  const minHeight = Math.max(0.0001, Math.min(a.height, b.height))
+  const centers = Math.abs((a.y + a.height / 2) - (b.y + b.height / 2))
+  return verticalOverlap(a, b) / minHeight >= 0.42 && centers <= Math.max(a.height, b.height) * 0.62
+}
+
+function horizontalGap(left: TextObjectInfo, right: TextObjectInfo) {
+  return right.x - (left.x + left.width)
+}
+
+function connectionThreshold(a: TextObjectInfo, b: TextObjectInfo) {
+  return Math.max(0.012, Math.min(0.034, Math.max(a.height, b.height) * 1.35))
+}
+
+function buildTextLine(objects: TextObjectInfo[], anchor: TextObjectInfo) {
+  const row = objects.filter((item) => sameTextLine(item, anchor)).sort((a, b) => a.x - b.x)
+  const anchorPosition = row.findIndex((item) => item.objectIndex === anchor.objectIndex)
+  if (anchorPosition < 0) return [anchor]
+
+  let start = anchorPosition
+  let end = anchorPosition
+  while (start > 0) {
+    const previous = row[start - 1]
+    const current = row[start]
+    if (horizontalGap(previous, current) > connectionThreshold(previous, current)) break
+    start -= 1
+  }
+  while (end < row.length - 1) {
+    const current = row[end]
+    const next = row[end + 1]
+    if (horizontalGap(current, next) > connectionThreshold(current, next)) break
+    end += 1
+  }
+  return row.slice(start, end + 1)
+}
+
+function inferredLineText(items: TextObjectInfo[]) {
+  let output = ''
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index]
+    if (index > 0) {
+      const previous = items[index - 1]
+      const gap = Math.max(0, horizontalGap(previous, item))
+      const previousChars = Math.max(1, previous.text.replace(/\s/g, '').length)
+      const currentChars = Math.max(1, item.text.replace(/\s/g, '').length)
+      const averageCharacterWidth = ((previous.width / previousChars) + (item.width / currentChars)) / 2
+      const explicitWhitespace = /\s$/.test(output) || /^\s/.test(item.text)
+      if (!explicitWhitespace && gap > Math.max(0.0015, averageCharacterWidth * 0.3)) output += ' '
+    }
+    output += item.text
+  }
+  return output.replace(/[\t\r\n]+/g, ' ').replace(/ {2,}/g, ' ').trim()
+}
+
+function selectionFromLine(pageIndex: number, line: TextObjectInfo[]): NativeTextSelection {
+  const left = Math.min(...line.map((item) => item.x))
+  const top = Math.min(...line.map((item) => item.y))
+  const right = Math.max(...line.map((item) => item.x + item.width))
+  const bottom = Math.max(...line.map((item) => item.y + item.height))
+  const anchor = line[0]
+  return {
+    page: pageIndex,
+    objectIndex: anchor.objectIndex,
+    objectIndexes: line.map((item) => item.objectIndex),
+    objectTexts: line.map((item) => item.text),
+    text: inferredLineText(line),
+    x: left,
+    y: top,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top),
+    fontSize: anchor.fontSize,
+  }
+}
+
 async function withDocument<T>(bytes: ArrayBuffer, run: (module: PdfiumRuntime, document: PdfiumDocumentUnsafe) => T | Promise<T>) {
   const library = await getLibrary()
   const document = await library.loadDocument(new Uint8Array(bytes.slice(0)))
   try { return await run(library.module, document) } finally { document.destroy() }
 }
 
-function findSelectedTextObject(module: PdfiumRuntime, page: number, selection: NativeTextSelection) {
+function findSelectedTextObjects(module: PdfiumRuntime, page: number, selection: NativeTextSelection) {
   const count = module._FPDFPage_CountObjects(page)
-  let object = selection.objectIndex >= 0 && selection.objectIndex < count
-    ? module._FPDFPage_GetObject(page, selection.objectIndex)
-    : 0
+  const requested = selection.objectIndexes?.length ? selection.objectIndexes : [selection.objectIndex]
+  const byIndex = requested
+    .filter((index) => index >= 0 && index < count)
+    .map((index) => module._FPDFPage_GetObject(page, index))
+    .filter((object) => object && module._FPDFPageObj_GetType(object) === 1)
+
+  if (byIndex.length === requested.length && byIndex.length) return byIndex
+
   const textPage = module._FPDFText_LoadPage(page)
   if (!textPage) throw new Error('The page text could not be loaded.')
   try {
-    const matchesExpected = object && module._FPDFPageObj_GetType(object) === 1 &&
-      normalizedText(readTextObject(module, object, textPage)) === normalizedText(selection.text)
-    if (!matchesExpected) {
-      object = 0
-      for (let i = 0; i < count; i++) {
-        const candidate = module._FPDFPage_GetObject(page, i)
-        if (!candidate || module._FPDFPageObj_GetType(candidate) !== 1) continue
-        if (normalizedText(readTextObject(module, candidate, textPage)) === normalizedText(selection.text)) {
-          object = candidate
-          break
-        }
-      }
+    for (let i = 0; i < count; i++) {
+      const candidate = module._FPDFPage_GetObject(page, i)
+      if (!candidate || module._FPDFPageObj_GetType(candidate) !== 1) continue
+      if (normalizedText(readTextObject(module, candidate, textPage)) === normalizedText(selection.text)) return [candidate]
     }
   } finally {
     module._FPDFText_ClosePage(textPage)
   }
-  if (!object) throw new Error('The selected text object changed before it could be edited. Select it again.')
-  return object
+
+  throw new Error('The selected text changed before it could be edited. Select the line again.')
 }
 
 export async function pickNativeTextObject(bytes: ArrayBuffer, pageIndex: number, point: { x: number; y: number }, hint = ''): Promise<NativeTextSelection | null> {
@@ -165,25 +272,20 @@ export async function pickNativeTextObject(bytes: ArrayBuffer, pageIndex: number
     try {
       const pageWidth = module._FPDF_GetPageWidth(page)
       const pageHeight = module._FPDF_GetPageHeight(page)
-      const count = module._FPDFPage_CountObjects(page)
-      let best: { score: number; selection: NativeTextSelection } | null = null
-      for (let objectIndex = 0; objectIndex < count; objectIndex++) {
-        const object = module._FPDFPage_GetObject(page, objectIndex)
-        if (!object || module._FPDFPageObj_GetType(object) !== 1) continue
-        const text = readTextObject(module, object, textPage)
-        if (!text.trim()) continue
-        const bounds = readBounds(module, object, pageWidth, pageHeight)
-        if (!bounds) continue
-        const distance = distanceToRect(point.x, point.y, bounds)
-        const affinity = textAffinity(text, hint)
+      const objects = collectTextObjects(module, page, textPage, pageWidth, pageHeight)
+      let best: { score: number; item: TextObjectInfo } | null = null
+
+      for (const item of objects) {
+        const distance = distanceToRect(point.x, point.y, item)
+        const affinity = textAffinity(item.text, hint)
         if (distance > 0.045 && affinity === 0) continue
-        const area = Math.max(0.000001, bounds.width * bounds.height)
+        const area = Math.max(0.000001, item.width * item.height)
         const score = affinity * 10 - distance * 150 - area * 0.04
-        if (!best || score > best.score) {
-          best = { score, selection: { page: pageIndex, objectIndex, text, ...bounds, fontSize: module._FPDFTextObj_GetFontSize?.(object) || undefined } }
-        }
+        if (!best || score > best.score) best = { score, item }
       }
-      return best?.selection || null
+
+      if (!best) return null
+      return selectionFromLine(pageIndex, buildTextLine(objects, best.item))
     } finally {
       module._FPDFText_ClosePage(textPage)
       module._FPDF_ClosePage(page)
@@ -247,19 +349,33 @@ function savePdfiumDocument(module: PdfiumRuntime, documentIdx: number) {
 }
 
 export async function replaceNativeTextObject(bytes: ArrayBuffer, selection: NativeTextSelection, nextText: string): Promise<ArrayBuffer> {
-  if (!nextText.length) throw new Error('Use Delete text object to remove this text completely.')
+  if (!nextText.length) throw new Error('Use Delete text line to remove this text completely.')
   return withDocument(bytes, (module, document) => {
     const page = module._FPDF_LoadPage(document.documentIdx, selection.page)
     if (!page) throw new Error('The selected PDF page could not be loaded.')
+    const removed: number[] = []
     try {
-      const object = findSelectedTextObject(module, page, selection)
+      const objects = findSelectedTextObjects(module, page, selection)
+      const anchor = objects[0]
       const encoded = encodeUtf16(module, nextText)
       try {
-        if (!module._FPDFText_SetText(object, encoded.ptr)) throw new Error('PDFium rejected this text replacement. The embedded font may not support the new characters.')
+        if (!module._FPDFText_SetText(anchor, encoded.ptr)) throw new Error('PDFium rejected this text replacement. The embedded font may not support the new characters.')
       } finally { module.wasmExports.free(encoded.ptr) }
+
+      for (const object of objects.slice(1)) {
+        if (!module._FPDFPage_RemoveObject(page, object)) throw new Error('PDFium could not consolidate this fragmented text line.')
+        removed.push(object)
+      }
+
       if (!module._FPDFPage_GenerateContent(page)) throw new Error('PDFium could not regenerate this page after the text edit.')
-      return savePdfiumDocument(module, document.documentIdx)
-    } finally { module._FPDF_ClosePage(page) }
+      const saved = savePdfiumDocument(module, document.documentIdx)
+      for (const object of removed) module._FPDFPageObj_Destroy(object)
+      removed.length = 0
+      return saved
+    } finally {
+      for (const object of removed) module._FPDFPageObj_Destroy(object)
+      module._FPDF_ClosePage(page)
+    }
   })
 }
 
@@ -267,17 +383,20 @@ export async function deleteNativeTextObject(bytes: ArrayBuffer, selection: Nati
   return withDocument(bytes, (module, document) => {
     const page = module._FPDF_LoadPage(document.documentIdx, selection.page)
     if (!page) throw new Error('The selected PDF page could not be loaded.')
-    let removedObject = 0
+    const removed: number[] = []
     try {
-      removedObject = findSelectedTextObject(module, page, selection)
-      if (!module._FPDFPage_RemoveObject(page, removedObject)) throw new Error('PDFium could not remove this text object.')
+      const objects = findSelectedTextObjects(module, page, selection)
+      for (const object of objects) {
+        if (!module._FPDFPage_RemoveObject(page, object)) throw new Error('PDFium could not remove this text line.')
+        removed.push(object)
+      }
       if (!module._FPDFPage_GenerateContent(page)) throw new Error('PDFium could not regenerate the page after deleting text.')
       const saved = savePdfiumDocument(module, document.documentIdx)
-      module._FPDFPageObj_Destroy(removedObject)
-      removedObject = 0
+      for (const object of removed) module._FPDFPageObj_Destroy(object)
+      removed.length = 0
       return saved
     } finally {
-      if (removedObject) module._FPDFPageObj_Destroy(removedObject)
+      for (const object of removed) module._FPDFPageObj_Destroy(object)
       module._FPDF_ClosePage(page)
     }
   })
