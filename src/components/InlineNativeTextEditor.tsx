@@ -51,7 +51,7 @@ export function InlineNativeTextEditor() {
           return
         }
 
-        const key = `${Math.round(rect.left)}:${Math.round(rect.top)}:${Math.round(rect.width)}:${Math.round(rect.height)}:${source.defaultValue}`
+        const key = `${box.style.left}:${box.style.top}:${box.style.width}:${box.style.height}`
         document.body.classList.add('inline-native-edit-active')
         setOverlay({
           left: rect.left,
@@ -105,6 +105,7 @@ export function InlineNativeTextEditor() {
         top: overlay.top,
         width: Math.max(56, overlay.width),
         minHeight: Math.max(24, overlay.height),
+        fontSize: Math.max(11, overlay.height * 0.72),
       }}
       onChange={(event) => {
         const source = sourceEditor()
