@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { AllTools } from './components/AllTools'
+import { InlineNativeTextEditor } from './components/InlineNativeTextEditor'
 import { NavigationExtras } from './components/NavigationExtras'
 import { OcrActivity } from './components/OcrActivity'
 import './acrobat-polish.css'
@@ -195,6 +196,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
     <AllTools />
+    <InlineNativeTextEditor />
     <NavigationExtras />
     <OcrActivity />
   </StrictMode>,
