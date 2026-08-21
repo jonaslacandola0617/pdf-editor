@@ -34,7 +34,12 @@ async function openFile(page: Page, path: string) {
   await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
 }
 
-test('edits a real existing PDF text object directly on the page and persists it into export', async ({ page }, testInfo) => {
+async function applyByClickingOutside(page: Page) {
+  await page.locator('.stage-top-hint').click()
+  await expect(page.getByRole('textbox', { name: 'Edit selected PDF text directly on page' })).toHaveCount(0, { timeout: 30_000 })
+}
+
+test('edits existing PDF text on the page with no sidebar editor and applies on blur', async ({ page }, testInfo) => {
   const browserErrors: string[] = []
   page.on('pageerror', (error) => browserErrors.push(error.message))
 
@@ -45,22 +50,21 @@ test('edits a real existing PDF text object directly on the page and persists it
   const editTool = page.getByTitle('Edit existing text')
   await editTool.click()
   await expect(editTool).toHaveClass(/active/)
+  await expect(page.locator('.right-panel')).toBeHidden()
 
   const originalSpan = page.locator('.pdf-text-layer span').filter({ hasText: 'ORIGINAL SENTENCE 9921' }).first()
   await expect(originalSpan).toBeAttached({ timeout: 20_000 })
   await originalSpan.click()
 
-  const editor = page.locator('.native-text-editor')
-  await expect(editor).toBeVisible({ timeout: 20_000 })
   await expect(page.locator('.native-text-selection')).toBeVisible()
-
   const inlineEditor = page.getByRole('textbox', { name: 'Edit selected PDF text directly on page' })
   await expect(inlineEditor).toBeVisible({ timeout: 20_000 })
   await expect(inlineEditor).toHaveValue('ORIGINAL SENTENCE 9921')
+  await expect(page.getByRole('button', { name: 'Apply to PDF' })).toBeHidden()
+  await expect(page.getByRole('button', { name: /Delete text object/i })).toBeHidden()
 
   await inlineEditor.fill('UPDATED SENTENCE 9921')
-  await editor.getByRole('button', { name: 'Apply to PDF' }).click()
-  await expect(editor).toHaveCount(0, { timeout: 30_000 })
+  await applyByClickingOutside(page)
 
   await page.getByTitle('Select').click()
   const search = page.getByPlaceholder('Find in document')
@@ -103,6 +107,7 @@ test('selects and edits a sentence even when the PDF stores it as individual gly
   await openFile(page, sourcePath)
 
   await page.getByTitle('Edit existing text').click()
+  await expect(page.locator('.right-panel')).toBeHidden()
 
   const pdfPage = page.locator('.pdf-page').first()
   const box = await pdfPage.boundingBox()
@@ -119,8 +124,7 @@ test('selects and edits a sentence even when the PDF stores it as individual gly
   await expect(inlineEditor).toHaveValue('QXFRAGMENTED LINE 8842')
 
   await inlineEditor.fill('QXUPDATED TEXT LINE 8842')
-  await inlineEditor.press('Control+Enter')
-  await expect(inlineEditor).toHaveCount(0, { timeout: 30_000 })
+  await applyByClickingOutside(page)
 
   await page.getByTitle('Select').click()
   const search = page.getByPlaceholder('Find in document')
@@ -135,4 +139,26 @@ test('selects and edits a sentence even when the PDF stores it as individual gly
   await search.fill('SEPARATE COLUMN 4455')
   await search.press('Enter')
   await expect(page.locator('.stage-top-hint')).toContainText('1 matching page', { timeout: 20_000 })
+})
+
+test('clearing the inline text and clicking outside deletes the selected PDF text', async ({ page }, testInfo) => {
+  const sourcePath = testInfo.outputPath('native-text-delete.pdf')
+  await makeEditablePdf(sourcePath)
+  await openFile(page, sourcePath)
+
+  await page.getByTitle('Edit existing text').click()
+  const originalSpan = page.locator('.pdf-text-layer span').filter({ hasText: 'ORIGINAL SENTENCE 9921' }).first()
+  await expect(originalSpan).toBeAttached({ timeout: 20_000 })
+  await originalSpan.click()
+
+  const inlineEditor = page.getByRole('textbox', { name: 'Edit selected PDF text directly on page' })
+  await expect(inlineEditor).toBeVisible({ timeout: 20_000 })
+  await inlineEditor.fill('')
+  await applyByClickingOutside(page)
+
+  await page.getByTitle('Select').click()
+  const search = page.getByPlaceholder('Find in document')
+  await search.fill('ORIGINAL SENTENCE 9921')
+  await search.press('Enter')
+  await expect(page.locator('.stage-top-hint')).toContainText('No matches', { timeout: 20_000 })
 })
