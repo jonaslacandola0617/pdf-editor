@@ -50,6 +50,7 @@ body:has(.editor-toolbar button[title="Edit existing text"].active) .workspace {
 
 body.inline-native-edit-active .stage-top-hint {
   font-size: 0;
+  pointer-events: auto;
 }
 
 body.inline-native-edit-active .stage-top-hint::after {

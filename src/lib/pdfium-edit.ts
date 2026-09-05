@@ -21,6 +21,9 @@ type PdfiumRuntime = {
   _FPDFPageObj_GetBounds: (object: number, left: number, bottom: number, right: number, top: number) => number
   _FPDFText_LoadPage: (page: number) => number
   _FPDFText_ClosePage: (textPage: number) => void
+  _FPDFText_CountChars: (textPage: number) => number
+  _FPDFText_GetTextObject: (textPage: number, index: number) => number
+  _FPDFText_GetUnicode: (textPage: number, index: number) => number
   _FPDFTextObj_GetText: (object: number, textPage: number, buffer: number, length: number) => number
   _FPDFTextObj_GetFontSize?: (object: number) => number
   _FPDFText_SetText: (object: number, text: number) => number
@@ -212,7 +215,31 @@ function inferredLineText(items: TextObjectInfo[]) {
   return output.replace(/[\t\r\n]+/g, ' ').replace(/ {2,}/g, ' ').trim()
 }
 
-function selectionFromLine(pageIndex: number, line: TextObjectInfo[]): NativeTextSelection {
+function extractedLineText(module: PdfiumRuntime, textPage: number, line: TextObjectInfo[]) {
+  const selected = new Set(line.map(item => item.object))
+  const chars: Array<{ object: number; text: string }> = []
+  let first = -1
+  let last = -1
+  for (let index = 0; index < module._FPDFText_CountChars(textPage); index++) {
+    const object = module._FPDFText_GetTextObject(textPage, index)
+    const unicode = module._FPDFText_GetUnicode(textPage, index)
+    chars.push({ object, text: unicode > 0 && unicode <= 0x10ffff ? String.fromCodePoint(unicode) : '' })
+    if (selected.has(object)) {
+      if (first < 0) first = index
+      last = index
+    }
+  }
+  const range = chars.slice(first, last + 1)
+  // Only use a contiguous extraction that contains exactly the selected content.
+  // Generated spaces have no page object; unrelated column text must not enter it.
+  if (first >= 0 && range.every(char => selected.has(char.object) || /^\s*$/.test(char.text))) {
+    const text = range.map(char => char.text).join('').replace(/\s+/g, ' ').trim()
+    if (text.replace(/\s/g, '') === line.map(item => item.text).join('').replace(/\s/g, '')) return text
+  }
+  return inferredLineText(line)
+}
+
+function selectionFromLine(pageIndex: number, line: TextObjectInfo[], text = inferredLineText(line)): NativeTextSelection {
   const left = Math.min(...line.map((item) => item.x))
   const top = Math.min(...line.map((item) => item.y))
   const right = Math.max(...line.map((item) => item.x + item.width))
@@ -223,7 +250,7 @@ function selectionFromLine(pageIndex: number, line: TextObjectInfo[]): NativeTex
     objectIndex: anchor.objectIndex,
     objectIndexes: line.map((item) => item.objectIndex),
     objectTexts: line.map((item) => item.text),
-    text: inferredLineText(line),
+    text,
     x: left,
     y: top,
     width: Math.max(0, right - left),
@@ -285,7 +312,8 @@ export async function pickNativeTextObject(bytes: ArrayBuffer, pageIndex: number
       }
 
       if (!best) return null
-      return selectionFromLine(pageIndex, buildTextLine(objects, best.item))
+      const line = buildTextLine(objects, best.item)
+      return selectionFromLine(pageIndex, line, extractedLineText(module, textPage, line))
     } finally {
       module._FPDFText_ClosePage(textPage)
       module._FPDF_ClosePage(page)

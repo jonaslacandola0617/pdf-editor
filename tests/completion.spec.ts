@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { readFile, writeFile } from 'node:fs/promises'
 
@@ -193,5 +193,16 @@ test('QPDF optimization and AES-256 password protected export run locally', asyn
   const protectedBytes = await readFile(protectedPath)
   expect(protectedBytes.subarray(0, 5).toString()).toBe('%PDF-')
   expect(protectedBytes.toString('latin1')).toContain('/Encrypt')
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  for (const password of [undefined, 'incorrect-password']) {
+    const task = pdfjs.getDocument({ data: new Uint8Array(protectedBytes), password })
+    await expect(task.promise).rejects.toMatchObject({ name: 'PasswordException' })
+    await task.destroy()
+  }
+  const task = pdfjs.getDocument({ data: new Uint8Array(protectedBytes), password: 'ForgeQA!2026' })
+  const unlocked = await task.promise
+  const content = await (await unlocked.getPage(1)).getTextContent()
+  expect(content.items.map(item => 'str' in item ? item.str : '').join(' ')).toContain('LOCAL SECURITY 4242')
+  await task.destroy()
   expect(outboundWrites).toEqual([])
 })

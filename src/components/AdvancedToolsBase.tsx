@@ -6,7 +6,7 @@ import {
 import type { Annotation, PdfMetadata, Point } from '../types'
 import {
   addHeaderFooter, addImageToPage, addWatermark, cropPage, downloadBytes, flattenAnnotations, flattenFormFields,
-  insertBlankPage, reorderPdf, replacePageWithFile,
+  insertBlankPage, rotatePdfPages, replacePageWithFile,
 } from '../lib/pdf'
 import { insertFilesAt, rasterCompressPdf } from '../lib/document-extra'
 import { encryptPdf, optimizePdf } from '../lib/security'
@@ -108,7 +108,7 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
       const flattened = await flattenAnnotations(bytes, forExport(ordinary, rotations), metadata)
       finalized = new Uint8Array(await secureRedactPdf(toArrayBuffer(flattened), redactions, rotations))
     } else {
-      const rotated = rotations.some(Boolean) ? await reorderPdf(bytes, Array.from({ length: pageCount }, (_, i) => i), rotations) : bytes
+      const rotated = rotations.some(Boolean) ? await rotatePdfPages(bytes, rotations) : bytes
       finalized = await flattenAnnotations(rotated, forExport(ordinary, rotations), metadata)
     }
     if (!notes.length) return finalized

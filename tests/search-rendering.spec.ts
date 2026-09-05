@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { writeFile } from 'node:fs/promises'
 

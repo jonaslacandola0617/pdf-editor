@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { PDFDocumentProxy } from '../lib/pdfjs'
+import { isRetiredPdfResource, type PDFDocumentProxy } from '../lib/pdfjs'
 
 type CancelableRenderTask = {
   promise: Promise<unknown>
@@ -43,7 +43,7 @@ export function Thumbnail({
 
     void run().catch((error: unknown) => {
       const name = error && typeof error === 'object' && 'name' in error ? String((error as { name?: unknown }).name) : ''
-      if (!cancelled && name !== 'RenderingCancelledException') console.error(error)
+      if (!cancelled && !isRetiredPdfResource(pdf) && name !== 'RenderingCancelledException') console.error(error)
     })
 
     return () => {

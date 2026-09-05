@@ -338,6 +338,14 @@ export async function readMetadata(bytes: ArrayBuffer): Promise<PdfMetadata> {
   }
 }
 
+export async function rotatePdfPages(bytes: ArrayBuffer, rotations: number[]) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  pdf.getPages().forEach((page, index) => {
+    if (rotations[index] !== undefined) page.setRotation(degrees(rotations[index]))
+  })
+  return (await pdf.save()).buffer as ArrayBuffer
+}
+
 export async function readFormFields(bytes: ArrayBuffer): Promise<FormFieldState[]> {
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const form = pdf.getForm()
@@ -345,24 +353,28 @@ export async function readFormFields(bytes: ArrayBuffer): Promise<FormFieldState
     const name = field.getName()
     if (field instanceof PDFTextField) return { name, type: 'text' as const, value: field.getText() || '' }
     if (field instanceof PDFCheckBox) return { name, type: 'checkbox' as const, value: field.isChecked() }
-    if (field instanceof PDFDropdown) return { name, type: 'dropdown' as const, value: field.getSelected()[0] || '', options: field.getOptions() }
-    if (field instanceof PDFOptionList) return { name, type: 'option' as const, value: field.getSelected().join(', '), options: field.getOptions() }
+    if (field instanceof PDFDropdown) return { name, type: 'dropdown' as const, value: field.isMultiselect() ? field.getSelected() : field.getSelected()[0] || '', multiple: field.isMultiselect(), options: field.getOptions() }
+    if (field instanceof PDFOptionList) return { name, type: 'option' as const, value: field.isMultiselect() ? field.getSelected() : field.getSelected()[0] || '', multiple: field.isMultiselect(), options: field.getOptions() }
     if (field instanceof PDFRadioGroup) return { name, type: 'radio' as const, value: field.getSelected() || '', options: field.getOptions() }
     return { name, type: 'unknown' as const, value: '' }
-  })
+  }).map((info, index) => ({ ...info, readOnly: form.getFields()[index].isReadOnly() }))
 }
 
-export async function updateFormField(bytes: ArrayBuffer, field: FormFieldState, next: string | boolean) {
+export async function updateFormField(bytes: ArrayBuffer, field: FormFieldState, next: string | string[] | boolean) {
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
   const form = pdf.getForm()
   const raw = form.getFieldMaybe(field.name)
   if (!raw) return bytes
+  if (raw.isReadOnly()) throw new Error('This form field is read-only.')
 
   if (raw instanceof PDFTextField) raw.setText(String(next))
   if (raw instanceof PDFCheckBox) Boolean(next) ? raw.check() : raw.uncheck()
-  if (raw instanceof PDFDropdown) raw.select(String(next))
-  if (raw instanceof PDFOptionList) raw.select(String(next))
-  if (raw instanceof PDFRadioGroup) raw.select(String(next))
+  if (raw instanceof PDFDropdown || raw instanceof PDFOptionList) {
+    const selected = Array.isArray(next) ? next : String(next) ? [String(next)] : []
+    if (selected.length) raw.select(selected)
+    else raw.clear()
+  }
+  if (raw instanceof PDFRadioGroup) next ? raw.select(String(next)) : raw.clear()
 
   return (await pdf.save()).buffer as ArrayBuffer
 }
