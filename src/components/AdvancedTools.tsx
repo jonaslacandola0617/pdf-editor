@@ -4,6 +4,8 @@ import { AdvancedTools as BaseAdvancedTools } from './AdvancedToolsBase'
 import { AttachmentManager } from './AttachmentManager'
 import { DocumentViewManager } from './DocumentViewManager'
 import { FormFieldPropertyManager } from './FormFieldPropertyManager'
+import { AdvancedFormWidgetManager } from './AdvancedFormWidgetManager'
+import '../advanced-form-widget-manager.css'
 import { ImageSignatureManager } from './ImageSignatureManager'
 import { NativeCommentDetailManager } from './NativeCommentDetailManager'
 import { NativeExtendedAnnotationManager } from './NativeExtendedAnnotationManager'
@@ -85,6 +87,7 @@ export function AdvancedTools(props: Props) {
         <div className="object-section" id="pdf-object-forms">
           <div className="object-section-heading"><span>04</span><div><strong>Interactive forms</strong><small>Manage existing AcroForm field properties and behavior.</small></div></div>
           <FormFieldPropertyManager bytes={props.bytes} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
+          <AdvancedFormWidgetManager bytes={props.bytes} currentPage={props.currentPage} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
         </div>
 
         <div className="object-section" id="pdf-object-files">
