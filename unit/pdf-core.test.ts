@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, PDFName, PDFString } from 'pdf-lib'
 import {
   cropPage,
   duplicatePage,
@@ -9,6 +9,7 @@ import {
   insertBlankPage,
   parsePageRange,
   reorderPdf,
+  rotatePdfPages,
 } from '../src/lib/pdf.ts'
 
 async function makeSizedPdf() {
@@ -49,6 +50,23 @@ test('reorderPdf follows the requested page order and applies output rotations',
   assert.equal(pdf.getPageCount(), 2)
   assert.deepEqual(pdf.getPages().map((page) => page.getWidth()), [600, 400])
   assert.deepEqual(pdf.getPages().map((page) => page.getRotation().angle), [90, 180])
+})
+
+test('rotatePdfPages preserves document structures while applying page rotations', async () => {
+  const pdf = await PDFDocument.create()
+  const page = pdf.addPage([400, 500])
+  const field = pdf.getForm().createTextField('preserved')
+  field.setText('value')
+  field.addToPage(page, { x: 20, y: 30, width: 120, height: 24 })
+  pdf.catalog.set(PDFName.of('CustomCatalogKey'), PDFString.of('keep'))
+  const raw = await pdf.save()
+  const input = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer
+
+  const output = await rotatePdfPages(input, [270])
+  const reopened = await PDFDocument.load(output)
+  assert.equal(reopened.getPage(0).getRotation().angle, 270)
+  assert.equal(reopened.getForm().getTextField('preserved').getText(), 'value')
+  assert.equal(reopened.catalog.lookup(PDFName.of('CustomCatalogKey'), PDFString).decodeText(), 'keep')
 })
 
 test('insertBlankPage clamps the index and matches the adjacent page dimensions', async () => {

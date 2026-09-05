@@ -1,4 +1,5 @@
 import type { PDFPageProxy } from 'pdfjs-dist'
+import { isRetiredPdfResource } from './pdfjs-lifecycle'
 import type { Worker as TesseractWorker } from 'tesseract.js'
 import { getOcrPage, saveOcrPage, type OcrPageRecord, type OcrWord } from './ocr-cache'
 
@@ -171,8 +172,10 @@ export async function recognizePdfPage(
     try {
       resolveJob(await runOcr(page, fingerprint, pageNumber, pageCount))
     } catch (error) {
-      console.error('OCR failed', error)
-      emit({ phase: 'error', pageNumber, pageCount, progress: 0, status: 'OCR failed for this page' })
+      if (!isRetiredPdfResource(page)) {
+        console.error('OCR failed', error)
+        emit({ phase: 'error', pageNumber, pageCount, progress: 0, status: 'OCR failed for this page' })
+      }
       rejectJob(error)
     } finally {
       pending.delete(key)

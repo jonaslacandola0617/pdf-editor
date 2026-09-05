@@ -44,15 +44,17 @@ import {
   extractPages,
   fileSize,
   flattenAnnotations,
+  getPageCount,
   mergePdfs,
   parsePageRange,
   readFormFields,
   readMetadata,
   reorderPdf,
+  rotatePdfPages,
   updateFormField,
 } from './lib/pdf'
 import { deleteNativeTextObject, pickNativeTextObject, replaceNativeTextObject } from './lib/pdfium-edit'
-import { pdfjsLib, type PDFDocumentProxy } from './lib/pdfjs'
+import { pdfjsLib, retirePdfDocument, type PDFDocumentProxy } from './lib/pdfjs'
 import { secureRedactPdf } from './lib/redaction'
 import { embedNativeNotes } from './lib/pdf-notes'
 import { annotationFromPreset, loadSignaturePresets, presetFromAnnotation, storeSignaturePresets, type SignaturePreset } from './lib/signature-presets'
@@ -211,10 +213,12 @@ export default function App() {
     }
 
     let cancelled = false
+    let loadedDocument: PDFDocumentProxy | null = null
     const task = pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) })
     task.promise
       .then((document) => {
-        if (cancelled) return
+        loadedDocument = document
+        if (cancelled) { retirePdfDocument(document); return }
         setPdf(document)
         setPageCount(document.numPages)
         setCurrentPage((page) => Math.min(page, document.numPages - 1))
@@ -234,7 +238,10 @@ export default function App() {
 
     return () => {
       cancelled = true
-      void task.destroy()
+      if (loadedDocument) retirePdfDocument(loadedDocument)
+      // Let page and text-layer effects cancel before tearing down the shared
+      // worker transport. React cleans parent effects before some descendants.
+      window.setTimeout(() => { void task.destroy() }, 0)
     }
   }, [bytes])
 
@@ -392,6 +399,9 @@ export default function App() {
       const task = pdfjsLib.getDocument({ data: new Uint8Array(raw.slice(0)) })
       const document = await task.promise
       const count = document.numPages
+      const embeddedRotations = await Promise.all(Array.from({ length: count }, async (_, index) => (await document.getPage(index + 1)).rotate))
+      const initialRotations = existing?.rotations?.length === count ? existing.rotations : embeddedRotations
+      setRotations([...initialRotations])
       await task.destroy()
       await saveDocument({
         id,
@@ -401,7 +411,7 @@ export default function App() {
         size: raw.byteLength,
         updatedAt: Date.now(),
         annotations: existing?.annotations || [],
-        rotations: existing?.rotations || [],
+        rotations: [...initialRotations],
         metadata: nextMetadata,
       })
       await refreshLibrary()
@@ -444,6 +454,19 @@ export default function App() {
     setStatus('Opened from local library')
   }
 
+  useEffect(() => {
+    const openById = (event: Event) => {
+      const id: unknown = (event as CustomEvent).detail
+      if (typeof id !== 'string') return
+      void listDocuments().then(async documents => {
+        const document = documents.find(item => item.id === id)
+        if (document) await openLibraryDoc(document)
+      }).catch(() => setStatus('Could not open this local document.'))
+    }
+    window.addEventListener('pdf-forge:open-document', openById)
+    return () => window.removeEventListener('pdf-forge:open-document', openById)
+  }, [openLibraryDoc])
+
   const closeDocument = () => {
     setActiveId(null)
     setBytes(null)
@@ -473,9 +496,10 @@ export default function App() {
       const task = pdfjsLib.getDocument({ data: new Uint8Array(next.slice(0)) })
       const document = await task.promise
       const extraCount = document.numPages - pageCount
+      const appendedRotations = await Promise.all(Array.from({ length: Math.max(0, extraCount) }, async (_, index) => (await document.getPage(pageCount + index + 1)).rotate))
       await task.destroy()
       setBytes(next)
-      setRotations((items) => [...items, ...Array(Math.max(0, extraCount)).fill(0)])
+      setRotations((items) => [...items, ...appendedRotations])
       setSelectedPages(new Set())
       setStatus('Files merged')
     } catch (error) {
@@ -563,13 +587,19 @@ export default function App() {
 
   const bulkDelete = async () => {
     if (!bytes || !selectedPages.size) return
-    if (selectedPages.size >= pageCount) {
+    const actualPageCount = await getPageCount(bytes)
+    const selected = new Set([...selectedPages].filter(index => index >= 0 && index < actualPageCount))
+    if (!selected.size) {
+      setSelectedPages(new Set())
+      return
+    }
+    if (selected.size >= actualPageCount) {
       setStatus('A PDF must keep at least one page.')
       return
     }
     pushHistory()
-    const order = Array.from({ length: pageCount }, (_, index) => index)
-      .filter((index) => !selectedPages.has(index))
+    const order = Array.from({ length: actualPageCount }, (_, index) => index)
+      .filter((index) => !selected.has(index))
     const next = await reorderPdf(bytes, order, order.map(() => 0))
     const currentNew = Math.max(0, order.indexOf(currentPage))
     setBytes(next)
@@ -583,7 +613,7 @@ export default function App() {
   const sourceWithRotations = async () => {
     if (!bytes) return null
     return rotations.some(Boolean)
-      ? reorderPdf(bytes, Array.from({ length: pageCount }, (_, index) => index), rotations)
+      ? rotatePdfPages(bytes, rotations)
       : bytes
   }
 
@@ -591,7 +621,12 @@ export default function App() {
     if (!selectedPages.size) return
     const source = await sourceWithRotations()
     if (!source) return
-    const indices = [...selectedPages].sort((a, b) => a - b)
+    const actualPageCount = await getPageCount(source)
+    const indices = [...selectedPages].filter(index => index >= 0 && index < actualPageCount).sort((a, b) => a - b)
+    if (!indices.length) {
+      setSelectedPages(new Set())
+      return
+    }
     const output = await extractPages(source, indices)
     downloadBytes(output, `${name.replace(/\.pdf$/i, '')}-selected-pages.pdf`)
     setStatus(`Extracted ${indices.length} selected pages`)
@@ -730,7 +765,7 @@ export default function App() {
       finalized = new Uint8Array(redacted)
     } else {
       const rotated = rotations.some(Boolean)
-        ? await reorderPdf(bytes, Array.from({ length: pageCount }, (_, index) => index), rotations)
+        ? await rotatePdfPages(bytes, rotations)
         : bytes
       finalized = await flattenAnnotations(rotated, annotationsForExport(ordinary, rotations), metadata)
     }
@@ -863,7 +898,7 @@ export default function App() {
     setCurrentPage(searchMatches[next])
   }
 
-  const changeFormField = async (field: FormFieldState, nextValue: string | boolean) => {
+  const changeFormField = async (field: FormFieldState, nextValue: string | string[] | boolean) => {
     if (!bytes) return
     pushHistory()
     try {
@@ -1175,19 +1210,23 @@ export default function App() {
                     {field.type === 'checkbox' ? (
                       <input
                         type="checkbox"
+                        disabled={field.readOnly}
                         checked={Boolean(field.value)}
                         onChange={(event) => void changeFormField(field, event.target.checked)}
                       />
                     ) : field.options?.length ? (
                       <select
-                        value={String(field.value)}
-                        onChange={(event) => void changeFormField(field, event.target.value)}
+                        disabled={field.readOnly}
+                        multiple={field.multiple}
+                        value={field.multiple ? (Array.isArray(field.value) ? field.value : []) : String(field.value)}
+                        onChange={(event) => void changeFormField(field, field.multiple ? Array.from(event.target.selectedOptions, option => option.value) : event.target.value)}
                       >
-                        <option value="">Choose…</option>
+                        {!field.multiple && <option value="">Choose…</option>}
                         {field.options.map((option) => <option key={option}>{option}</option>)}
                       </select>
                     ) : (
                       <input
+                        disabled={field.readOnly || field.type === 'unknown'}
                         value={String(field.value)}
                         onChange={(event) => setFormFields((items) => items.map(
                           (item) => item.name === field.name ? { ...item, value: event.target.value } : item,

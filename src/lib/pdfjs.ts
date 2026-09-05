@@ -2,6 +2,8 @@ import * as basePdfjs from 'pdfjs-dist'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { nativeTextIsEnough, recognizePdfPage } from './ocr'
+import { trackPdfPage } from './pdfjs-lifecycle'
+export { isRetiredPdfResource, retirePdfDocument } from './pdfjs-lifecycle'
 
 basePdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 
@@ -16,7 +18,8 @@ function nativeText(content: Awaited<ReturnType<PDFPageProxy['getTextContent']>>
     .trim()
 }
 
-function patchPage(page: PDFPageProxy, fingerprint: string, pageCount: number) {
+function patchPage(page: PDFPageProxy, fingerprint: string, pageCount: number, owner: PDFDocumentProxy) {
+  trackPdfPage(page, owner)
   if (patchedPages.has(page)) return
   patchedPages.add(page)
 
@@ -76,7 +79,7 @@ function patchDocument(doc: PDFDocumentProxy) {
     configurable: true,
     value: async (pageNumber: number) => {
       const page = await originalGetPage(pageNumber)
-      patchPage(page, fingerprint, doc.numPages)
+      patchPage(page, fingerprint, doc.numPages, doc)
       return page
     },
   })

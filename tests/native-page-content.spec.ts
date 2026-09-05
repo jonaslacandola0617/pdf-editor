@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './fixtures'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { readFile, writeFile } from 'node:fs/promises'
 import { deflateSync } from 'node:zlib'

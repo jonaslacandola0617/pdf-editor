@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './fixtures'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -180,8 +180,9 @@ test('visual audit — progressive disclosure surfaces stay usable and unclipped
   await expect(page.locator('.advanced-category-nav')).toBeVisible()
   await shot(page, '06-document-tools-desktop')
   const advanced = await page.locator('.advanced-modal').boundingBox()
-  expect(advanced?.top ?? 0).toBeGreaterThanOrEqual(8)
-  expect(advanced?.bottom ?? 9999).toBeLessThanOrEqual(892)
+  expect(advanced).not.toBeNull()
+  expect(advanced!.y).toBeGreaterThanOrEqual(8)
+  expect(advanced!.y + advanced!.height).toBeLessThanOrEqual(892)
   await page.locator('.advanced-modal header .icon-btn').click()
 
   await page.getByTitle('Embedded PDF objects').click()
@@ -189,8 +190,9 @@ test('visual audit — progressive disclosure surfaces stay usable and unclipped
   await expect(page.locator('.object-section-nav')).toBeVisible()
   await shot(page, '07-objects-desktop')
   const objects = await page.locator('.native-object-modal').boundingBox()
-  expect(objects?.top ?? 0).toBeGreaterThanOrEqual(8)
-  expect(objects?.bottom ?? 9999).toBeLessThanOrEqual(892)
+  expect(objects).not.toBeNull()
+  expect(objects!.y).toBeGreaterThanOrEqual(8)
+  expect(objects!.y + objects!.height).toBeLessThanOrEqual(892)
   await page.getByTitle('Close embedded objects').click()
   assertNoErrors()
 })
@@ -214,8 +216,9 @@ test('visual audit — tablet and mobile flows remain discoverable', async ({ pa
   await expectNoViewportOverflow(page)
   await expectCriticalTargets(page, 36)
   const float = await page.locator('.floating-nav').boundingBox()
-  expect(float?.left ?? -1).toBeGreaterThanOrEqual(0)
-  expect(float?.right ?? 9999).toBeLessThanOrEqual(390)
+  expect(float).not.toBeNull()
+  expect(float!.x).toBeGreaterThanOrEqual(0)
+  expect(float!.x + float!.width).toBeLessThanOrEqual(390)
   await expect(page.locator('.mobile-workspace-bar')).toBeVisible()
 
   await page.getByTitle('All Tools').click()

@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test:unit": "node --test --experimental-strip-types unit/*.test.ts"
+    "test:unit": "node --test --experimental-strip-types unit/*.test.ts",
+    "test:browser": "playwright test",
+    "test:all": "npm run test:unit && npm run build && npm run test:browser"
   },
   "dependencies": {
     "@hyzyla/pdfium": "2.1.13",
@@ -22,6 +24,7 @@
     "tesseract.js": "7.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "5.2.0",

@@ -53,8 +53,10 @@ export type PdfMetadata = {
 export type FormFieldState = {
   name: string
   type: 'text' | 'checkbox' | 'dropdown' | 'radio' | 'option' | 'unknown'
-  value: string | boolean
+  value: string | string[] | boolean
   options?: string[]
+  multiple?: boolean
+  readOnly?: boolean
 }
 
 export type PageOperation = {

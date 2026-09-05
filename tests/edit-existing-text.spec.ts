@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { writeFile } from 'node:fs/promises'
 

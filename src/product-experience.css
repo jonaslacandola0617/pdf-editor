@@ -292,7 +292,7 @@ body:has(.editor-toolbar button[title="Edit existing text"].active) .workspace {
   .product-home-bar nav { position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 40; justify-content: stretch; background: rgba(24,25,29,.96); box-shadow: 0 8px 28px rgba(0,0,0,.35); }
   .product-home-bar nav button { flex: 1; min-height: 38px; }
   .product-local-status { display: none; }
-  .product-home-content { width: calc(100% - 28px); padding: 28px 0 82px; }
+  .product-home-content { width: calc(100% - 36px); padding: 28px 0 82px; }
   .product-home-hero { min-height: 0; padding: 18px 0 34px; }
   .product-hero-copy h1 { font-size: 38px; }
   .product-hero-copy p { font-size: 14px; }

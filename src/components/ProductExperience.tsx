@@ -76,14 +76,8 @@ function openFilePicker() {
   input?.click()
 }
 
-function openStoredDocument(name: string) {
-  const recent = Array.from(document.querySelectorAll<HTMLButtonElement>('.recent-row'))
-    .find((button) => button.textContent?.includes(name))
-  if (recent) {
-    recent.click()
-    return true
-  }
-  return false
+function openStoredDocument(id: string) {
+  window.dispatchEvent(new CustomEvent('pdf-forge:open-document', { detail: id }))
 }
 
 function activateEditorMode(mode: EditorMode) {
@@ -348,7 +342,7 @@ export function ProductExperience() {
               {documents.length > 3 && <button onClick={() => setView('documents')}>View all <ChevronRight size={14} /></button>}
             </div>
             {documents.length ? <div className="product-recent-grid">
-              {documents.slice(0, 4).map((document) => <button key={document.id} className="product-document-card" onClick={() => openStoredDocument(document.name)}>
+              {documents.slice(0, 4).map((document) => <button key={document.id} className="product-document-card" onClick={() => openStoredDocument(document.id)}>
                 <span className="product-pdf-sheet"><span>PDF</span></span>
                 <span className="product-document-copy"><strong>{document.name}</strong><small>{document.pageCount} pages · {fileSize(document.size)}</small><small>{formatUpdatedAt(document.updatedAt)}</small></span>
                 <ChevronRight size={16} />
@@ -383,7 +377,7 @@ export function ProductExperience() {
           </div>
           {filteredDocuments.length ? <div className="product-document-list">
             {filteredDocuments.map((document) => <div className="product-document-row" key={document.id}>
-              <button className="product-document-open" onClick={() => openStoredDocument(document.name)}>
+              <button className="product-document-open" onClick={() => openStoredDocument(document.id)}>
                 <span className="product-pdf-sheet compact"><span>PDF</span></span>
                 <span><strong>{document.name}</strong><small>{document.pageCount} pages · {fileSize(document.size)} · {formatUpdatedAt(document.updatedAt)}</small></span>
               </button>
@@ -391,7 +385,7 @@ export function ProductExperience() {
               <div className="product-row-menu-wrap">
                 <button className="product-icon-button" aria-label={`More actions for ${document.name}`} onClick={() => setMenuDocumentId((id) => id === document.id ? null : document.id)}>•••</button>
                 {menuDocumentId === document.id && <div className="product-row-menu">
-                  <button onClick={() => openStoredDocument(document.name)}>Open document</button>
+                  <button onClick={() => openStoredDocument(document.id)}>Open document</button>
                   <button onClick={() => void renameStoredDocument(document)}>Rename</button>
                   <button onClick={() => void duplicateStoredDocument(document)}>Duplicate</button>
                   <button className="danger" onClick={() => void removeStoredDocument(document)}><Trash2 size={14} /> Remove from library</button>
