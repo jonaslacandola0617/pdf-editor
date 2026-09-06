@@ -48,6 +48,19 @@ async function makeFormPdf(path: string) {
   await writeFile(path, await pdf.save())
 }
 
+async function makeLayoutPdf(path: string) {
+  const pdf = await PDFDocument.create()
+  const first = pdf.addPage([600, 800])
+  pdf.addPage([600, 800])
+  const form = pdf.getForm()
+  for (const [name, x, y] of [['alpha', 60, 680], ['beta', 250, 540], ['gamma', 370, 380]] as const) {
+    const field = form.createTextField(name)
+    field.setText(name.toUpperCase())
+    field.addToPage(first, { x, y, width: 120, height: 32 })
+  }
+  await writeFile(path, await pdf.save())
+}
+
 async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
@@ -194,4 +207,64 @@ test('exports and reimports local form values as JSON', async ({ page }, testInf
   expect(form.getTextField('notes').getText()).toBe('Initial notes')
   expect(form.getDropdown('choice').getSelected()).toEqual(['Alpha'])
   expect(form.getRadioGroup('level').getSelected()).toBe('Low')
+})
+
+test('selects, drags, resizes, aligns, distributes, duplicates and copies fields on the page', async ({ page }, testInfo) => {
+  test.setTimeout(120_000)
+  const source = testInfo.outputPath('form-layout-source.pdf')
+  await makeLayoutPdf(source)
+  await openFile(page, source)
+  await page.getByTitle('Form fields').click()
+  await page.getByRole('button', { name: 'Prepare form on page' }).click()
+  await expect(page.locator('.form-widget-outline')).toHaveCount(3)
+
+  let alpha = page.getByRole('button', { name: 'Form widget alpha 1', exact: true })
+  const before = await alpha.boundingBox()
+  await page.mouse.move(before!.x + before!.width / 2, before!.y + before!.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(before!.x + before!.width / 2 + 45, before!.y + before!.height / 2 + 20, { steps: 4 })
+  await page.mouse.up()
+  await expect(page.locator('.stage-top-hint')).toContainText('Form widget position updated', { timeout: 30_000 })
+
+  alpha = page.getByRole('button', { name: 'Form widget alpha 1', exact: true })
+  const moved = await alpha.boundingBox()
+  expect(moved!.x).toBeGreaterThan(before!.x + 30)
+  const resize = page.getByRole('button', { name: 'Resize form widget alpha 1', exact: true })
+  const handle = await resize.boundingBox()
+  await page.mouse.move(handle!.x + handle!.width / 2, handle!.y + handle!.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(handle!.x + 35, handle!.y + 18, { steps: 4 })
+  await page.mouse.up()
+  await expect(page.locator('.stage-top-hint')).toContainText('Form widget position updated', { timeout: 30_000 })
+
+  await page.getByRole('button', { name: 'Form widget alpha 1', exact: true }).click()
+  await page.getByRole('button', { name: 'Form widget beta 1', exact: true }).click({ modifiers: ['Shift'] })
+  await page.getByRole('button', { name: 'Form widget gamma 1', exact: true }).click({ modifiers: ['Shift'] })
+  await expect(page.locator('.form-selection-summary')).toContainText('3 selected')
+  await page.getByRole('button', { name: 'Align left' }).click()
+  await expect(page.locator('.stage-top-hint')).toContainText('Align left complete', { timeout: 30_000 })
+  await page.getByRole('button', { name: 'Distribute V' }).click()
+  await expect(page.locator('.stage-top-hint')).toContainText('Distribute vertical complete', { timeout: 30_000 })
+
+  await page.locator('.pdf-page').click({ position: { x: 5, y: 5 } })
+  await page.getByRole('button', { name: 'Form widget alpha 1', exact: true }).click()
+  await page.getByRole('button', { name: 'Duplicate selected fields' }).click()
+  await expect(page.getByRole('button', { name: 'Form widget alpha_copy 1', exact: true })).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: 'Form widget alpha_copy 1', exact: true }).click()
+  await page.getByLabel('Copy form fields to page').fill('2')
+  await page.locator('.form-copy-row').getByRole('button', { name: 'Copy', exact: true }).click()
+  await expect(page.locator('.stage-top-hint')).toContainText('Form fields copied to page 2', { timeout: 30_000 })
+  await expect(page.getByRole('button', { name: 'Form widget alpha_copy_page_2 1', exact: true })).toBeVisible({ timeout: 30_000 })
+
+  const exported = testInfo.outputPath('form-layout-export.pdf')
+  await exportPdf(page, exported)
+  const result = await PDFDocument.load(await readFile(exported))
+  const fields = result.getForm()
+  expect(fields.getTextField('alpha_copy').getText()).toBe('ALPHA')
+  expect(fields.getTextField('alpha_copy_page_2').getText()).toBe('ALPHA')
+  const pageOneWidgets = ['alpha', 'beta', 'gamma'].map(name => fields.getTextField(name).acroField.getWidgets()[0].getRectangle())
+  expect(pageOneWidgets[0].x).toBeCloseTo(pageOneWidgets[1].x, 1)
+  expect(pageOneWidgets[1].x).toBeCloseTo(pageOneWidgets[2].x, 1)
+  const centers = pageOneWidgets.map(rect => rect.y + rect.height / 2).sort((a, b) => a - b)
+  expect(centers[1] - centers[0]).toBeCloseTo(centers[2] - centers[1], 1)
 })

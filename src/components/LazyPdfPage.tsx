@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { PdfPageCanvas } from './PdfPageCanvas'
 import type { Annotation, NativeTextSelection, Point, Tool } from '../types'
+import type { FormWidgetGeometry, FormWidgetTarget } from '../lib/advanced-forms'
+import type { PageFormWidget } from './FormWidgetOverlay'
 
 type Props = {
   pdf: PDFDocumentProxy | null
@@ -21,6 +23,11 @@ type Props = {
   onFocus: () => void
   onBeginAnnotationEdit?: () => void
   onUpdateAnnotation?: (id: string, patch: Partial<Annotation>) => void
+  formWidgetMode?: boolean
+  formWidgets?: PageFormWidget[]
+  selectedFormWidgets?: Set<string>
+  onSelectFormWidget?: (target: FormWidgetTarget | null, additive: boolean) => void
+  onCommitFormWidget?: (target: FormWidgetTarget, geometry: FormWidgetGeometry) => void
 }
 
 export function LazyPdfPage(props: Props) {

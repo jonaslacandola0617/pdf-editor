@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { isRetiredPdfResource, pdfjsLib, type PDFDocumentProxy } from '../lib/pdfjs'
 import type { Annotation, NativeTextSelection, Point, Tool } from '../types'
 import { OcrTextOverlay } from './OcrTextOverlay'
+import { FormWidgetOverlay, type PageFormWidget } from './FormWidgetOverlay'
+import type { FormWidgetGeometry, FormWidgetTarget } from '../lib/advanced-forms'
 import '../text-layer.css'
 
 type Props = {
@@ -21,6 +23,11 @@ type Props = {
   onPickNativeText: (point: Point, hint: string) => void
   onBeginAnnotationEdit?: () => void
   onUpdateAnnotation?: (id: string, patch: Partial<Annotation>) => void
+  formWidgetMode?: boolean
+  formWidgets?: PageFormWidget[]
+  selectedFormWidgets?: Set<string>
+  onSelectFormWidget?: (target: FormWidgetTarget | null, additive: boolean) => void
+  onCommitFormWidget?: (target: FormWidgetTarget, geometry: FormWidgetGeometry) => void
 }
 
 type DragPreview = {
@@ -39,6 +46,8 @@ type AnnotationEdit = {
 
 type CancelableRenderTask = { promise: Promise<unknown>; cancel: () => void }
 type CancelableTextLayer = { render: () => Promise<unknown>; cancel: () => void; textDivs?: HTMLElement[]; textContentItemsStr?: string[] }
+const EMPTY_FORM_WIDGET_SELECTION = new Set<string>()
+const EMPTY_FORM_WIDGETS: PageFormWidget[] = []
 
 function currentSearchQuery() {
   return document.querySelector<HTMLInputElement>('.search-box input')?.value.trim() || ''
@@ -116,6 +125,7 @@ export function PdfPageCanvas({
   pdf, pageIndex, zoom, rotation, annotations, tool, color, strokeWidth, fontSize,
   selectedId, nativeSelection, onSelect, onAdd, onPickNativeText,
   onBeginAnnotationEdit, onUpdateAnnotation,
+  formWidgetMode = false, formWidgets = EMPTY_FORM_WIDGETS, selectedFormWidgets = EMPTY_FORM_WIDGET_SELECTION, onSelectFormWidget, onCommitFormWidget,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const textLayerRef = useRef<HTMLDivElement | null>(null)
@@ -210,6 +220,7 @@ export function PdfPageCanvas({
   }
 
   const pointerDown = (e: React.PointerEvent) => {
+    if (formWidgetMode) { onSelectFormWidget?.(null, false); return }
     if (tool === 'editText') { onPickNativeText(pointFromEvent(e), textHintFromTarget(e.target)); return }
     if (tool === 'select') {
       const p = pointFromEvent(e)
@@ -289,6 +300,7 @@ export function PdfPageCanvas({
       <div ref={textLayerRef} className={`pdf-text-layer textLayer ${tool === 'select' || tool === 'editText' ? 'interactive' : ''}`} />
       {pdf && <OcrTextOverlay pdf={pdf} pageIndex={pageIndex} rotation={rotation} searchQuery={searchQuery} />}
       {nativeBounds && <div className="native-text-selection" aria-hidden="true" style={{ left: `${nativeBounds.x * 100}%`, top: `${nativeBounds.y * 100}%`, width: `${nativeBounds.width * 100}%`, height: `${nativeBounds.height * 100}%` }} />}
+      {formWidgetMode && onSelectFormWidget && onCommitFormWidget && <FormWidgetOverlay widgets={formWidgets} rotation={rotation} selected={selectedFormWidgets} onSelect={onSelectFormWidget} onCommit={onCommitFormWidget} />}
       <div className="annotation-layer">
         {annotations.map((ann) => {
           const selected = ann.id === selectedId
