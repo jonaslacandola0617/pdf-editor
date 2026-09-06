@@ -60,6 +60,15 @@ import { embedNativeNotes } from './lib/pdf-notes'
 import { annotationFromPreset, loadSignaturePresets, presetFromAnnotation, storeSignaturePresets, type SignaturePreset } from './lib/signature-presets'
 import { decryptPdf } from './lib/security'
 import { deleteDocument, listDocuments, saveDocument } from './lib/storage'
+import {
+  duplicateFormWidgets,
+  listAdvancedFormFields,
+  updateFormWidgetGeometries,
+  type AdvancedFormFieldInfo,
+  type FormWidgetGeometry,
+  type FormWidgetTarget,
+} from './lib/advanced-forms'
+import { formWidgetKey } from './components/FormWidgetOverlay'
 import type {
   Annotation,
   FormFieldState,
@@ -184,6 +193,10 @@ export default function App() {
   const [panel, setPanel] = useState<Panel>('pages')
   const [metadata, setMetadata] = useState<PdfMetadata>(EMPTY_META)
   const [formFields, setFormFields] = useState<FormFieldState[]>([])
+  const [advancedFormFields, setAdvancedFormFields] = useState<AdvancedFormFieldInfo[]>([])
+  const [prepareForms, setPrepareForms] = useState(false)
+  const [selectedFormWidgets, setSelectedFormWidgets] = useState<Set<string>>(new Set())
+  const [formCopyPage, setFormCopyPage] = useState(1)
   const [searchText, setSearchText] = useState('')
   const [searchMatches, setSearchMatches] = useState<number[]>([])
   const [searchMatchIndex, setSearchMatchIndex] = useState(0)
@@ -204,6 +217,24 @@ export default function App() {
   useEffect(() => {
     void refreshLibrary()
   }, [refreshLibrary])
+
+  useEffect(() => {
+    if (!bytes || panel !== 'forms') { setAdvancedFormFields([]); return }
+    let cancelled = false
+    void listAdvancedFormFields(bytes).then(fields => {
+      if (!cancelled) setAdvancedFormFields(fields)
+    }).catch(() => {
+      if (!cancelled) setAdvancedFormFields([])
+    })
+    return () => { cancelled = true }
+  }, [bytes, panel])
+
+  useEffect(() => {
+    if (panel !== 'forms') {
+      setPrepareForms(false)
+      setSelectedFormWidgets(new Set())
+    }
+  }, [panel])
 
   useEffect(() => {
     if (!bytes) {
@@ -955,6 +986,104 @@ export default function App() {
     () => [...selectedPages].sort((a, b) => a - b),
     [selectedPages],
   )
+  const formWidgetEntries = useMemo(() => advancedFormFields.flatMap(field => field.widgets.map(widget => ({
+    fieldName: field.name,
+    type: field.type,
+    widgetIndex: widget.widgetIndex,
+    pageIndex: widget.pageIndex,
+    geometry: widget.geometry,
+  }))), [advancedFormFields])
+  const selectedWidgetEntries = useMemo(() => formWidgetEntries.filter(widget => selectedFormWidgets.has(formWidgetKey(widget))), [formWidgetEntries, selectedFormWidgets])
+
+  const selectFormWidget = (target: FormWidgetTarget | null, additive: boolean) => {
+    if (!target) { setSelectedFormWidgets(new Set()); return }
+    const key = formWidgetKey(target)
+    setSelectedFormWidgets(previous => {
+      if (!additive) return new Set([key])
+      const next = new Set(previous)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
+  const commitFormWidget = async (target: FormWidgetTarget, geometry: FormWidgetGeometry) => {
+    if (!bytes) return
+    pushHistory()
+    try {
+      setStatus('Moving form widget…')
+      const next = await updateFormWidgetGeometries(bytes, [{ ...target, geometry }])
+      applyAdvancedMutation(next, { status: 'Form widget position updated' })
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not move this form widget.')
+    }
+  }
+
+  const updateSelectedWidgetGeometry = async (label: string, geometries: Map<string, FormWidgetGeometry>) => {
+    if (!bytes || !geometries.size) return
+    pushHistory()
+    try {
+      setStatus(`${label}…`)
+      const updates = selectedWidgetEntries.flatMap(widget => {
+        const geometry = geometries.get(formWidgetKey(widget))
+        return geometry ? [{ fieldName: widget.fieldName, widgetIndex: widget.widgetIndex, geometry }] : []
+      })
+      const next = await updateFormWidgetGeometries(bytes, updates)
+      applyAdvancedMutation(next, { status: `${label} complete` })
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : `${label} failed.`)
+    }
+  }
+
+  const alignFormWidgets = (mode: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+    if (selectedWidgetEntries.length < 2) return
+    const left = Math.min(...selectedWidgetEntries.map(item => item.geometry.x))
+    const right = Math.max(...selectedWidgetEntries.map(item => item.geometry.x + item.geometry.width))
+    const top = Math.min(...selectedWidgetEntries.map(item => item.geometry.y))
+    const bottom = Math.max(...selectedWidgetEntries.map(item => item.geometry.y + item.geometry.height))
+    const updates = new Map<string, FormWidgetGeometry>()
+    selectedWidgetEntries.forEach(item => {
+      const geometry = { ...item.geometry }
+      if (mode === 'left') geometry.x = left
+      if (mode === 'center') geometry.x = (left + right - geometry.width) / 2
+      if (mode === 'right') geometry.x = right - geometry.width
+      if (mode === 'top') geometry.y = top
+      if (mode === 'middle') geometry.y = (top + bottom - geometry.height) / 2
+      if (mode === 'bottom') geometry.y = bottom - geometry.height
+      updates.set(formWidgetKey(item), geometry)
+    })
+    void updateSelectedWidgetGeometry(`Align ${mode}`, updates)
+  }
+
+  const distributeFormWidgets = (axis: 'horizontal' | 'vertical') => {
+    if (selectedWidgetEntries.length < 3) return
+    const sorted = [...selectedWidgetEntries].sort((a, b) => axis === 'horizontal'
+      ? (a.geometry.x + a.geometry.width / 2) - (b.geometry.x + b.geometry.width / 2)
+      : (a.geometry.y + a.geometry.height / 2) - (b.geometry.y + b.geometry.height / 2))
+    const center = (item: typeof sorted[number]) => axis === 'horizontal' ? item.geometry.x + item.geometry.width / 2 : item.geometry.y + item.geometry.height / 2
+    const first = center(sorted[0])
+    const step = (center(sorted[sorted.length - 1]) - first) / (sorted.length - 1)
+    const updates = new Map<string, FormWidgetGeometry>()
+    sorted.forEach((item, index) => {
+      const geometry = { ...item.geometry }
+      if (axis === 'horizontal') geometry.x = first + step * index - geometry.width / 2
+      else geometry.y = first + step * index - geometry.height / 2
+      updates.set(formWidgetKey(item), geometry)
+    })
+    void updateSelectedWidgetGeometry(`Distribute ${axis}`, updates)
+  }
+
+  const duplicateSelectedFormWidgets = async (targetPage?: number) => {
+    if (!bytes || !selectedWidgetEntries.length) return
+    pushHistory()
+    try {
+      const next = await duplicateFormWidgets(bytes, selectedWidgetEntries.map(({ fieldName, widgetIndex }) => ({ fieldName, widgetIndex })), targetPage)
+      setSelectedFormWidgets(new Set())
+      if (targetPage !== undefined) setCurrentPage(targetPage)
+      applyAdvancedMutation(next, { status: targetPage === undefined ? 'Form fields duplicated' : `Form fields copied to page ${targetPage + 1}` })
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not duplicate the selected fields.')
+    }
+  }
   const annotationsForPage = (index: number) => annotations.filter(
     (annotation) => annotation.page === index,
   )
@@ -985,6 +1114,11 @@ export default function App() {
       onPickNativeText: (point: Point, hint: string) => void pickNativeText(index, point, hint),
       onBeginAnnotationEdit: pushHistory,
       onUpdateAnnotation: updateAnnotationLive,
+      formWidgetMode: prepareForms,
+      formWidgets: formWidgetEntries.filter(widget => widget.pageIndex === index),
+      selectedFormWidgets,
+      onSelectFormWidget: selectFormWidget,
+      onCommitFormWidget: commitFormWidget,
     }
 
     if (lazy) {
@@ -1199,6 +1333,34 @@ export default function App() {
                 <div><span className="eyebrow">ACROFORM</span><h3>Form fields</h3></div>
                 <span>{formFields.length}</span>
               </div>
+              {!!advancedFormFields.length && <button
+                className={`prepare-form-toggle ${prepareForms ? 'active' : ''}`}
+                aria-pressed={prepareForms}
+                onClick={() => {
+                  const next = !prepareForms
+                  setPrepareForms(next)
+                  setSelectedFormWidgets(new Set())
+                  if (next) { setTool('select'); setNativeSelection(null); setSelectedId(null) }
+                }}
+              ><MousePointer2 /> {prepareForms ? 'Finish preparing form' : 'Prepare form on page'}</button>}
+              {prepareForms && <div className="form-layout-tools" aria-label="Form layout tools">
+                <div className="form-selection-summary"><strong>{selectedWidgetEntries.length}</strong> selected <span>Shift/Ctrl-click to select several</span></div>
+                <div className="form-layout-grid">
+                  <button disabled={selectedWidgetEntries.length < 2} onClick={() => alignFormWidgets('left')}>Align left</button>
+                  <button disabled={selectedWidgetEntries.length < 2} onClick={() => alignFormWidgets('center')}>Center</button>
+                  <button disabled={selectedWidgetEntries.length < 2} onClick={() => alignFormWidgets('right')}>Align right</button>
+                  <button disabled={selectedWidgetEntries.length < 2} onClick={() => alignFormWidgets('top')}>Align top</button>
+                  <button disabled={selectedWidgetEntries.length < 2} onClick={() => alignFormWidgets('middle')}>Middle</button>
+                  <button disabled={selectedWidgetEntries.length < 2} onClick={() => alignFormWidgets('bottom')}>Align bottom</button>
+                  <button disabled={selectedWidgetEntries.length < 3} onClick={() => distributeFormWidgets('horizontal')}>Distribute H</button>
+                  <button disabled={selectedWidgetEntries.length < 3} onClick={() => distributeFormWidgets('vertical')}>Distribute V</button>
+                </div>
+                <button disabled={!selectedWidgetEntries.length} onClick={() => void duplicateSelectedFormWidgets()}><Copy /> Duplicate selected fields</button>
+                <div className="form-copy-row">
+                  <label>Copy to page <input aria-label="Copy form fields to page" type="number" min="1" max={pageCount} value={formCopyPage} onChange={event => setFormCopyPage(Math.max(1, Math.min(pageCount, Number(event.target.value) || 1)))} /></label>
+                  <button disabled={!selectedWidgetEntries.length} onClick={() => void duplicateSelectedFormWidgets(formCopyPage - 1)}>Copy</button>
+                </div>
+              </div>}
               {!formFields.length && (
                 <div className="empty-panel"><FormInput /><strong>No form fields found</strong><p>You can still add text anywhere using the Text tool.</p></div>
               )}

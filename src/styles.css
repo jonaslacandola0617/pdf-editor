@@ -129,6 +129,19 @@ button:disabled { cursor: default; opacity: .35; }
 .form-field small { color: #585861; font-weight: 400; }
 .form-field input:not([type=checkbox]), .form-field select, .meta-form input, .meta-form textarea, .property-field textarea { width: 100%; border: 1px solid #303036; background: #202024; color: #e1e1e5; border-radius: 7px; padding: 7px 8px; font-size: 11px; }
 .form-field input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); }
+.prepare-form-toggle { width:100%;display:flex;align-items:center;justify-content:center;gap:7px;margin:0 0 10px;padding:9px;border:1px solid #34343a;border-radius:8px;background:#252529;color:#c9c9cf;font-size:11px;font-weight:650;cursor:pointer }
+.prepare-form-toggle svg { width:15px }
+.prepare-form-toggle.active { border-color:#287bc1;background:#172b3d;color:#8bd3ff }
+.form-layout-tools { display:flex;flex-direction:column;gap:8px;margin:0 0 12px;padding:9px;border:1px solid #303036;border-radius:9px;background:#19191d }
+.form-selection-summary { display:flex;align-items:center;gap:5px;color:#aaaab2;font-size:10px }
+.form-selection-summary strong { color:#8bd3ff;font-size:12px }
+.form-selection-summary span { margin-left:auto;color:#686872;font-size:8px }
+.form-layout-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:4px }
+.form-layout-tools button { min-height:28px;border:1px solid #34343a;border-radius:6px;background:#242429;color:#c7c7cd;font-size:9px;cursor:pointer }
+.form-layout-tools button:disabled { opacity:.35;cursor:not-allowed }
+.form-copy-row { display:grid;grid-template-columns:1fr auto;gap:5px;align-items:end }
+.form-copy-row label { display:flex;flex-direction:column;gap:3px;color:#85858e;font-size:9px }
+.form-copy-row input { min-width:0;width:100%;padding:6px;border:1px solid #34343a;border-radius:6px;background:#111113;color:#eee }
 .meta-form { display: grid; gap: 11px; }
 .meta-form textarea, .property-field textarea { resize: vertical; }
 

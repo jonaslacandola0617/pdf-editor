@@ -8,9 +8,11 @@ import {
   PDFOptionList,
   PDFRadioGroup,
   PDFRef,
+  PDFField,
   PDFWidgetAnnotation,
   PDFTextField,
   TextAlignment,
+  rgb,
 } from 'pdf-lib'
 
 export type FormWidgetGeometry = { x: number; y: number; width: number; height: number }
@@ -47,6 +49,9 @@ export type WidgetUpdate = {
   borderWidth?: number
 }
 
+export type FormWidgetTarget = { fieldName: string; widgetIndex: number }
+export type FormWidgetGeometryUpdate = FormWidgetTarget & { geometry: FormWidgetGeometry }
+
 export type TextBehaviorUpdate = {
   multiline: boolean
   password: boolean
@@ -81,6 +86,11 @@ function toHex(values: number[] | undefined, fallback: string) {
 function parseHex(value: string) {
   const raw = /^#[0-9a-f]{6}$/i.test(value) ? value.slice(1) : 'ffffff'
   return [0, 2, 4].map((offset) => parseInt(raw.slice(offset, offset + 2), 16) / 255)
+}
+
+function pdfColor(value: string) {
+  const [r, g, b] = parseHex(value)
+  return rgb(r, g, b)
 }
 
 function parseDefaultAppearance(da: string) {
@@ -240,6 +250,143 @@ export async function updateFormWidget(bytes: ArrayBuffer, fieldName: string, wi
   if (update.borderColor !== undefined) widget.getOrCreateAppearanceCharacteristics().setBorderColor(parseHex(update.borderColor))
   if (update.borderWidth !== undefined) widget.getOrCreateBorderStyle().setWidth(Math.max(0, Number(update.borderWidth) || 0))
   form.markFieldAsDirty(field.ref)
+  return (await pdf.save({ useObjectStreams: true, updateFieldAppearances: true })).buffer as ArrayBuffer
+}
+
+export async function updateFormWidgetGeometries(bytes: ArrayBuffer, updates: FormWidgetGeometryUpdate[]) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const form = pdf.getForm()
+  const refs = pageRefMap(pdf)
+  for (const update of updates) {
+    const field = form.getField(update.fieldName)
+    const widget = field.acroField.getWidgets()[update.widgetIndex]
+    if (!widget) throw new Error(`Widget ${update.widgetIndex + 1} for ${update.fieldName} no longer exists.`)
+    const pageIndex = findWidgetPage(pdf, widget, refs)
+    const { width: pageWidth, height: pageHeight } = pdf.getPage(pageIndex).getSize()
+    const xP = clamp(Number(update.geometry.x) || 0, 0, 99.9)
+    const yP = clamp(Number(update.geometry.y) || 0, 0, 99.9)
+    const wP = clamp(Number(update.geometry.width) || 0.1, 0.1, 100 - xP)
+    const hP = clamp(Number(update.geometry.height) || 0.1, 0.1, 100 - yP)
+    widget.setRectangle({
+      x: pageWidth * xP / 100,
+      y: pageHeight - pageHeight * yP / 100 - pageHeight * hP / 100,
+      width: pageWidth * wP / 100,
+      height: pageHeight * hP / 100,
+    })
+    form.markFieldAsDirty(field.ref)
+  }
+  return (await pdf.save({ useObjectStreams: true, updateFieldAppearances: true })).buffer as ArrayBuffer
+}
+
+function copyFieldFlags(source: PDFField, target: PDFField) {
+  source.isReadOnly() ? target.enableReadOnly() : target.disableReadOnly()
+  source.isRequired() ? target.enableRequired() : target.disableRequired()
+  source.isExported() ? target.enableExporting() : target.disableExporting()
+}
+
+function uniqueFieldName(existing: Set<string>, sourceName: string, pageIndex?: number) {
+  const suffix = pageIndex === undefined ? 'copy' : `page_${pageIndex + 1}`
+  let candidate = `${sourceName}_${suffix}`
+  let index = 2
+  while (existing.has(candidate)) candidate = `${sourceName}_${suffix}_${index++}`
+  existing.add(candidate)
+  return candidate
+}
+
+export async function duplicateFormWidgets(bytes: ArrayBuffer, targets: FormWidgetTarget[], targetPageIndex?: number) {
+  const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
+  const form = pdf.getForm()
+  const refs = pageRefMap(pdf)
+  const existing = new Set(form.getFields().map(field => field.getName()))
+
+  for (const target of targets) {
+    const source = form.getField(target.fieldName)
+    const widget = source.acroField.getWidgets()[target.widgetIndex]
+    if (!widget) throw new Error(`Widget ${target.widgetIndex + 1} for ${target.fieldName} no longer exists.`)
+    const sourcePageIndex = findWidgetPage(pdf, widget, refs)
+    const destinationIndex = targetPageIndex === undefined ? sourcePageIndex : clamp(Math.floor(targetPageIndex), 0, pdf.getPageCount() - 1)
+    const destination = pdf.getPage(destinationIndex)
+    const sourceGeometry = widgetInfo(pdf, widget, target.widgetIndex, refs).geometry
+    const offset = targetPageIndex === undefined ? 2 : 0
+    const geometry = {
+      x: clamp(sourceGeometry.x + offset, 0, 99.9),
+      y: clamp(sourceGeometry.y + offset, 0, 99.9),
+      width: sourceGeometry.width,
+      height: sourceGeometry.height,
+    }
+    geometry.width = clamp(geometry.width, 0.1, 100 - geometry.x)
+    geometry.height = clamp(geometry.height, 0.1, 100 - geometry.y)
+    const pageSize = destination.getSize()
+    const appearance = widgetInfo(pdf, widget, target.widgetIndex, refs)
+    const options = {
+      x: pageSize.width * geometry.x / 100,
+      y: pageSize.height - pageSize.height * geometry.y / 100 - pageSize.height * geometry.height / 100,
+      width: pageSize.width * geometry.width / 100,
+      height: pageSize.height * geometry.height / 100,
+      backgroundColor: pdfColor(appearance.backgroundColor),
+      borderColor: pdfColor(appearance.borderColor),
+      borderWidth: appearance.borderWidth,
+    }
+    const name = uniqueFieldName(existing, source.getName(), targetPageIndex)
+    let copy: PDFField
+    if (source instanceof PDFTextField) {
+      const field = form.createTextField(name)
+      field.setText(source.getText() || '')
+      source.isMultiline() && field.enableMultiline()
+      source.isPassword() && field.enablePassword()
+      source.isFileSelector() && field.enableFileSelection()
+      source.isSpellChecked() ? field.enableSpellChecking() : field.disableSpellChecking()
+      source.isScrollable() ? field.enableScrolling() : field.disableScrolling()
+      source.isRichFormatted() && field.enableRichFormatting()
+      const maxLength = source.getMaxLength()
+      if (maxLength) field.setMaxLength(maxLength)
+      if (source.isCombed() && maxLength && !source.isMultiline() && !source.isPassword()) field.enableCombing()
+      field.setAlignment(source.getAlignment())
+      const defaultAppearance = parseDefaultAppearance(source.acroField.getDefaultAppearance() || '')
+      field.addToPage(destination, options)
+      if (defaultAppearance.fontSize) field.setFontSize(defaultAppearance.fontSize)
+      setDefaultTextColor(field, defaultAppearance.color)
+      copy = field
+    } else if (source instanceof PDFCheckBox) {
+      const field = form.createCheckBox(name)
+      field.addToPage(destination, options)
+      if (source.isChecked()) field.check()
+      copy = field
+    } else if (source instanceof PDFDropdown) {
+      const field = form.createDropdown(name)
+      field.addOptions(source.getOptions())
+      source.isMultiselect() && field.enableMultiselect()
+      source.isEditable() && field.enableEditing()
+      source.isSorted() && field.enableSorting()
+      source.isSpellChecked() ? field.enableSpellChecking() : field.disableSpellChecking()
+      source.isSelectOnClick() && field.enableSelectOnClick()
+      field.addToPage(destination, options)
+      const selected = source.getSelected()
+      if (selected.length) field.select(source.isMultiselect() ? selected : selected[0])
+      copy = field
+    } else if (source instanceof PDFOptionList) {
+      const field = form.createOptionList(name)
+      field.addOptions(source.getOptions())
+      source.isMultiselect() && field.enableMultiselect()
+      source.isSorted() && field.enableSorting()
+      source.isSelectOnClick() && field.enableSelectOnClick()
+      field.addToPage(destination, options)
+      const selected = source.getSelected()
+      if (selected.length) field.select(selected)
+      copy = field
+    } else if (source instanceof PDFRadioGroup) {
+      const field = form.createRadioGroup(name)
+      source.isOffToggleable() ? field.enableOffToggling() : field.disableOffToggling()
+      source.isMutuallyExclusive() ? field.enableMutualExclusion() : field.disableMutualExclusion()
+      const option = source.getOptions()[target.widgetIndex] || widget.getOnValue()?.decodeText() || 'Option'
+      field.addOptionToPage(option, destination, options)
+      if (source.getSelected() === option) field.select(option)
+      copy = field
+    } else {
+      throw new Error(`Duplicating ${target.fieldName} is not supported for this field type.`)
+    }
+    copyFieldFlags(source, copy)
+  }
   return (await pdf.save({ useObjectStreams: true, updateFieldAppearances: true })).buffer as ArrayBuffer
 }
 
