@@ -83,6 +83,15 @@ import './native-edit.css'
 
 type Panel = 'pages' | 'library' | 'forms' | 'comments' | 'info'
 type ViewMode = 'single' | 'continuous' | 'spread'
+type TextPromptRequest = {
+  kind: 'password' | 'signature'
+  title: string
+  description: string
+  label: string
+  action: string
+  annotation?: Annotation
+  resolve?: (value: string | null) => void
+}
 
 type HistorySnapshot = {
   bytes: ArrayBuffer
@@ -205,7 +214,10 @@ export default function App() {
   const [extractOpen, setExtractOpen] = useState(false)
   const [extractRange, setExtractRange] = useState('1')
   const [status, setStatus] = useState('Ready')
+  const [saveState, setSaveState] = useState<'saved' | 'saving' | 'changed'>('saved')
   const [dragPage, setDragPage] = useState<number | null>(null)
+  const [textPrompt, setTextPrompt] = useState<TextPromptRequest | null>(null)
+  const [textPromptValue, setTextPromptValue] = useState('')
 
   const fileInput = useRef<HTMLInputElement | null>(null)
   const mergeInput = useRef<HTMLInputElement | null>(null)
@@ -278,7 +290,9 @@ export default function App() {
 
   useEffect(() => {
     if (!bytes || !activeId) return
+    setSaveState('changed')
     const timer = window.setTimeout(async () => {
+      setSaveState('saving')
       await saveDocument({
         id: activeId,
         name,
@@ -291,6 +305,7 @@ export default function App() {
         metadata,
       })
       await refreshLibrary()
+      setSaveState('saved')
     }, 500)
     return () => window.clearTimeout(timer)
   }, [activeId, annotations, bytes, metadata, name, pageCount, refreshLibrary, rotations])
@@ -373,7 +388,17 @@ export default function App() {
     } catch (error) {
       const message = error instanceof Error ? `${error.name} ${error.message}` : String(error)
       if (!/password/i.test(message)) throw error
-      const password = window.prompt(`Enter the password for ${file.name}`)
+      const password = await new Promise<string | null>((resolve) => {
+        setTextPromptValue('')
+        setTextPrompt({
+          kind: 'password',
+          title: 'Unlock this PDF',
+          description: `${file.name} is password protected. Enter its document password to open it locally.`,
+          label: 'Document password',
+          action: 'Unlock PDF',
+          resolve,
+        })
+      })
       if (password === null) throw new Error('Password-protected PDF was not opened.')
       setStatus('Decrypting PDF locally…')
       return decryptPdf(raw, password)
@@ -672,13 +697,35 @@ export default function App() {
   }
 
   const saveReusableSignature = (annotation: Annotation) => {
-    const label = window.prompt('Name this reusable signature', `Signature ${signaturePresets.length + 1}`)
-    if (label === null) return
-    const preset = presetFromAnnotation(annotation, label)
-    if (!preset) { setStatus('Draw a signature first.'); return }
+    setTextPromptValue(`Signature ${signaturePresets.length + 1}`)
+    setTextPrompt({
+      kind: 'signature',
+      title: 'Save this signature',
+      description: 'Give your signature a recognizable name. It will remain stored on this device for future documents.',
+      label: 'Signature name',
+      action: 'Save Signature',
+      annotation,
+    })
+  }
+
+  const closeTextPrompt = () => {
+    textPrompt?.resolve?.(null)
+    setTextPrompt(null)
+  }
+
+  const submitTextPrompt = () => {
+    if (!textPrompt || !textPromptValue.trim()) return
+    if (textPrompt.kind === 'password') {
+      textPrompt.resolve?.(textPromptValue)
+      setTextPrompt(null)
+      return
+    }
+    const preset = textPrompt.annotation ? presetFromAnnotation(textPrompt.annotation, textPromptValue.trim()) : null
+    if (!preset) { setStatus('Draw a signature first.'); setTextPrompt(null); return }
     const next = [preset, ...signaturePresets].slice(0, 8)
     setSignaturePresets(next)
     storeSignaturePresets(next)
+    setTextPrompt(null)
     setStatus('Reusable signature saved locally')
   }
 
@@ -819,6 +866,7 @@ export default function App() {
 
   const saveToLibrary = async () => {
     if (!bytes || !activeId) return
+    setSaveState('saving')
     await saveDocument({
       id: activeId,
       name,
@@ -831,6 +879,7 @@ export default function App() {
       metadata,
     })
     await refreshLibrary()
+    setSaveState('saved')
     setStatus('Saved to local library')
   }
 
@@ -1137,8 +1186,34 @@ export default function App() {
     )
   }
 
+  const textPromptDialog = textPrompt && (
+    <div className="product-dialog-layer" role="presentation" onMouseDown={closeTextPrompt}>
+      <section className="product-dialog" role="dialog" aria-modal="true" aria-labelledby="app-text-prompt-title" onMouseDown={(event) => event.stopPropagation()}>
+        <header>
+          <span className="product-dialog-icon">{textPrompt.kind === 'password' ? <Archive size={19} /> : <PenLine size={19} />}</span>
+          <div>
+            <h2 id="app-text-prompt-title">{textPrompt.title}</h2>
+            <p>{textPrompt.description}</p>
+          </div>
+        </header>
+        <label className="product-dialog-field">{textPrompt.label}
+          <input
+            autoFocus
+            type={textPrompt.kind === 'password' ? 'password' : 'text'}
+            value={textPromptValue}
+            onChange={(event) => setTextPromptValue(event.target.value)}
+            onKeyDown={(event) => { if (event.key === 'Enter') submitTextPrompt(); if (event.key === 'Escape') closeTextPrompt() }}
+          />
+        </label>
+        {textPrompt.kind === 'password' && <p className="product-dialog-trust"><Check size={13} /> Your password is used only to open this document on this device.</p>}
+        <footer><button className="product-secondary" onClick={closeTextPrompt}>Cancel</button><button className="product-primary" disabled={!textPromptValue.trim()} onClick={submitTextPrompt}>{textPrompt.action}</button></footer>
+      </section>
+    </div>
+  )
+
   if (!bytes || !pdf) {
     return (
+      <>
       <main className="welcome" onDragOver={(event) => event.preventDefault()} onDrop={dropFiles}>
         <div className="welcome-orb" />
         <header className="welcome-header">
@@ -1195,10 +1270,13 @@ export default function App() {
           onChange={(event) => event.target.files && void importFiles(event.target.files)}
         />
       </main>
+      {textPromptDialog}
+      </>
     )
   }
 
   return (
+    <>
     <main className="app-shell" onDragOver={(event) => event.preventDefault()} onDrop={dropFiles}>
       <header className="topbar">
         <div className="brand compact"><span className="brand-mark">P</span><span>PDF Forge</span></div>
@@ -1207,6 +1285,7 @@ export default function App() {
           <span>{pageCount} pages · {fileSize(bytes.byteLength)}</span>
         </div>
         <div className="top-actions">
+          <span className={`document-save-state ${saveState}`} aria-live="polite"><Check size={13} />{saveState === 'saved' ? 'Saved' : saveState === 'saving' ? 'Saving…' : 'Unsaved changes'}</span>
           <button className="icon-btn" title="Undo" disabled={!history.length} onClick={undo}><Undo2 /></button>
           <button className="icon-btn" title="Redo" disabled={!future.length} onClick={redo}><Redo2 /></button>
           <span className="divider" />
@@ -1405,9 +1484,10 @@ export default function App() {
           {panel === 'comments' && (
             <>
               <div className="panel-heading">
-                <div><span className="eyebrow">COMMENTS</span><h3>Notes</h3></div>
+                <div><span className="eyebrow">REVIEW</span><h3>Comments</h3></div>
                 <span>{annotations.filter((ann) => ann.type === 'note').length}</span>
               </div>
+              <p className="panel-supporting-copy">Review notes and conversations across this document.</p>
               <button className="drop-card comment-add" onClick={() => chooseTool('note')}>
                 <StickyNote /><strong>Add sticky note</strong><span>Click anywhere on a page</span>
               </button>
@@ -1418,7 +1498,7 @@ export default function App() {
                   </button>
                 ))}
                 {!annotations.some((ann) => ann.type === 'note') && (
-                  <div className="empty-panel"><StickyNote /><strong>No comments yet</strong><p>Add a sticky note and it will export as a standard PDF comment.</p></div>
+                  <div className="empty-panel"><StickyNote /><strong>No comments yet</strong><p>Add comments and annotations while reviewing your document. They will appear here for easy navigation.</p></div>
                 )}
               </div>
             </>
@@ -1491,8 +1571,8 @@ export default function App() {
                 nativeBusy
                   ? 'Loading PDF text engine…'
                   : nativeSelection
-                    ? 'Edit the selected PDF text in the right panel'
-                    : 'Click existing PDF text to edit it'
+                    ? 'Edit the selected PDF text directly on the page'
+                    : 'Click existing text to edit it directly on the page'
               )}
               {tool === 'text' && 'Click anywhere on the page to add new text'}
               {tool === 'note' && 'Click anywhere on the page to add a sticky note'}
@@ -1799,5 +1879,7 @@ export default function App() {
         onChange={(event) => void mergeFiles(event.target.files)}
       />
     </main>
+    {textPromptDialog}
+    </>
   )
 }

@@ -85,8 +85,10 @@ test('drawn signatures can be saved locally and reinserted', async ({ page }, te
   await expect(page.locator('.ink-hitbox')).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Save this signature' })).toBeVisible()
 
-  page.once('dialog', async (dialog) => dialog.accept('QA Signature'))
   await page.getByRole('button', { name: 'Save this signature' }).click()
+  const signatureDialog = page.getByRole('dialog', { name: 'Save this signature' })
+  await signatureDialog.getByLabel('Signature name').fill('QA Signature')
+  await signatureDialog.getByRole('button', { name: 'Save Signature' }).click()
   await expect.poll(() => page.evaluate(() => localStorage.getItem('pdf-forge-signatures') || '')).toContain('QA Signature')
 
   await page.keyboard.press('Escape')
