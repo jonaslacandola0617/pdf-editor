@@ -127,6 +127,12 @@ test('visual audit — welcome hierarchy at desktop and mobile widths', async ({
   await expect(page.getByRole('button', { name: /Open PDF or images/i })).toBeVisible()
   await expectVisibleFocus(page, '.primary.large')
 
+  await page.getByRole('button', { name: 'Use dark appearance' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.waitForTimeout(250)
+  await shot(page, '01b-welcome-dark')
+  await page.getByRole('button', { name: 'Use light appearance' }).click()
+
   await page.setViewportSize({ width: 390, height: 844 })
   await shot(page, '02-welcome-mobile')
   await expectNoViewportOverflow(page)
@@ -155,6 +161,16 @@ test('visual audit — editor desktop hierarchy, density, focus and primary work
   await search.press('Enter')
   await expect(page.locator('.pdf-search-hit')).toBeVisible({ timeout: 20_000 })
   await shot(page, '04-editor-search-result')
+
+  await page.getByRole('button', { name: 'Use dark appearance' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await page.waitForTimeout(250)
+  const darkSurfaces = await page.evaluate(() => ({
+    workspace: getComputedStyle(document.querySelector<HTMLElement>('.document-stage')!).backgroundColor,
+    inspector: getComputedStyle(document.querySelector<HTMLElement>('.right-panel')!).backgroundColor,
+  }))
+  expect(darkSurfaces.workspace).not.toBe(darkSurfaces.inspector)
+  await shot(page, '04b-editor-dark')
   assertNoErrors()
 })
 

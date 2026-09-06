@@ -17,11 +17,19 @@ test('home is a focused PDF workspace with documents and tool navigation', async
   await expect(product).toBeVisible()
   await expect(product.getByRole('heading', { name: 'Your PDF workspace' })).toBeVisible()
   await expect(product.getByRole('button', { name: 'Open PDF or images' })).toBeVisible()
-  await expect(product.getByText('Drop a PDF here to start working')).toBeVisible()
+  await expect(product.getByText('Open a document')).toBeVisible()
+  await expect(product.getByText('Private by design. Your files remain on this device.')).toBeVisible()
+
+  await product.getByRole('button', { name: 'Use dark appearance' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await product.getByRole('button', { name: 'Use light appearance' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 
   await product.getByRole('button', { name: 'Documents', exact: true }).click()
   await expect(product.getByRole('heading', { name: 'Documents' })).toBeVisible()
   await expect(product.getByPlaceholder('Search documents')).toBeVisible()
+  await expect(product.getByLabel('Sort documents')).toBeVisible()
+  await expect(product.getByRole('button', { name: 'Grid view' })).toBeVisible()
 
   await product.getByRole('button', { name: 'Tools', exact: true }).click()
   await expect(product.getByRole('heading', { name: 'Tools' })).toBeVisible()

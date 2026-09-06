@@ -15,6 +15,7 @@ import './ux-audit.css'
 import './ux-audit-sections.css'
 import './release-fixes.css'
 import './product-experience.css'
+import './premium-system.css'
 
 const RESUME_KEY = 'pdf-forge-resume-editor'
 const WORKSPACE_KEY = 'pdf-forge-workspace'
