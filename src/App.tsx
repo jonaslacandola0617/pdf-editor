@@ -1576,7 +1576,7 @@ export default function App() {
             <div className="toolbar-spacer" />
             <button className="soft-btn forge-page-command" onClick={() => mergeInput.current?.click()}><FileInput /> Merge</button>
             <button className="soft-btn forge-page-command" onClick={() => { setExtractRange(String(currentPage + 1)); setExtractOpen(true) }}><Split /> Extract</button>
-            <button className={`soft-btn forge-inspector-toggle ${inspectorOpen ? 'active' : ''}`} onClick={() => setInspectorOpen((open) => !open)}><Info /> Properties</button>
+            <button className={`soft-btn forge-inspector-toggle ${inspectorOpen ? 'active' : ''}`} title="Properties" onClick={() => setInspectorOpen((open) => !open)}><Info /> Properties</button>
             <AdvancedTools
               bytes={bytes}
               name={name}
