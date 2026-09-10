@@ -43,13 +43,16 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function openObjects(page: Page) {
   await page.getByTitle('Embedded PDF objects').click()
   const modal = page.locator('.native-object-modal')
   await expect(modal).toBeVisible()
+  await modal.locator('.object-category-rail').getByRole('button', { name: /Comments & links/i }).click()
+  await modal.locator('.object-tool-rail').getByRole('button', { name: 'Links & bookmarks', exact: true }).click()
+  await expect(modal.locator('.native-object-manager')).toBeVisible()
   return modal
 }
 
@@ -106,14 +109,14 @@ test('edits native comments, URI links and bookmarks created by another PDF edit
   await comment.locator('xpath=..').getByRole('button', { name: 'Save' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Updating native comment complete', { timeout: 20_000 })
 
-  await modal.getByRole('button', { name: /Links/ }).click()
+  await modal.locator('.native-object-tabs').getByRole('button', { name: /Links/ }).click()
   const link = modal.getByLabel('Native link page 1')
   await expect(link).toHaveValue('https://example.com/original-6611')
   await link.fill('https://example.com/updated-6622')
   await link.locator('xpath=..').getByRole('button', { name: 'Save' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Updating native link complete', { timeout: 20_000 })
 
-  await modal.getByRole('button', { name: /Bookmarks/ }).click()
+  await modal.locator('.native-object-tabs').getByRole('button', { name: /Bookmarks/ }).click()
   const bookmark = modal.locator('input[aria-label^="Native bookmark"]').first()
   await expect(bookmark).toHaveValue('External bookmark 7711')
   await bookmark.fill('Updated bookmark 7722')
@@ -140,12 +143,12 @@ test('deletes existing native comments, links and bookmarks from the PDF', async
   await expect(page.locator('.stage-top-hint')).toContainText('Deleting native comment complete', { timeout: 20_000 })
   await expect(modal.getByText('No native sticky-note or free-text comments found.')).toBeVisible()
 
-  await modal.getByRole('button', { name: /Links/ }).click()
+  await modal.locator('.native-object-tabs').getByRole('button', { name: /Links/ }).click()
   await modal.locator('.native-object-row').first().getByRole('button', { name: 'Delete' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Deleting native link complete', { timeout: 20_000 })
   await expect(modal.getByText('No URI link annotations found.')).toBeVisible()
 
-  await modal.getByRole('button', { name: /Bookmarks/ }).click()
+  await modal.locator('.native-object-tabs').getByRole('button', { name: /Bookmarks/ }).click()
   await modal.locator('.native-object-row').first().getByRole('button', { name: 'Delete' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Deleting bookmark complete', { timeout: 20_000 })
   await expect(modal.getByText('No PDF outline bookmarks found.')).toBeVisible()
