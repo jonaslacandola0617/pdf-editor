@@ -66,7 +66,7 @@ const toolDefinitions: ToolDefinition[] = [
   { name: 'Create Form Fields', description: 'Add and arrange interactive fields directly on document pages.', group: 'Forms & Signatures', icon: FormInput, intent: 'forms' },
 ]
 
-const quickTools = ['Edit PDF', 'Organize Pages', 'Merge PDFs', 'Compress & Optimize', 'Fill & Sign', 'Redact Content']
+const quickTools = ['Edit PDF', 'Organize Pages', 'Merge PDFs', 'Compress & Optimize', 'Fill & Sign']
 
 function readFavorites() {
   try {
