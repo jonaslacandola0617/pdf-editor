@@ -1311,11 +1311,11 @@ export default function App() {
             <button className="forge-panel-collapse" title="Hide navigator" aria-label="Hide navigator" onClick={() => setNavigatorOpen(false)}><ChevronLeft /></button>
           </div>
           <nav className="forge-navigator-tabs" aria-label="Document navigator">
-            <button className={panel === 'pages' ? 'active' : ''} onClick={() => setPanel('pages')}><Files /><span>Pages</span></button>
-            <button className={panel === 'comments' ? 'active' : ''} onClick={() => setPanel('comments')}><StickyNote /><span>Comments</span></button>
-            <button className={panel === 'forms' ? 'active' : ''} onClick={() => setPanel('forms')}><FormInput /><span>Forms</span></button>
-            <button className={panel === 'library' ? 'active' : ''} onClick={() => setPanel('library')}><Library /><span>Library</span></button>
-            <button className={panel === 'info' ? 'active' : ''} onClick={() => setPanel('info')}><Info /><span>Info</span></button>
+            <button className={panel === 'pages' ? 'active' : ''} title="Pages" onClick={() => setPanel('pages')}><Files /><span>Pages</span></button>
+            <button className={panel === 'comments' ? 'active' : ''} title="Comments" onClick={() => setPanel('comments')}><StickyNote /><span>Comments</span></button>
+            <button className={panel === 'forms' ? 'active' : ''} title="Form fields" onClick={() => setPanel('forms')}><FormInput /><span>Forms</span></button>
+            <button className={panel === 'library' ? 'active' : ''} title="Library" onClick={() => setPanel('library')}><Library /><span>Library</span></button>
+            <button className={panel === 'info' ? 'active' : ''} title="Document info" onClick={() => setPanel('info')}><Info /><span>Info</span></button>
           </nav>
           {panel === 'pages' && (
             <>
