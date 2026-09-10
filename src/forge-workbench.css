@@ -1979,3 +1979,126 @@ body[data-pdf-mode="organize"] .thumb-drag-wrap.multi-selected {
     overflow: visible !important;
   }
 }
+
+
+/* Mobile is a dedicated document instrument, not a squeezed desktop shell. */
+@media (max-width: 760px) {
+  body.pdf-product-editor .topbar {
+    height: 56px !important;
+    min-height: 56px !important;
+    flex-basis: 56px !important;
+    padding: 0 6px !important;
+  }
+  body.pdf-product-editor .brand.compact,
+  body.pdf-product-editor .doc-title,
+  body.pdf-product-editor .document-save-state,
+  body.pdf-product-editor .top-actions button[title="Undo"],
+  body.pdf-product-editor .top-actions button[title="Redo"] {
+    display: none !important;
+  }
+  .forge-editor-switch {
+    left: 6px !important;
+    right: 92px !important;
+    top: 0 !important;
+    height: 56px !important;
+    transform: none !important;
+    border: 0 !important;
+  }
+  .forge-editor-switch > button {
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
+    padding: 0 4px !important;
+    font-size: 7.5px !important;
+    letter-spacing: -.01em;
+  }
+  .forge-editor-switch .forge-command-trigger { display: none !important; }
+  .forge-editor-switch > button::after { left: 5px !important; right: 5px !important; }
+  body.pdf-product-editor .top-actions {
+    width: 82px !important;
+    margin-left: auto !important;
+    justify-content: flex-end !important;
+    gap: 3px !important;
+  }
+  body.pdf-product-editor .top-actions .primary {
+    width: 39px !important;
+    min-width: 39px !important;
+    height: 38px !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    border-radius: 0 !important;
+  }
+  body.pdf-product-editor .top-actions .primary svg { width: 16px !important; height: 16px !important; }
+  body.pdf-product-editor .top-actions .icon-btn[title="Close document"] {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    border-left: 1px solid rgba(255,255,255,.09) !important;
+  }
+
+  .mobile-workspace-bar {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 9px !important;
+    height: 48px !important;
+    padding: 0 !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-top: 2px solid var(--forge-copper) !important;
+    border-radius: 0 !important;
+    background: rgba(20,19,16,.96) !important;
+    box-shadow: 0 14px 34px rgba(0,0,0,.28) !important;
+    backdrop-filter: blur(14px) !important;
+  }
+  .mobile-workspace-bar button {
+    min-height: 46px !important;
+    border-radius: 0 !important;
+    color: rgba(255,255,255,.47) !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    border-right: 1px solid rgba(255,255,255,.07) !important;
+  }
+  .mobile-workspace-bar button:last-child { border-right: 0 !important; }
+  .mobile-workspace-bar button:hover,
+  .mobile-workspace-bar button:active {
+    background: rgba(255,255,255,.05) !important;
+    color: #fff !important;
+  }
+  .mobile-workspace-bar svg { width: 15px !important; height: 15px !important; }
+  .mobile-workspace-bar span {
+    font: 500 7px/1 var(--forge-mono) !important;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  body.mobile-left-open .left-panel,
+  body.mobile-right-open .right-panel {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 65px !important;
+    max-height: min(72dvh, 640px) !important;
+    padding: 18px 14px 22px !important;
+    border: 1px solid var(--forge-line-strong) !important;
+    border-top: 3px solid var(--forge-copper) !important;
+    border-radius: 0 !important;
+    background: var(--forge-paper-hi) !important;
+    color: var(--forge-text) !important;
+    box-shadow: 0 -18px 55px rgba(0,0,0,.27) !important;
+  }
+  .mobile-sheet-backdrop {
+    inset: 56px 0 58px !important;
+    background: rgba(18,16,13,.48) !important;
+    backdrop-filter: blur(3px) !important;
+  }
+  .mobile-sheet-close {
+    right: 19px !important;
+    width: 36px !important;
+    height: 36px !important;
+    border: 1px solid var(--forge-line-strong) !important;
+    border-radius: 0 !important;
+    background: var(--forge-ink) !important;
+    color: #eee7dc !important;
+  }
+  body.mobile-left-open .left-panel .panel-heading,
+  body.mobile-right-open .right-panel .panel-heading {
+    background: var(--forge-paper-hi) !important;
+  }
+}
