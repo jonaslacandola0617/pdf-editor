@@ -19,6 +19,7 @@ import './product-experience.css'
 import './premium-system.css'
 import './forge-workbench.css'
 import './workbench-ux-v5.css'
+import './control-safety.css'
 
 const RESUME_KEY = 'pdf-forge-resume-editor'
 const WORKSPACE_KEY = 'pdf-forge-workspace'
