@@ -132,6 +132,7 @@ test('visual audit — welcome hierarchy at desktop and mobile widths', async ({
   await page.waitForTimeout(250)
   await shot(page, '01b-welcome-dark')
   await page.getByRole('button', { name: 'Use light appearance' }).click()
+  await page.waitForTimeout(200)
 
   await page.setViewportSize({ width: 390, height: 844 })
   await shot(page, '02-welcome-mobile')
