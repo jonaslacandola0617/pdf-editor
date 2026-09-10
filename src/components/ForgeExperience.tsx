@@ -207,6 +207,10 @@ export function ForgeExperience() {
       document.body.classList.toggle('forge-home-active', Boolean(welcome))
       document.body.classList.toggle('forge-editor-active', Boolean(shell))
       if (shell && !document.body.dataset.forgeMode) document.body.dataset.forgeMode = 'edit'
+      if (!shell) {
+        delete document.body.dataset.forgeMode
+        setMode('edit')
+      }
     }
 
     sync()
