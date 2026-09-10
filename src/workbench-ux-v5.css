@@ -116,9 +116,7 @@ body.pdf-product-editor .forge-editor-workbench.navigator-closed .forge-navigato
   align-items: center;
   text-align: left;
 }
-.forge-context-menu > button[role="menuitem"]:hover {
-  background: var(--forge-paper-low);
-}
+.forge-context-menu > button[role="menuitem"]:hover { background: var(--forge-paper-low); }
 .forge-context-menu > button[role="menuitem"] > svg { color: var(--forge-copper); }
 .forge-context-menu > button[role="menuitem"] > span {
   min-width: 0;
@@ -129,10 +127,368 @@ body.pdf-product-editor .forge-editor-workbench.navigator-closed .forge-navigato
 .forge-context-menu strong { font-size: 11px; font-weight: 700; }
 .forge-context-menu small { color: var(--forge-muted); font-size: 9px; line-height: 1.35; }
 .forge-context-separator { height: 1px; margin: 5px 3px; background: var(--forge-line); }
-
-/* Trackpad gestures belong to the document, so prevent accidental text/browser
-   selection while a precision gesture is being interpreted. */
 .page-scroll.view-single { overscroll-behavior: contain; }
+
+/* Select-tool transforms. The content itself retains pointer handling while the
+   transform frame supplies clear resize, rotate, and skew affordances. */
+.annotation-transform-box {
+  position: absolute;
+  z-index: 82;
+  pointer-events: none;
+  border: 1px dashed color-mix(in srgb, var(--forge-copper) 78%, white 10%);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.22);
+  min-width: 14px;
+  min-height: 14px;
+}
+.annotation-transform-handle {
+  position: absolute;
+  z-index: 84;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 2px solid var(--forge-paper-hi);
+  background: var(--forge-copper);
+  box-shadow: 0 1px 5px rgba(0,0,0,.34);
+  pointer-events: auto;
+}
+.annotation-transform-handle.resize {
+  right: -8px;
+  bottom: -8px;
+  cursor: nwse-resize;
+}
+.annotation-transform-handle.rotate {
+  left: 50%;
+  top: -31px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  cursor: grab;
+}
+.annotation-transform-handle.rotate::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 1px;
+  height: 16px;
+  background: var(--forge-copper);
+}
+.annotation-transform-handle.rotate:active { cursor: grabbing; }
+.annotation-transform-handle.skew {
+  left: -8px;
+  bottom: -8px;
+  transform: rotate(45deg);
+  cursor: ew-resize;
+  background: var(--forge-ink-3);
+}
+.annotation-transform-box.resize-only .annotation-transform-handle.resize {
+  width: 15px;
+  height: 15px;
+}
+
+/* Focused Document Tools / Objects share one calm three-pane information model. */
+.advanced-focus-modal,
+.object-focus-modal {
+  width: min(1180px, calc(100vw - 42px)) !important;
+  height: min(760px, calc(100dvh - 42px)) !important;
+  max-height: none !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: var(--forge-paper-hi) !important;
+}
+.advanced-focus-modal > header,
+.object-focus-modal > header {
+  flex: 0 0 auto;
+  min-height: 88px !important;
+  padding: 18px 22px 15px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+.advanced-focus-modal > header h2,
+.object-focus-modal > header h2 { font-size: 30px !important; }
+.advanced-focus-modal > header p,
+.object-focus-modal > header p { max-width: 650px; font-size: 11.5px !important; }
+.advanced-focus-modal > footer,
+.object-focus-modal > footer {
+  flex: 0 0 40px;
+  min-height: 40px;
+  padding: 0 18px;
+  border-top: 1px solid var(--forge-line);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--forge-muted);
+  font-size: 10px;
+}
+.advanced-focus-layout,
+.object-focus-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 225px 220px minmax(0, 1fr);
+  overflow: hidden;
+}
+.advanced-category-rail,
+.object-category-rail {
+  min-height: 0;
+  padding: 12px 10px;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255,255,255,.08);
+  background: var(--forge-ink);
+  color: #eee7dc;
+}
+.advanced-category-rail > button,
+.object-category-rail > button {
+  width: 100%;
+  min-height: 67px;
+  padding: 9px 9px;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: rgba(255,255,255,.56);
+  display: grid;
+  grid-template-columns: 24px minmax(0,1fr);
+  gap: 7px;
+  align-items: center;
+  text-align: left;
+}
+.object-category-rail > button { grid-template-columns: 20px 24px minmax(0,1fr); }
+.advanced-category-rail > button:hover,
+.object-category-rail > button:hover { background: rgba(255,255,255,.045); color: #fff; }
+.advanced-category-rail > button.active,
+.object-category-rail > button.active {
+  border-left-color: var(--forge-copper);
+  background: rgba(255,255,255,.06);
+  color: #fff;
+}
+.advanced-category-rail i,
+.object-category-rail i {
+  color: var(--forge-copper);
+  font: 500 8px/1 var(--forge-mono);
+  font-style: normal;
+}
+.object-category-rail svg { color: var(--forge-copper); }
+.advanced-category-rail > button > span,
+.object-category-rail > button > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.advanced-category-rail strong,
+.object-category-rail strong { font-size: 12px; font-weight: 700; }
+.advanced-category-rail small,
+.object-category-rail small { color: rgba(255,255,255,.38); font-size: 9.5px; line-height: 1.4; }
+
+.advanced-tool-rail,
+.object-tool-rail {
+  min-height: 0;
+  padding: 13px 10px;
+  overflow-y: auto;
+  border-right: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper);
+}
+.advanced-tool-rail > div,
+.object-tool-rail > div {
+  padding: 5px 8px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-bottom: 1px solid var(--forge-line);
+}
+.advanced-tool-rail > div > span,
+.object-tool-rail > div > span {
+  color: var(--forge-copper);
+  font: 500 8px/1 var(--forge-mono);
+  letter-spacing: .1em;
+}
+.advanced-tool-rail > div > strong,
+.object-tool-rail > div > strong { font: 400 19px/1.05 var(--forge-display); }
+.advanced-tool-rail > button,
+.object-tool-rail > button {
+  width: 100%;
+  min-height: 43px;
+  padding: 7px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--forge-line);
+  background: transparent;
+  color: var(--forge-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 650;
+}
+.advanced-tool-rail > button:hover,
+.object-tool-rail > button:hover { background: var(--forge-paper-low); color: var(--forge-text); }
+.advanced-tool-rail > button.active,
+.object-tool-rail > button.active {
+  color: var(--forge-text);
+  background: var(--forge-copper-soft);
+  box-shadow: inset 2px 0 0 var(--forge-copper);
+}
+.advanced-tool-rail > button svg { color: var(--forge-copper); flex: 0 0 auto; }
+
+.advanced-tool-pane,
+.object-tool-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 26px clamp(24px, 3vw, 42px) 34px;
+  background: var(--forge-paper-hi);
+}
+.advanced-tool-pane > header,
+.object-tool-pane > header {
+  min-height: 91px;
+  padding: 0 0 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+.object-tool-pane > header { display: block; }
+.advanced-tool-glyph {
+  width: 45px;
+  height: 52px;
+  flex: 0 0 45px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--forge-line-strong);
+  color: var(--forge-copper);
+  background: var(--forge-paper);
+}
+.advanced-tool-pane h3,
+.object-tool-pane h3 {
+  margin: 5px 0 6px;
+  font: 400 29px/1 var(--forge-display);
+  color: var(--forge-text);
+}
+.advanced-tool-pane header p,
+.object-tool-pane header p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.advanced-tool-content,
+.object-tool-content { max-width: 650px; padding-top: 22px; }
+.advanced-focus-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.advanced-focus-form > p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.advanced-focus-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--forge-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+.advanced-focus-form input:not([type="range"]),
+.advanced-focus-form select,
+.advanced-focus-form textarea {
+  min-height: 39px;
+  padding: 8px 9px;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 2px;
+  background: var(--forge-paper);
+  color: var(--forge-text);
+  font-size: 12px;
+}
+.advanced-focus-form button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 2px;
+  background: var(--forge-paper);
+  color: var(--forge-text);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+.advanced-focus-form button:hover { border-color: var(--forge-copper); background: var(--forge-paper-low); }
+.advanced-focus-form .danger-action {
+  border-color: color-mix(in srgb, var(--forge-red) 45%, var(--forge-line));
+  color: var(--forge-red);
+}
+.danger-focus {
+  padding: 17px;
+  border-left: 2px solid var(--forge-red);
+  background: color-mix(in srgb, var(--forge-red) 5%, transparent);
+}
+
+/* Managers embedded in the focused Objects pane should stop looking like
+   nested cards inside cards. */
+.object-tool-content .native-page-content-manager,
+.object-tool-content .native-object-manager,
+.object-tool-content .attachment-manager,
+.object-tool-content .image-signature-manager,
+.object-tool-content .native-comment-detail-manager,
+.object-tool-content .native-markup-manager,
+.object-tool-content .native-shape-manager,
+.object-tool-content .native-extended-manager,
+.object-tool-content .form-field-property-manager,
+.object-tool-content .advanced-form-widget-manager,
+.object-tool-content .document-view-manager {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.object-tool-content button,
+.object-tool-content input,
+.object-tool-content select,
+.object-tool-content textarea { font-size: 11px !important; }
+
+@media (max-width: 900px) {
+  .advanced-focus-modal,
+  .object-focus-modal { width: calc(100vw - 18px) !important; height: calc(100dvh - 18px) !important; }
+  .advanced-focus-layout,
+  .object-focus-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(0,1fr);
+  }
+  .advanced-category-rail,
+  .object-category-rail {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .advanced-category-rail > button,
+  .object-category-rail > button {
+    flex: 0 0 168px;
+    min-height: 52px;
+  }
+  .advanced-category-rail small,
+  .object-category-rail small { display: none; }
+  .advanced-tool-rail,
+  .object-tool-rail {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px;
+    border-right: 0;
+    border-bottom: 1px solid var(--forge-line-strong);
+  }
+  .advanced-tool-rail > div,
+  .object-tool-rail > div { display: none; }
+  .advanced-tool-rail > button,
+  .object-tool-rail > button { flex: 0 0 auto; min-height: 38px; border: 1px solid var(--forge-line); }
+  .advanced-tool-pane,
+  .object-tool-pane { padding: 20px 18px 28px; }
+}
 
 @media (max-width: 980px) and (min-width: 761px) {
   .forge-editor-switch > button { min-width: 61px !important; font-size: 10.5px !important; }
