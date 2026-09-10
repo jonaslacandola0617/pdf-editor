@@ -3472,3 +3472,16 @@ body.pdf-product-editor .floating-nav span {
     border-right: 0;
   }
 }
+
+
+/* Home must escape the legacy two-column product grid completely. */
+body.pdf-product-home .welcome > .forge-product-root.home-stage {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+body.pdf-product-home .welcome > .forge-product-root.home-stage > .forge-product-surface {
+  width: 100% !important;
+  grid-column: 1 / -1 !important;
+}
