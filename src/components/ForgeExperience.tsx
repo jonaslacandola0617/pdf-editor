@@ -232,9 +232,20 @@ export function ForgeExperience() {
 
   useEffect(() => {
     if (!editorVisible || window.innerWidth > 760) return
-    const fitMobileDocument = () => findButtonByTitle('Fit width')?.click()
-    const timer = window.setTimeout(fitMobileDocument, 220)
-    return () => window.clearTimeout(timer)
+    let attempts = 0
+    const fitWhenReady = window.setInterval(() => {
+      const canvas = document.querySelector('.pdf-page canvas')
+      const fitButton = findButtonByTitle('Fit width')
+      if (!canvas || !fitButton) return
+      fitButton.click()
+      attempts += 1
+      if (attempts >= 2) window.clearInterval(fitWhenReady)
+    }, 450)
+    const stop = window.setTimeout(() => window.clearInterval(fitWhenReady), 2600)
+    return () => {
+      window.clearInterval(fitWhenReady)
+      window.clearTimeout(stop)
+    }
   }, [editorVisible])
 
   useEffect(() => {
