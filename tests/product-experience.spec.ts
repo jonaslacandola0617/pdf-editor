@@ -11,19 +11,20 @@ async function makePdf(path: string) {
   await writeFile(path, await pdf.save())
 }
 
-test('home is a focused PDF workspace with documents and tool navigation', async ({ page }) => {
+test('home is a focused dark-first PDF workspace with documents and tool navigation', async ({ page }) => {
   await page.goto('/')
   const product = page.locator('.forge-product-root')
   await expect(product).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect(product.getByRole('heading', { name: /Open a document/i })).toBeVisible()
   await expect(product.getByRole('button', { name: /Open PDF/i }).first()).toBeVisible()
   await expect(product.getByRole('heading', { name: /Pick up where you left off/i })).toBeVisible()
   await expect(product.getByText('Processed locally on this device')).toBeVisible()
 
-  await product.getByRole('button', { name: 'Use dark appearance' }).click()
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await product.getByRole('button', { name: 'Use light appearance' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await product.getByRole('button', { name: 'Use dark appearance' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
 
   await product.getByRole('button', { name: 'Documents', exact: true }).click()
   await expect(product.getByRole('heading', { name: /Every document/i })).toBeVisible()
@@ -38,13 +39,15 @@ test('home is a focused PDF workspace with documents and tool navigation', async
   await expect(product.getByRole('button', { name: /Protect PDF/ })).toBeVisible()
 })
 
-test('editor exposes intent-based modes and quick actions without breaking PDF workflows', async ({ page }, testInfo) => {
+test('editor exposes intent-based modes, continuous reading, and quick actions without breaking PDF workflows', async ({ page }, testInfo) => {
   const source = testInfo.outputPath('product-experience.pdf')
   await makePdf(source)
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(source)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.locator('.page-scroll')).toHaveClass(/view-continuous/)
 
   const modes = page.locator('.forge-editor-switch')
   await expect(modes).toBeVisible()
