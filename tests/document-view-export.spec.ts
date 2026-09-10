@@ -16,13 +16,15 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function openObjects(page: Page) {
   await page.getByTitle('Embedded PDF objects').click()
   const modal = page.locator('.native-object-modal')
   await expect(modal).toBeVisible()
+  await modal.locator('.object-category-rail').getByRole('button', { name: /View & navigation/i }).click()
+  await modal.locator('.object-tool-rail').getByRole('button', { name: 'Document view', exact: true }).click()
   await expect(modal.locator('.document-view-manager')).toBeVisible()
   return modal
 }
