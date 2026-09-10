@@ -8,6 +8,7 @@ on:
     branches:
       - 'fix/**'
       - 'redesign/**'
+      - 'chore/**'
   workflow_dispatch:
 
 jobs:
@@ -16,21 +17,18 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout tested revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: Install app dependencies
-        run: npm install
-
-      - name: Install Playwright test runner
-        run: npm install --no-save @playwright/test
+        run: npm ci
 
       - name: Install Chromium
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Run unit tests
         run: npm run test:unit
@@ -38,14 +36,45 @@ jobs:
       - name: Production build check
         run: npm run build
 
-      - name: Run browser verification
-        run: npx playwright test
+      - name: Run Chromium browser verification
+        run: npm run test:browser
 
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: playwright-report
+          name: playwright-report-chromium
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
+  cross-browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout tested revision
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Install Firefox and WebKit
+        run: npx playwright install --with-deps firefox webkit
+
+      - name: Run Firefox and WebKit Workbench smoke tests
+        run: npm run test:cross-browser
+
+      - name: Upload cross-browser report on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report-cross-browser
           path: |
             playwright-report
             test-results
