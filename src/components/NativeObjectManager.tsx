@@ -15,6 +15,7 @@ import {
   type NativeLinkGeometry,
   type NativeLinkInfo,
 } from '../lib/native-objects'
+import { normalizeSafePdfUri } from '../lib/url-security'
 
 type Props = {
   bytes: ArrayBuffer
@@ -159,9 +160,9 @@ export function NativeObjectManager({ bytes, onBeforeMutate, onApply, onStatus }
             <label>Width %<input aria-label={`Native link width percent page ${item.pageIndex + 1}`} type="number" min="0.1" max="100" step="0.1" value={geometry.width} onChange={(event) => updateGeometryDraft(key, 'width', event.target.value)} /></label>
             <label>Height %<input aria-label={`Native link height percent page ${item.pageIndex + 1}`} type="number" min="0.1" max="100" step="0.1" value={geometry.height} onChange={(event) => updateGeometryDraft(key, 'height', event.target.value)} /></label>
           </div>
-          <p className="native-object-help">Geometry is measured from the page’s top-left corner and written back to the native PDF /Rect.</p>
+          <p className="native-object-help">Geometry is measured from the page’s top-left corner and written back to the native PDF /Rect. Only http, https and mailto destinations can be saved.</p>
           <div className="native-object-actions">
-            <button disabled={Boolean(busy)} onClick={() => void mutate('Updating native link', () => updateNativeLink(bytes, item.pageIndex, item.annotationIndex, linkDrafts[key] ?? '', geometry))}><Save /> Save</button>
+            <button disabled={Boolean(busy)} onClick={() => void mutate('Updating native link', () => updateNativeLink(bytes, item.pageIndex, item.annotationIndex, normalizeSafePdfUri(linkDrafts[key] ?? ''), geometry))}><Save /> Save</button>
             <button className="danger-action" disabled={Boolean(busy)} onClick={() => void mutate('Deleting native link', () => deleteNativeLink(bytes, item.pageIndex, item.annotationIndex))}><Trash2 /> Delete</button>
           </div>
         </div>

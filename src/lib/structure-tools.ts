@@ -10,6 +10,7 @@ import {
   StandardFonts,
   rgb,
 } from 'pdf-lib'
+import { normalizeSafePdfUri } from './url-security'
 
 export type FormFieldKind = 'text' | 'checkbox' | 'dropdown' | 'list' | 'radio'
 
@@ -135,9 +136,7 @@ export async function addUriLink(bytes: ArrayBuffer, options: {
   const pageIndex = clamp(Math.floor(options.pageIndex), 0, Math.max(0, pdf.getPageCount() - 1))
   const { page, annots } = ensureAnnots(pdf, pageIndex)
   const rect = fieldRect(page.getWidth(), page.getHeight(), options)
-  const rawUrl = options.url.trim()
-  if (!rawUrl) throw new Error('Enter a URL for the link.')
-  const url = /^[a-z][a-z0-9+.-]*:/i.test(rawUrl) ? rawUrl : `https://${rawUrl}`
+  const url = normalizeSafePdfUri(options.url)
   const link = pdf.context.obj({
     Type: 'Annot',
     Subtype: 'Link',

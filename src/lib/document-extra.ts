@@ -4,6 +4,8 @@ import { PDFDocument } from 'pdf-lib'
 
 rawPdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 
+const STANDARD_FONT_DATA_URL = '/pdfjs-standard-fonts/'
+
 async function embedImage(pdf: PDFDocument, file: File) {
   const raw = await file.arrayBuffer()
   const png = file.type.includes('png') || file.name.toLowerCase().endsWith('.png')
@@ -74,7 +76,12 @@ export async function rasterCompressPdf(
 ) {
   const scale = Math.max(0.75, Math.min(2, options.scale ?? 1.15))
   const quality = Math.max(0.35, Math.min(0.92, options.quality ?? 0.68))
-  const task = rawPdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) })
+  const sourceOptions = {
+    data: new Uint8Array(bytes.slice(0)),
+    isEvalSupported: false,
+    standardFontDataUrl: STANDARD_FONT_DATA_URL,
+  } as Parameters<typeof rawPdfjs.getDocument>[0]
+  const task = rawPdfjs.getDocument(sourceOptions)
   const source = await task.promise
   const output = await PDFDocument.create()
 
