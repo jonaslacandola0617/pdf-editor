@@ -25,7 +25,7 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function exportPdf(page: Page, path: string) {
@@ -47,6 +47,9 @@ test('renames, updates flags and deletes existing AcroForm fields without orphan
 
   await page.getByTitle('Embedded PDF objects').click()
   const modal = page.locator('.native-object-modal')
+  await expect(modal).toBeVisible()
+  await modal.locator('.object-category-rail').getByRole('button', { name: /Forms/i }).click()
+  await modal.locator('.object-tool-rail').getByRole('button', { name: 'Field properties', exact: true }).click()
   const manager = modal.locator('.form-property-manager')
   await expect(manager).toBeVisible()
   await expect(manager.getByRole('list', { name: 'Existing form fields' })).toContainText('customer.name')
