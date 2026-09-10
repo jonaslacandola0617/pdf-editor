@@ -26,7 +26,11 @@ test('Document Tools and Objects keep readable non-overlapping navigation rails'
   const categoryRail = modal.locator('.advanced-category-rail')
   const categoryButtons = categoryRail.locator(':scope > button')
   await expect(categoryButtons).toHaveCount(4)
-  await expect(categoryRail.locator('small')).toBeHidden()
+  const categoryDescriptions = categoryRail.locator('small')
+  await expect(categoryDescriptions).toHaveCount(4)
+  for (let index = 0; index < await categoryDescriptions.count(); index += 1) {
+    await expect(categoryDescriptions.nth(index)).toBeHidden()
+  }
 
   const railBox = await categoryRail.boundingBox()
   const firstCategoryBox = await categoryButtons.first().boundingBox()
@@ -65,7 +69,11 @@ test('Document Tools and Objects keep readable non-overlapping navigation rails'
   await page.getByTitle('Embedded PDF objects').click()
   const objects = page.locator('.object-focus-modal')
   await expect(objects).toBeVisible()
-  await expect(objects.locator('.object-category-rail small')).toBeHidden()
+  const objectDescriptions = objects.locator('.object-category-rail small')
+  expect(await objectDescriptions.count()).toBeGreaterThan(0)
+  for (let index = 0; index < await objectDescriptions.count(); index += 1) {
+    await expect(objectDescriptions.nth(index)).toBeHidden()
+  }
   const objectCategoryBox = await objects.locator('.object-category-rail > button').first().boundingBox()
   const objectToolBox = await objects.locator('.object-tool-rail > button').first().boundingBox()
   expect(objectCategoryBox).not.toBeNull()
