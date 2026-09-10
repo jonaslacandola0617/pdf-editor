@@ -388,79 +388,83 @@ export function ProductExperience() {
 
         <main className="forge-product-main">
           {view === 'home' && (
-            <>
-              <section className="forge-desk-intro">
-                <div className="forge-intro-copy">
-                  <span className="forge-folio-label">LOCAL DOCUMENT WORKSHOP · 01</span>
-                  <h1>Shape the document.<br /><em>Keep the file.</em></h1>
-                  <p>One focused workspace for editing, organizing, signing, securing, and finishing PDFs without handing the document to a cloud service.</p>
-                  <div className="forge-intro-actions">
-                    <button className="forge-primary-action" onClick={openFilePicker}><Upload size={17} /> Open a PDF</button>
-                    <button className="forge-secondary-action" onClick={openFilePicker}><Plus size={17} /> Build from images</button>
-                  </div>
+            <section className="forge-launchpad">
+              <header className="forge-launch-header">
+                <div>
+                  <span className="forge-folio-label">WORKBENCH</span>
+                  <h1>What do you need to do?</h1>
+                  <p>Open a PDF to work on it, continue a recent document, or choose a specific task. PDF Forge will take you straight to the right workspace.</p>
                 </div>
-                <button className="forge-file-tray" onClick={openFilePicker}>
-                  <span className="forge-tray-index">DROP / OPEN</span>
-                  <span className="forge-tray-glyph"><Upload size={22} /></span>
-                  <span className="forge-tray-copy"><strong>Bring a document to the desk</strong><small>Drop a PDF, PNG, or JPG anywhere in this window. Everything is processed locally.</small></span>
-                  <ChevronRight size={18} />
-                </button>
-              </section>
+                <div className="forge-local-status"><span className="forge-local-dot" /><strong>Local processing</strong><small>Your files stay on this device</small></div>
+              </header>
 
-              <section className="forge-home-body">
-                <div className="forge-recent-ledger">
-                  <div className="forge-section-head">
-                    <div><span>RECENT WORK / 02</span><h2>{recentDocuments.length ? 'Continue where you stopped' : 'Your desk is clear'}</h2></div>
-                    {documents.length > 6 && <button onClick={() => setView('documents')}>Open archive <ChevronRight size={14} /></button>}
+              <section className="forge-start-area" aria-label="Start or continue work">
+                <button className="forge-open-station" onClick={openFilePicker}>
+                  <span className="forge-open-file-icon"><i>PDF</i><Upload size={24} /></span>
+                  <span className="forge-open-copy">
+                    <strong>Open a PDF</strong>
+                    <small>Choose a PDF from your computer or drop it anywhere in this window.</small>
+                  </span>
+                  <span className="forge-open-cta">Choose file <ChevronRight size={17} /></span>
+                </button>
+
+                <div className="forge-continue-station">
+                  <div className="forge-station-heading">
+                    <div><span>CONTINUE</span><h2>Recent documents</h2></div>
+                    {documents.length > 4 && <button onClick={() => setView('documents')}>View all</button>}
                   </div>
                   {recentDocuments.length ? (
-                    <div className="forge-ledger">
-                      <div className="forge-ledger-head"><span>Document</span><span>Pages</span><span>Size</span><span>Last worked</span><span /></div>
-                      {recentDocuments.map((document, index) => (
-                        <button key={document.id} className="forge-ledger-row" onClick={() => openStoredDocument(document.id)}>
-                          <span className="forge-ledger-doc"><b>{String(index + 1).padStart(2, '0')}</b><i className="forge-pdf-glyph">PDF</i><strong>{document.name}</strong></span>
-                          <span>{document.pageCount}</span>
-                          <span>{fileSize(document.size)}</span>
-                          <span>{formatUpdatedAt(document.updatedAt)}</span>
-                          <ChevronRight size={15} />
+                    <div className="forge-recent-stack">
+                      {recentDocuments.slice(0, 4).map((document, index) => (
+                        <button key={document.id} className={index === 0 ? 'forge-recent-document featured' : 'forge-recent-document'} onClick={() => openStoredDocument(document.id)}>
+                          <span className="forge-recent-sheet"><i>PDF</i><b>{document.pageCount}</b></span>
+                          <span className="forge-recent-copy">
+                            <strong>{document.name}</strong>
+                            <small>{document.pageCount} pages · {fileSize(document.size)} · {formatUpdatedAt(document.updatedAt)}</small>
+                          </span>
+                          <span className="forge-recent-action">{index === 0 ? 'Continue' : 'Open'} <ChevronRight size={15} /></span>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <div className="forge-empty-ledger">
-                      <span>NO DOCUMENTS ON THE DESK</span>
-                      <strong>Open your first PDF.</strong>
-                      <p>Recent documents will appear here automatically so returning to work takes one click.</p>
-                      <button onClick={openFilePicker}>Choose a document</button>
+                    <div className="forge-recent-empty">
+                      <strong>No recent documents yet</strong>
+                      <p>Once you open a PDF, it will appear here so you can get back to it immediately.</p>
                     </div>
                   )}
                 </div>
-
-                <aside className="forge-task-index">
-                  <div className="forge-section-head compact"><div><span>TASK INDEX / 03</span><h2>Start with the outcome</h2></div></div>
-                  <div className="forge-task-list">
-                    {toolDefinitions.filter((tool) => quickTools.includes(tool.name)).map((item, index) => {
-                      const Icon = item.icon
-                      return (
-                        <button key={item.name} onClick={() => startIntent(item.intent)}>
-                          <span className="forge-task-number">{String(index + 1).padStart(2, '0')}</span>
-                          <span className="forge-task-icon"><Icon size={16} /></span>
-                          <span className="forge-task-copy"><strong>{item.name}</strong><small>{item.description}</small></span>
-                          <ChevronRight size={14} />
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <button className="forge-all-tools-link" onClick={() => setView('tools')}>Browse every tool <ChevronRight size={14} /></button>
-                </aside>
               </section>
 
-              <footer className="forge-home-footer">
-                <span><Check size={13} /> Local-first processing</span>
-                <span>PDF.js · PDFium · QPDF</span>
+              <section className="forge-jobs">
+                <div className="forge-jobs-heading">
+                  <div>
+                    <span>START WITH A TASK</span>
+                    <h2>You can also choose the job first.</h2>
+                    <p>Pick what you want to accomplish. PDF Forge will ask for the file and open the right tools automatically.</p>
+                  </div>
+                  <button onClick={() => setView('tools')}>All tools <ChevronRight size={15} /></button>
+                </div>
+
+                <div className="forge-job-board">
+                  {toolDefinitions.filter((tool) => quickTools.includes(tool.name)).map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <button key={item.name} className="forge-job" onClick={() => startIntent(item.intent)}>
+                        <span className="forge-job-icon"><Icon size={21} /></span>
+                        <span className="forge-job-copy"><strong>{item.name}</strong><small>{item.description}</small></span>
+                        <ChevronRight size={17} />
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <footer className="forge-launch-footer">
+                <span><Check size={14} /> Local-first processing</span>
                 <span>No account required</span>
+                <span>PDF.js · PDFium · QPDF</span>
               </footer>
-            </>
+            </section>
           )}
 
           {view === 'documents' && (
