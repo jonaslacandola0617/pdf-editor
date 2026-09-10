@@ -1542,6 +1542,9 @@ body[data-pdf-mode="organize"] .thumb-drag-wrap.multi-selected {
   .forge-editor-theme { display: none; }
   body.pdf-product-editor .editor-toolbar .search-box { min-width: 120px !important; }
   body.pdf-product-editor .editor-toolbar > .soft-btn { display: none !important; }
+  body.pdf-product-editor .rail button { width: 38px !important; height: 38px !important; }
+  body.pdf-product-editor .editor-toolbar .tool-group button { min-width: 38px !important; height: 38px !important; }
+  body.pdf-product-editor .floating-nav button { min-width: 36px !important; height: 36px !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
