@@ -359,7 +359,7 @@ export function ProductExperience() {
       {view !== 'home' && <aside className="forge-mast">
         <ProductBrand />
         <nav className="forge-mast-nav" aria-label="PDF Forge sections">
-          <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} title="Workbench" aria-label="Workbench">
+          <button onClick={() => setView('home')} title="Workbench" aria-label="Workbench">
             <span>01</span><Clock3 size={17} /><em>Workbench</em>
           </button>
           <button className={view === 'documents' ? 'active' : ''} onClick={() => setView('documents')} title="Documents" aria-label="Documents">
