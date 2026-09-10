@@ -52,6 +52,15 @@ test('Document Tools and Objects keep readable non-overlapping navigation rails'
   expect(firstToolBox!.width).toBeGreaterThan(180)
   expect(firstToolBox!.height).toBeGreaterThanOrEqual(42)
 
+  await categoryRail.getByRole('button', { name: /Security & privacy/ }).click()
+  await modal.locator('.advanced-tool-rail').getByRole('button', { name: 'Secure redaction' }).click()
+  const destructiveAction = modal.getByRole('button', { name: 'Apply marked redactions' })
+  await expect(destructiveAction).toBeVisible()
+  const destructiveBox = await destructiveAction.boundingBox()
+  expect(destructiveBox).not.toBeNull()
+  expect(destructiveBox!.width).toBeGreaterThan(180)
+  expect(destructiveBox!.height).toBeLessThanOrEqual(64)
+
   await page.getByTitle('Close Document tools').click()
   await page.getByTitle('Embedded PDF objects').click()
   const objects = page.locator('.object-focus-modal')
