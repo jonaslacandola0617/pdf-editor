@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72" role="img" aria-label="PDF Forge">
+  <rect width="64" height="72" rx="2" fill="#181713"/>
+  <rect x="4" y="4" width="56" height="64" fill="none" stroke="#5f5a51" stroke-width="1"/>
+  <path d="M43 4h17v17" fill="#a95732"/>
+  <text x="32" y="49" text-anchor="middle" font-family="Georgia, serif" font-size="42" fill="#f2ede4">P</text>
+</svg>
