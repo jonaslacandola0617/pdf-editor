@@ -1,0 +1,265 @@
+/* PDF Forge focused tool browser layout repair.
+   Keep category context compact, keep tools readable, and reserve descriptions
+   for the focused work pane instead of repeating them in narrow rails. */
+
+body.pdf-product-editor .advanced-focus-modal,
+body.pdf-product-editor .object-focus-modal {
+  width: min(1220px, calc(100vw - 40px)) !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-focus-layout,
+body.pdf-product-editor .object-focus-modal .object-focus-layout {
+  grid-template-columns: 252px 248px minmax(0, 1fr) !important;
+  min-width: 0 !important;
+}
+
+/* Category rail: category only. The focused pane owns explanatory copy. */
+body.pdf-product-editor .advanced-focus-modal .advanced-category-rail,
+body.pdf-product-editor .object-focus-modal .object-category-rail {
+  display: block !important;
+  min-width: 0 !important;
+  width: auto !important;
+  padding: 14px 12px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-category-rail > button,
+body.pdf-product-editor .object-focus-modal .object-category-rail > button {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 60px !important;
+  margin: 0 0 5px !important;
+  padding: 10px 12px !important;
+  border: 0 !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 3px !important;
+  display: grid !important;
+  grid-template-columns: 30px minmax(0, 1fr) !important;
+  grid-auto-rows: auto !important;
+  gap: 10px !important;
+  align-items: center !important;
+  justify-content: stretch !important;
+  text-align: left !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+}
+
+body.pdf-product-editor .object-focus-modal .object-category-rail > button {
+  grid-template-columns: 24px 24px minmax(0, 1fr) !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-category-rail > button.active,
+body.pdf-product-editor .object-focus-modal .object-category-rail > button.active {
+  border-left-color: var(--forge-copper) !important;
+  background: rgba(255,255,255,.065) !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-category-rail i,
+body.pdf-product-editor .object-focus-modal .object-category-rail i {
+  position: static !important;
+  width: 26px !important;
+  height: 26px !important;
+  display: grid !important;
+  place-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-radius: 2px !important;
+  color: var(--forge-copper) !important;
+  background: rgba(255,255,255,.025) !important;
+  font: 500 8px/1 var(--forge-mono) !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-category-rail > button > span,
+body.pdf-product-editor .object-focus-modal .object-category-rail > button > span {
+  min-width: 0 !important;
+  width: 100% !important;
+  display: block !important;
+  overflow: hidden !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-category-rail strong,
+body.pdf-product-editor .object-focus-modal .object-category-rail strong {
+  display: block !important;
+  margin: 0 !important;
+  color: inherit !important;
+  font-size: 13.5px !important;
+  line-height: 1.28 !important;
+  font-weight: 700 !important;
+  letter-spacing: -.015em !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  hyphens: none !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-category-rail small,
+body.pdf-product-editor .object-focus-modal .object-category-rail small {
+  display: none !important;
+}
+
+body.pdf-product-editor .object-focus-modal .object-category-rail svg {
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 auto !important;
+}
+
+/* Tool rail: one readable action per row, never a compressed chip. */
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail,
+body.pdf-product-editor .object-focus-modal .object-tool-rail {
+  display: block !important;
+  min-width: 0 !important;
+  width: auto !important;
+  padding: 14px 12px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail > div,
+body.pdf-product-editor .object-focus-modal .object-tool-rail > div {
+  display: flex !important;
+  padding: 5px 10px 15px !important;
+  margin-bottom: 5px !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail > div > strong,
+body.pdf-product-editor .object-focus-modal .object-tool-rail > div > strong {
+  font-size: 21px !important;
+  line-height: 1.08 !important;
+  white-space: normal !important;
+  word-break: normal !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail > button,
+body.pdf-product-editor .object-focus-modal .object-tool-rail > button {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 50px !important;
+  margin: 0 !important;
+  padding: 10px 11px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  text-align: left !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  line-height: 1.3 !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail > button > span,
+body.pdf-product-editor .object-focus-modal .object-tool-rail > button > span {
+  min-width: 0 !important;
+  display: block !important;
+  font-size: 12.5px !important;
+  line-height: 1.3 !important;
+  font-weight: 650 !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  hyphens: none !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail > button svg,
+body.pdf-product-editor .object-focus-modal .object-tool-rail > button svg {
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 18px !important;
+}
+
+/* Focus pane gets the visual emphasis and enough room for actual work. */
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-pane,
+body.pdf-product-editor .object-focus-modal .object-tool-pane {
+  min-width: 0 !important;
+  padding: 30px clamp(28px, 3vw, 46px) 36px !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-pane > header,
+body.pdf-product-editor .object-focus-modal .object-tool-pane > header {
+  min-height: 100px !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-pane h3,
+body.pdf-product-editor .object-focus-modal .object-tool-pane h3 {
+  font-size: 32px !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-tool-pane header p,
+body.pdf-product-editor .object-focus-modal .object-tool-pane header p,
+body.pdf-product-editor .advanced-focus-modal .advanced-focus-form > p {
+  max-width: 620px !important;
+  font-size: 12.5px !important;
+  line-height: 1.6 !important;
+}
+
+/* Medium widths: reduce rail width without crushing labels. */
+@media (max-width: 1120px) and (min-width: 901px) {
+  body.pdf-product-editor .advanced-focus-modal .advanced-focus-layout,
+  body.pdf-product-editor .object-focus-modal .object-focus-layout {
+    grid-template-columns: 218px 218px minmax(0, 1fr) !important;
+  }
+
+  body.pdf-product-editor .advanced-focus-modal .advanced-category-rail strong,
+  body.pdf-product-editor .object-focus-modal .object-category-rail strong,
+  body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail > button > span,
+  body.pdf-product-editor .object-focus-modal .object-tool-rail > button > span {
+    font-size: 12px !important;
+  }
+}
+
+/* Small widths become two horizontal navigators above one focused pane. */
+@media (max-width: 900px) {
+  body.pdf-product-editor .advanced-focus-modal .advanced-focus-layout,
+  body.pdf-product-editor .object-focus-modal .object-focus-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
+  }
+
+  body.pdf-product-editor .advanced-focus-modal .advanced-category-rail,
+  body.pdf-product-editor .object-focus-modal .object-category-rail,
+  body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail,
+  body.pdf-product-editor .object-focus-modal .object-tool-rail {
+    display: flex !important;
+    width: 100% !important;
+    gap: 6px !important;
+    padding: 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  body.pdf-product-editor .advanced-focus-modal .advanced-category-rail > button,
+  body.pdf-product-editor .object-focus-modal .object-category-rail > button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 154px !important;
+    min-height: 48px !important;
+    margin: 0 !important;
+  }
+
+  body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail > div,
+  body.pdf-product-editor .object-focus-modal .object-tool-rail > div {
+    display: none !important;
+  }
+
+  body.pdf-product-editor .advanced-focus-modal .advanced-tool-rail > button,
+  body.pdf-product-editor .object-focus-modal .object-tool-rail > button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    min-height: 42px !important;
+    padding-inline: 12px !important;
+    border: 1px solid var(--forge-line) !important;
+  }
+
+  body.pdf-product-editor .advanced-focus-modal .advanced-tool-pane,
+  body.pdf-product-editor .object-focus-modal .object-tool-pane {
+    padding: 22px 18px 30px !important;
+  }
+}
