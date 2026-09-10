@@ -1,7 +1,6 @@
 import * as basePdfjs from 'pdfjs-dist'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-import { nativeTextIsEnough, recognizePdfPage } from './ocr'
 import { trackPdfPage } from './pdfjs-lifecycle'
 export { isRetiredPdfResource, retirePdfDocument } from './pdfjs-lifecycle'
 
@@ -29,6 +28,7 @@ function patchPage(page: PDFPageProxy, fingerprint: string, pageCount: number, o
     value: async (...args: Parameters<PDFPageProxy['getTextContent']>) => {
       const native = await originalGetTextContent(...args)
       const text = nativeText(native)
+      const { nativeTextIsEnough, recognizePdfPage } = await import('./ocr')
       if (nativeTextIsEnough(text, native.items.length)) return native
 
       try {
@@ -86,8 +86,11 @@ function patchDocument(doc: PDFDocumentProxy) {
   return doc
 }
 
-function getDocument(...args: Parameters<typeof basePdfjs.getDocument>) {
-  const task = basePdfjs.getDocument(...args)
+function getDocument(source: Parameters<typeof basePdfjs.getDocument>[0]) {
+  const hardenedSource = source && typeof source === 'object' && !ArrayBuffer.isView(source) && !(source instanceof ArrayBuffer) && !(source instanceof URL)
+    ? { ...source, isEvalSupported: false }
+    : source
+  const task = basePdfjs.getDocument(hardenedSource as Parameters<typeof basePdfjs.getDocument>[0])
   void task.promise.then(patchDocument).catch(() => undefined)
   return task
 }
