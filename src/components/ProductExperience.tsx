@@ -355,8 +355,8 @@ export function ProductExperience() {
   const currentLabel = view === 'home' ? 'Workbench' : view === 'documents' ? 'Document archive' : 'Tool index'
 
   const homePortal = welcomeHost && createPortal(
-    <div className="forge-product-root">
-      <aside className="forge-mast">
+    <div className={`forge-product-root ${view === 'home' ? 'home-stage' : ''}`}>
+      {view !== 'home' && <aside className="forge-mast">
         <ProductBrand />
         <nav className="forge-mast-nav" aria-label="PDF Forge sections">
           <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} title="Workbench" aria-label="Workbench">
@@ -373,11 +373,21 @@ export function ProductExperience() {
           <span className="forge-local-dot" />
           <div><strong>Local desk</strong><small>Files stay here</small></div>
         </div>
-      </aside>
+      </aside>}
 
       <section className="forge-product-surface">
-        <header className="forge-product-bar">
-          <div className="forge-product-context"><span>PDF FORGE /</span><strong>{currentLabel}</strong></div>
+        <header className={`forge-product-bar ${view === 'home' ? 'forge-home-bar' : ''}`}>
+          {view === 'home' ? (
+            <>
+              <ProductBrand />
+              <nav className="forge-home-nav" aria-label="PDF Forge">
+                <button onClick={() => setView('documents')}><Library size={17} /> Documents</button>
+                <button onClick={() => setView('tools')}><Menu size={17} /> All tools</button>
+              </nav>
+            </>
+          ) : (
+            <div className="forge-product-context"><span>PDF FORGE /</span><strong>{currentLabel}</strong></div>
+          )}
           <div className="forge-product-actions">
             <button className="forge-quiet-action" onClick={() => { setPaletteOpen(true); setPaletteQuery('') }}><Search size={15} /><span>Quick actions</span><kbd>⌘K</kbd></button>
             <button className="forge-theme-switch" type="button" aria-label={`Use ${theme === 'light' ? 'dark' : 'light'} appearance`} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
@@ -388,82 +398,67 @@ export function ProductExperience() {
 
         <main className="forge-product-main">
           {view === 'home' && (
-            <section className="forge-launchpad">
-              <header className="forge-launch-header">
-                <div>
-                  <span className="forge-folio-label">WORKBENCH</span>
-                  <h1>What do you need to do?</h1>
-                  <p>Open a PDF to work on it, continue a recent document, or choose a specific task. PDF Forge will take you straight to the right workspace.</p>
+            <section className="forge-workbench-stage">
+              <section className="forge-focus-zone" aria-label="Open a document">
+                <div className="forge-focus-visual" aria-hidden="true">
+                  <span className="forge-paper-back back-two" />
+                  <span className="forge-paper-back back-one" />
+                  <span className="forge-paper-front"><i>PDF</i><Upload size={30} /></span>
                 </div>
-                <div className="forge-local-status"><span className="forge-local-dot" /><strong>Local processing</strong><small>Your files stay on this device</small></div>
-              </header>
-
-              <section className="forge-start-area" aria-label="Start or continue work">
-                <button className="forge-open-station" onClick={openFilePicker}>
-                  <span className="forge-open-file-icon"><i>PDF</i><Upload size={24} /></span>
-                  <span className="forge-open-copy">
-                    <strong>Open a PDF</strong>
-                    <small>Choose a PDF from your computer or drop it anywhere in this window.</small>
-                  </span>
-                  <span className="forge-open-cta">Choose file <ChevronRight size={17} /></span>
-                </button>
-
-                <div className="forge-continue-station">
-                  <div className="forge-station-heading">
-                    <div><span>CONTINUE</span><h2>Recent documents</h2></div>
-                    {documents.length > 4 && <button onClick={() => setView('documents')}>View all</button>}
-                  </div>
-                  {recentDocuments.length ? (
-                    <div className="forge-recent-stack">
-                      {recentDocuments.slice(0, 4).map((document, index) => (
-                        <button key={document.id} className={index === 0 ? 'forge-recent-document featured' : 'forge-recent-document'} onClick={() => openStoredDocument(document.id)}>
-                          <span className="forge-recent-sheet"><i>PDF</i><b>{document.pageCount}</b></span>
-                          <span className="forge-recent-copy">
-                            <strong>{document.name}</strong>
-                            <small>{document.pageCount} pages · {fileSize(document.size)} · {formatUpdatedAt(document.updatedAt)}</small>
-                          </span>
-                          <span className="forge-recent-action">{index === 0 ? 'Continue' : 'Open'} <ChevronRight size={15} /></span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="forge-recent-empty">
-                      <strong>No recent documents yet</strong>
-                      <p>Once you open a PDF, it will appear here so you can get back to it immediately.</p>
-                    </div>
-                  )}
+                <span className="forge-folio-label">START HERE</span>
+                <h1>Open a document</h1>
+                <p>Choose a PDF and start working immediately. You can also drop a PDF anywhere on this screen.</p>
+                <div className="forge-focus-actions">
+                  <button className="forge-main-open" onClick={openFilePicker}><Upload size={19} /> Open PDF</button>
+                  <button className="forge-image-build" onClick={openFilePicker}><Plus size={17} /> Create from images</button>
                 </div>
+                <span className="forge-focus-note"><Check size={14} /> Processed locally on this device</span>
               </section>
 
-              <section className="forge-jobs">
-                <div className="forge-jobs-heading">
-                  <div>
-                    <span>START WITH A TASK</span>
-                    <h2>You can also choose the job first.</h2>
-                    <p>Pick what you want to accomplish. PDF Forge will ask for the file and open the right tools automatically.</p>
-                  </div>
-                  <button onClick={() => setView('tools')}>All tools <ChevronRight size={15} /></button>
+              <section className="forge-recent-shelf" aria-label="Recent documents">
+                <div className="forge-shelf-heading">
+                  <div><span>RECENT</span><h2>Pick up where you left off</h2></div>
+                  {documents.length > 5 && <button onClick={() => setView('documents')}>See all documents <ChevronRight size={15} /></button>}
                 </div>
+                {recentDocuments.length ? (
+                  <div className="forge-shelf-track">
+                    {recentDocuments.slice(0, 5).map((document) => (
+                      <button key={document.id} className="forge-shelf-file" onClick={() => openStoredDocument(document.id)}>
+                        <span className="forge-shelf-paper"><i>PDF</i><b>{document.pageCount}</b></span>
+                        <span className="forge-shelf-copy">
+                          <strong>{document.name}</strong>
+                          <small>{fileSize(document.size)} · {formatUpdatedAt(document.updatedAt)}</small>
+                        </span>
+                        <ChevronRight size={16} />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="forge-shelf-empty">
+                    <span>No recent files yet.</span>
+                    <small>Your recently opened PDFs will appear here automatically.</small>
+                  </div>
+                )}
+              </section>
 
-                <div className="forge-job-board">
+              <section className="forge-task-dock" aria-label="Start with a task">
+                <div className="forge-dock-label">
+                  <span>OR START WITH A TASK</span>
+                  <small>Choose the result you want.</small>
+                </div>
+                <div className="forge-dock-actions">
                   {toolDefinitions.filter((tool) => quickTools.includes(tool.name)).map((item) => {
                     const Icon = item.icon
                     return (
-                      <button key={item.name} className="forge-job" onClick={() => startIntent(item.intent)}>
-                        <span className="forge-job-icon"><Icon size={21} /></span>
-                        <span className="forge-job-copy"><strong>{item.name}</strong><small>{item.description}</small></span>
-                        <ChevronRight size={17} />
+                      <button key={item.name} onClick={() => startIntent(item.intent)} title={item.description}>
+                        <Icon size={19} />
+                        <span>{item.name.replace(' & Optimize', '').replace(' Content', '')}</span>
                       </button>
                     )
                   })}
+                  <button className="forge-dock-more" onClick={() => setView('tools')}><Menu size={19} /><span>All tools</span></button>
                 </div>
               </section>
-
-              <footer className="forge-launch-footer">
-                <span><Check size={14} /> Local-first processing</span>
-                <span>No account required</span>
-                <span>PDF.js · PDFium · QPDF</span>
-              </footer>
             </section>
           )}
 
