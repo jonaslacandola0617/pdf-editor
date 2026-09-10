@@ -231,24 +231,6 @@ export function ForgeExperience() {
   }, [editorVisible])
 
   useEffect(() => {
-    if (!editorVisible || window.innerWidth > 760) return
-    let attempts = 0
-    const fitWhenReady = window.setInterval(() => {
-      const canvas = document.querySelector('.pdf-page canvas')
-      const fitButton = findButtonByTitle('Fit width')
-      if (!canvas || !fitButton) return
-      fitButton.click()
-      attempts += 1
-      if (attempts >= 2) window.clearInterval(fitWhenReady)
-    }, 450)
-    const stop = window.setTimeout(() => window.clearInterval(fitWhenReady), 2600)
-    return () => {
-      window.clearInterval(fitWhenReady)
-      window.clearTimeout(stop)
-    }
-  }, [editorVisible])
-
-  useEffect(() => {
     const observeMode = (event: Event) => {
       const target = event.target as HTMLElement | null
       const button = target?.closest<HTMLButtonElement>('.editor-toolbar button, .rail button')
