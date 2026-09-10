@@ -39,7 +39,7 @@ body.pdf-product-home .welcome {
   background: var(--pf-bg) !important;
   overflow: auto !important;
 }
-body.pdf-product-home .welcome > :not(.product-home-root):not(input[type="file"]) { display: none !important; }
+body.pdf-product-home .welcome > :not(.product-home-root):not(.forge-product-root):not(input[type="file"]) { display: none !important; }
 .product-home-root { min-height: 100vh; color: var(--pf-text); background: var(--pf-bg); }
 .product-home-bar {
   position: sticky; top: 0; z-index: 20;
