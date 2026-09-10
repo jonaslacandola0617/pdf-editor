@@ -2720,7 +2720,7 @@ body.pdf-product-editor .floating-nav span {
 
 @media (max-width: 780px) {
   .forge-product-main {
-    width: calc(100% - 28px) !important;
+    width: calc(100% - 32px) !important;
     padding-top: 24px !important;
   }
 
