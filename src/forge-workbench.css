@@ -4074,3 +4074,139 @@ body.pdf-product-editor:not([data-pdf-mode="organize"]) .forge-context-bar .forg
     height: 38px !important;
   }
 }
+
+
+/* Editor Workbench V4.2 — mobile sheets and Navigator integrations. */
+.forge-mobile-panel-backdrop {
+  display: none;
+}
+
+.forge-navigator-tabs .nav-extras-launcher {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 6px 4px !important;
+  border: 1px solid transparent !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.forge-navigator-tabs .nav-extras-launcher::before {
+  display: none !important;
+}
+
+.forge-navigator-tabs .nav-extras-launcher span {
+  display: inline !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+}
+
+.forge-navigator-tabs .nav-extras-launcher:hover,
+.forge-navigator-tabs .nav-extras-launcher.active {
+  background: var(--forge-paper-low) !important;
+  color: var(--forge-text) !important;
+}
+
+@media (max-width: 760px) {
+  body.pdf-product-editor .forge-editor-workbench.navigator-open .forge-navigator,
+  body.pdf-product-editor .forge-editor-workbench.inspector-open .forge-inspector {
+    display: block !important;
+    position: fixed !important;
+    z-index: 205 !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 64px !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(72dvh, 640px) !important;
+    overflow-y: auto !important;
+    padding: 0 14px 20px !important;
+    border: 1px solid var(--forge-line-strong) !important;
+    border-top: 3px solid var(--forge-copper) !important;
+    border-radius: 0 !important;
+    background: var(--forge-paper-hi) !important;
+    color: var(--forge-text) !important;
+    box-shadow: 0 -18px 55px rgba(0,0,0,.30) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-open .forge-navigator-chrome {
+    display: flex !important;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    margin: 0 -14px !important;
+    background: var(--forge-paper-hi) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-open .forge-navigator-tabs {
+    display: grid !important;
+    position: sticky;
+    top: 57px;
+    z-index: 2;
+    margin: 0 -14px 16px !important;
+    background: var(--forge-paper) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.inspector-open .forge-inspector-heading {
+    top: 0 !important;
+  }
+
+  .forge-mobile-panel-backdrop {
+    display: block !important;
+    position: fixed;
+    inset: 56px 0 58px;
+    z-index: 200;
+    border: 0;
+    background: rgba(17,15,12,.48);
+    backdrop-filter: blur(3px);
+  }
+
+  body.pdf-product-editor .forge-context-bar {
+    padding-inline: 7px !important;
+    gap: 5px !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .forge-navigator-toggle,
+  body.pdf-product-editor .forge-context-bar .forge-inspector-toggle {
+    display: inline-flex !important;
+    flex: 0 0 38px !important;
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .forge-navigator-toggle > span,
+  body.pdf-product-editor .forge-context-bar .forge-inspector-toggle {
+    font-size: 0 !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .tool-group button > span:not(.signature-icon) {
+    display: none !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .tool-group button {
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+    padding: 0 !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .search-box,
+  body.pdf-product-editor .forge-context-bar .forge-page-command,
+  body.pdf-product-editor .forge-context-bar > .advanced-tools-button,
+  body.pdf-product-editor .forge-context-bar > .native-objects-button {
+    display: none !important;
+  }
+}
