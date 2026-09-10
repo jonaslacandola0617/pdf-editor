@@ -1,0 +1,100 @@
+/* One authoritative selection frame. The older orange transform frame and
+   page-sized ink selection shadow are intentionally suppressed. */
+.annotation-transform-box { display: none !important; }
+.text-annotation.selected,
+.box-annotation.selected,
+.ink-hitbox.selected {
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+.note-annotation.selected {
+  outline: 2px solid #2f80ed !important;
+  outline-offset: 3px;
+}
+
+/* Full-page SVG wrappers must never block unrelated annotations. Only the
+   visible ink/signature stroke is a pointer target. */
+.ink-hitbox { pointer-events: none !important; }
+.ink-hitbox > svg { pointer-events: none !important; }
+.ink-hitbox > svg polyline { pointer-events: stroke !important; cursor: move; }
+
+/* OCR is a visual/search layer, not an input shield. */
+.ocr-text-overlay,
+.ocr-text-overlay .ocr-word { pointer-events: none !important; }
+
+.selection-transform-frame {
+  position: absolute;
+  z-index: 90;
+  min-width: 12px;
+  min-height: 12px;
+  border: 1.5px solid #2f80ed;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.72), 0 0 0 3px rgba(47,128,237,.14);
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+.selection-transform-handle,
+.selection-transform-rotate {
+  position: absolute;
+  z-index: 92;
+  width: 11px;
+  height: 11px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1.5px solid #fff;
+  border-radius: 1px;
+  background: #2f80ed;
+  box-shadow: 0 1px 4px rgba(15,23,42,.30);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.selection-transform-handle.handle-nw { left: -6px; top: -6px; cursor: nwse-resize; }
+.selection-transform-handle.handle-n { left: 50%; top: -6px; transform: translateX(-50%); cursor: ns-resize; }
+.selection-transform-handle.handle-ne { right: -6px; top: -6px; cursor: nesw-resize; }
+.selection-transform-handle.handle-e { right: -6px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+.selection-transform-handle.handle-se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.selection-transform-handle.handle-s { left: 50%; bottom: -6px; transform: translateX(-50%); cursor: ns-resize; }
+.selection-transform-handle.handle-sw { left: -6px; bottom: -6px; cursor: nesw-resize; }
+.selection-transform-handle.handle-w { left: -6px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+
+.selection-transform-rotate {
+  left: 50%;
+  top: -32px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  cursor: grab;
+}
+.selection-transform-rotate::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 1px;
+  height: 20px;
+  background: #2f80ed;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.selection-transform-rotate:active { cursor: grabbing; }
+
+.selection-transform-frame.resize-only .selection-transform-rotate { display: none; }
+
+@media (pointer: coarse) {
+  .selection-transform-handle,
+  .selection-transform-rotate {
+    width: 15px;
+    height: 15px;
+  }
+  .selection-transform-handle.handle-nw { left: -8px; top: -8px; }
+  .selection-transform-handle.handle-n { top: -8px; }
+  .selection-transform-handle.handle-ne { right: -8px; top: -8px; }
+  .selection-transform-handle.handle-e { right: -8px; }
+  .selection-transform-handle.handle-se { right: -8px; bottom: -8px; }
+  .selection-transform-handle.handle-s { bottom: -8px; }
+  .selection-transform-handle.handle-sw { left: -8px; bottom: -8px; }
+  .selection-transform-handle.handle-w { left: -8px; }
+}
