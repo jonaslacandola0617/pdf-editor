@@ -4050,3 +4050,27 @@ body.pdf-product-editor .floating-nav span {
     height: 17px !important;
   }
 }
+
+
+/* Editor Workbench V4.1 — remove redundant controls and keep task context clean. */
+@media (min-width: 761px) {
+  body.pdf-product-editor .forge-editor-workbench.navigator-open .forge-navigator-toggle {
+    display: none !important;
+  }
+}
+
+.forge-navigator-tabs button {
+  font-size: 11px !important;
+}
+
+body.pdf-product-editor:not([data-pdf-mode="organize"]) .forge-context-bar .forge-page-command {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  body.pdf-product-editor .floating-nav button {
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+  }
+}
