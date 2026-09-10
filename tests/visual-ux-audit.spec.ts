@@ -125,7 +125,7 @@ test('visual audit — welcome hierarchy at desktop and mobile widths', async ({
   await shot(page, '01-welcome-desktop')
   await expectNoViewportOverflow(page)
   await expect(page.getByRole('button', { name: /Open a PDF/i }).first()).toBeVisible()
-  await expectVisibleFocus(page, '.forge-open-station')
+  await expectVisibleFocus(page, '.forge-main-open')
 
   await page.getByRole('button', { name: 'Use dark appearance' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
