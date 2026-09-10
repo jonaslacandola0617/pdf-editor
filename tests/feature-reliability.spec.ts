@@ -47,7 +47,7 @@ test('library duplicate, rename, favorite, reopen and delete operate on real sav
   await expect(page.getByLabel('Document name')).toHaveValue('renamed.pdf')
   expect((await exported(page, info.outputPath('copy-export.pdf'))).getPageCount()).toBe(3)
   await page.getByTitle('Close document').click()
-  await page.getByRole('button', { name: 'Documents', exact: true }).click()
+  await page.locator('.forge-home').getByRole('button', { name: 'Library', exact: true }).click()
   await page.getByRole('button', { name: 'All', exact: true }).click()
   await page.getByLabel('More actions for renamed.pdf', { exact: true }).click()
   await page.locator('.forge-menu').getByRole('button', { name: 'Remove from library' }).click()
@@ -57,7 +57,7 @@ test('library duplicate, rename, favorite, reopen and delete operate on real sav
   await expect(page.locator('.forge-document-entry')).toHaveCount(1)
   await expect(page.locator('.forge-document-entry')).toContainText('library.pdf')
   await page.reload()
-  await page.getByRole('button', { name: 'Documents', exact: true }).click()
+  await page.locator('.forge-home').getByRole('button', { name: 'Library', exact: true }).click()
   await expect(page.locator('.forge-document-entry')).toHaveCount(1)
 })
 
