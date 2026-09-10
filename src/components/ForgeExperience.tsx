@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Archive,
@@ -36,6 +36,7 @@ type ProductView = 'desk' | 'library' | 'tools'
 type EditorMode = 'edit' | 'review' | 'sign' | 'pages'
 type ToolIntent =
   | 'edit'
+  | 'review'
   | 'merge'
   | 'optimize'
   | 'redact'
@@ -54,7 +55,7 @@ type ToolDefinition = {
   name: string
   description: string
   group: 'Write & Edit' | 'Pages' | 'Build & Convert' | 'Finish & Protect'
-  icon: React.ComponentType<{ size?: number }>
+  icon: ComponentType<{ size?: number }>
   intent: Exclude<ToolIntent, null>
 }
 
@@ -63,7 +64,7 @@ const FAVORITES_KEY = 'pdf-forge-favorites'
 const toolDefinitions: ToolDefinition[] = [
   { name: 'Edit PDF', description: 'Change existing text or place new content directly on a page.', group: 'Write & Edit', icon: PenLine, intent: 'edit' },
   { name: 'Add images', description: 'Place PNG or JPG artwork into the current document.', group: 'Write & Edit', icon: Upload, intent: 'document' },
-  { name: 'Comments & markup', description: 'Highlight, draw, add notes, and review document details.', group: 'Write & Edit', icon: Highlighter, intent: 'edit' },
+  { name: 'Comments & markup', description: 'Highlight, draw, add notes, and review document details.', group: 'Write & Edit', icon: Highlighter, intent: 'review' },
   { name: 'Organize pages', description: 'Reorder, rotate, duplicate, extract, or remove pages visually.', group: 'Pages', icon: Files, intent: 'organize' },
   { name: 'Extract pages', description: 'Create a clean PDF from only the pages you choose.', group: 'Pages', icon: Split, intent: 'organize' },
   { name: 'Merge documents', description: 'Append PDFs or images into one ordered document.', group: 'Pages', icon: FileInput, intent: 'merge' },
@@ -116,6 +117,10 @@ function runEditorIntent(intent: Exclude<ToolIntent, null>) {
     case 'edit':
       activateEditorMode('edit')
       findButtonByTitle('Edit existing text')?.click()
+      break
+    case 'review':
+      activateEditorMode('review')
+      findButtonByTitle('Highlight')?.click()
       break
     case 'merge':
       findButtonByText('Merge')?.click()
