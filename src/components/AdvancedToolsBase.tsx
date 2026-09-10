@@ -29,6 +29,55 @@ type Props = {
   onStatus: (status: string) => void
 }
 
+type ToolCategory = 'pages' | 'forms' | 'security' | 'output'
+type ToolId =
+  | 'pages' | 'crop' | 'watermark' | 'furniture' | 'image'
+  | 'form' | 'link' | 'bookmark' | 'bates'
+  | 'privacy' | 'redaction'
+  | 'ocr' | 'optimize' | 'compress' | 'protect' | 'print'
+
+type ToolMeta = {
+  id: ToolId
+  label: string
+  description: string
+  icon: React.ComponentType<{ size?: number }>
+}
+
+const categories: Array<{ id: ToolCategory; label: string; description: string; tools: ToolMeta[] }> = [
+  {
+    id: 'pages', label: 'Pages & content', description: 'Build pages and add visible content.', tools: [
+      { id: 'pages', label: 'Pages', description: 'Insert, replace, or add blank pages.', icon: FilePlus2 },
+      { id: 'crop', label: 'Crop page', description: 'Adjust the visible crop margins of this page.', icon: Crop },
+      { id: 'watermark', label: 'Watermark & stamps', description: 'Add a watermark or common document stamp.', icon: Stamp },
+      { id: 'furniture', label: 'Header, footer & numbers', description: 'Apply headers, footers, and page numbering.', icon: Type },
+      { id: 'image', label: 'Insert image', description: 'Place a PNG or JPG on the current page.', icon: ImagePlus },
+    ],
+  },
+  {
+    id: 'forms', label: 'Forms & navigation', description: 'Interactive fields and document navigation.', tools: [
+      { id: 'form', label: 'Create form field', description: 'Add a real interactive AcroForm field.', icon: Type },
+      { id: 'link', label: 'Add web link', description: 'Create a clickable web link on this page.', icon: FileSearch },
+      { id: 'bookmark', label: 'Bookmark page', description: 'Add the current page to the PDF outline.', icon: FilePlus2 },
+      { id: 'bates', label: 'Bates numbering', description: 'Apply stable document-control numbers.', icon: Type },
+    ],
+  },
+  {
+    id: 'security', label: 'Security & privacy', description: 'Sensitive and irreversible document operations.', tools: [
+      { id: 'privacy', label: 'Privacy cleanup', description: 'Remove metadata, scripts, attachments, and active content.', icon: ShieldCheck },
+      { id: 'redaction', label: 'Secure redaction', description: 'Permanently remove content covered by redaction marks.', icon: ScanLine },
+    ],
+  },
+  {
+    id: 'output', label: 'Output & optimize', description: 'Searchability, size, protection, and printing.', tools: [
+      { id: 'ocr', label: 'OCR searchable PDF', description: 'Add a searchable text layer to scanned pages.', icon: FileSearch },
+      { id: 'optimize', label: 'Lossless optimize', description: 'Reduce structural overhead while preserving native content.', icon: Sparkles },
+      { id: 'compress', label: 'Strong compression', description: 'Raster-compress scans and image-heavy documents.', icon: Sparkles },
+      { id: 'protect', label: 'Password protect', description: 'Export a separate AES-256 encrypted copy.', icon: FileLock2 },
+      { id: 'print', label: 'Print', description: 'Finalize pending edits and open the print dialog.', icon: Printer },
+    ],
+  },
+]
+
 function remapInsert(annotations: Annotation[], index: number, count = 1) {
   return annotations.map((ann) => ({ ...ann, page: ann.page >= index ? ann.page + count : ann.page }))
 }
@@ -68,6 +117,8 @@ function toArrayBuffer(bytes: Uint8Array) {
 export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, annotations, metadata, onBeforeMutate, onApply, onStatus }: Props) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState('')
+  const [activeCategory, setActiveCategory] = useState<ToolCategory>('pages')
+  const [activeTool, setActiveTool] = useState<ToolId>('pages')
   const [watermark, setWatermark] = useState('DRAFT')
   const [header, setHeader] = useState('')
   const [footer, setFooter] = useState('')
@@ -121,10 +172,7 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
     annotations: remapInsert(annotations, index),
   })
 
-  const chooseInsert = (position: 'before' | 'after') => {
-    insertPosition.current = position
-    insertInput.current?.click()
-  }
+  const chooseInsert = (position: 'before' | 'after') => { insertPosition.current = position; insertInput.current?.click() }
 
   const insertExternal = async (files: FileList | null) => {
     if (!files?.length || busy) return
@@ -147,10 +195,7 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
     }
   }
 
-  const replaceCurrent = async (file: File | undefined) => {
-    if (!file) return
-    await mutate('Replacing page', () => replacePageWithFile(bytes, currentPage, file), { annotations: annotations.filter((ann) => ann.page !== currentPage) })
-  }
+  const replaceCurrent = async (file: File | undefined) => { if (file) await mutate('Replacing page', () => replacePageWithFile(bytes, currentPage, file), { annotations: annotations.filter((ann) => ann.page !== currentPage) }) }
   const addImage = async (file: File | undefined) => { if (file) await mutate('Adding image', () => addImageToPage(bytes, currentPage, file, { widthPercent: imageWidth / 100 })) }
   const applyCrop = () => mutate('Cropping page', () => cropPage(bytes, currentPage, { left: crop.left / 100, right: crop.right / 100, top: crop.top / 100, bottom: crop.bottom / 100 }))
   const applyWatermark = (text = watermark, pageOnly = false) => mutate('Applying watermark', () => addWatermark(bytes, { text, pageIndex: pageOnly ? currentPage : undefined }))
@@ -158,26 +203,16 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
   const optimize = () => mutate('Optimizing PDF', () => optimizePdf(bytes))
   const searchable = () => mutate('Creating searchable PDF', () => makeSearchablePdf(bytes, (page, total) => onStatus(`OCR searchable export: page ${page} of ${total}`)))
   const createFormField = () => mutate('Adding form field', async () => (await addFormField(bytes, {
-    kind: formKind,
-    name: formName,
-    pageIndex: currentPage,
-    xPercent: fieldRect.x,
-    yPercent: fieldRect.y,
-    widthPercent: fieldRect.width,
-    heightPercent: fieldRect.height,
-    options: formOptions.split(',').map((value) => value.trim()).filter(Boolean),
-    required: formRequired,
+    kind: formKind, name: formName, pageIndex: currentPage,
+    xPercent: fieldRect.x, yPercent: fieldRect.y, widthPercent: fieldRect.width, heightPercent: fieldRect.height,
+    options: formOptions.split(',').map((value) => value.trim()).filter(Boolean), required: formRequired,
   })).bytes)
   const flattenForm = () => mutate('Flattening form fields', () => flattenFormFields(bytes))
   const createLink = () => mutate('Adding PDF link', () => addUriLink(bytes, { pageIndex: currentPage, url: linkUrl, xPercent: linkRect.x, yPercent: linkRect.y, widthPercent: linkRect.width, heightPercent: linkRect.height }))
   const createBookmark = () => mutate('Adding bookmark', () => addTopLevelBookmark(bytes, bookmarkTitle || `Page ${currentPage + 1}`, currentPage))
   const applyBates = () => mutate('Adding Bates numbers', () => addBatesNumbers(bytes, { prefix: batesPrefix, start: batesStart, digits: batesDigits }))
   const privacyCleanup = () => mutate('Cleaning document privacy data', () => privacyCleanupPdf(bytes), { metadata: { title: '', author: '', subject: '', keywords: '' } })
-
-  const strongCompress = () => mutate('Strong compression', () => rasterCompressPdf(bytes, {
-    quality: compressionQuality / 100,
-    onProgress: (page, total) => onStatus(`Strong compression: page ${page} of ${total}`),
-  }))
+  const strongCompress = () => mutate('Strong compression', () => rasterCompressPdf(bytes, { quality: compressionQuality / 100, onProgress: (page, total) => onStatus(`Strong compression: page ${page} of ${total}`) }))
 
   const applyRedactions = () => {
     const marks = annotations.filter((ann) => ann.type === 'redaction')
@@ -218,30 +253,77 @@ export function AdvancedTools({ bytes, name, pageCount, currentPage, rotations, 
     finally { setBusy('') }
   }
 
+  const chooseCategory = (category: ToolCategory) => {
+    setActiveCategory(category)
+    const first = categories.find((item) => item.id === category)?.tools[0]
+    if (first) setActiveTool(first.id)
+  }
+
+  const currentCategory = categories.find((item) => item.id === activeCategory) || categories[0]
+  const currentTool = currentCategory.tools.find((item) => item.id === activeTool) || currentCategory.tools[0]
+  const ToolIcon = currentTool.icon
+
+  const toolContent = () => {
+    switch (activeTool) {
+      case 'pages':
+        return <div className="advanced-focus-form"><div className="advanced-row"><button onClick={() => insertAt(currentPage)}>Blank before</button><button onClick={() => insertAt(currentPage + 1)}>Blank after</button></div><div className="advanced-row"><button onClick={() => chooseInsert('before')}>Insert file before</button><button onClick={() => chooseInsert('after')}>Insert file after</button></div><button onClick={() => replaceInput.current?.click()}>Replace current page</button><input ref={insertInput} hidden multiple type="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => void insertExternal(e.target.files)} /><input ref={replaceInput} hidden type="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => void replaceCurrent(e.target.files?.[0])} /></div>
+      case 'crop':
+        return <div className="advanced-focus-form"><div className="crop-grid">{(['top', 'right', 'bottom', 'left'] as const).map((side) => <label key={side}>{side}<input type="number" min="0" max="45" value={crop[side]} onChange={(e) => setCrop({ ...crop, [side]: Number(e.target.value) })} /><span>%</span></label>)}</div><button onClick={applyCrop}>Apply crop</button></div>
+      case 'watermark':
+        return <div className="advanced-focus-form"><label>Watermark text<input value={watermark} onChange={(e) => setWatermark(e.target.value)} placeholder="DRAFT" /></label><div className="advanced-row"><button onClick={() => applyWatermark()}>Apply to all pages</button><button onClick={() => applyWatermark(watermark, true)}>Current page only</button></div><div className="stamp-row">{['APPROVED', 'DRAFT', 'CONFIDENTIAL'].map((stamp) => <button key={stamp} onClick={() => applyWatermark(stamp, true)}>{stamp}</button>)}</div></div>
+      case 'furniture':
+        return <div className="advanced-focus-form"><label>Header<input value={header} onChange={(e) => setHeader(e.target.value)} placeholder="Supports {page} and {pages}" /></label><label>Footer<input value={footer} onChange={(e) => setFooter(e.target.value)} placeholder="Footer text" /></label><button onClick={addPageFurniture}>Apply header, footer & page numbers</button></div>
+      case 'image':
+        return <div className="advanced-focus-form"><label>Image width <input type="range" min="10" max="90" value={imageWidth} onChange={(e) => setImageWidth(Number(e.target.value))} /><strong>{imageWidth}%</strong></label><button onClick={() => imageInput.current?.click()}>Choose PNG or JPG</button><input ref={imageInput} hidden type="file" accept="image/png,image/jpeg" onChange={(e) => void addImage(e.target.files?.[0])} /></div>
+      case 'form':
+        return <div className="advanced-focus-form"><div className="advanced-row"><select aria-label="Form field type" value={formKind} onChange={(e) => setFormKind(e.target.value as FormFieldKind)}><option value="text">Text field</option><option value="checkbox">Checkbox</option><option value="dropdown">Dropdown</option><option value="list">Option list</option><option value="radio">Radio group</option></select><input aria-label="Form field name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Field name" /></div>{['dropdown','list','radio'].includes(formKind) && <input aria-label="Form field options" value={formOptions} onChange={(e) => setFormOptions(e.target.value)} placeholder="Option 1, Option 2" />}<div className="position-grid">{(['x','y','width','height'] as const).map((key) => <label key={key}>{key}<input aria-label={`Field ${key} percent`} type="number" min="0" max="100" value={fieldRect[key]} onChange={(e) => setFieldRect({ ...fieldRect, [key]: Number(e.target.value) })} /><span>%</span></label>)}</div><label className="check-row"><input type="checkbox" checked={formRequired} onChange={(e) => setFormRequired(e.target.checked)} /> Required field</label><div className="advanced-row"><button onClick={createFormField}>Add form field</button><button onClick={flattenForm}>Flatten form fields</button></div></div>
+      case 'link':
+        return <div className="advanced-focus-form"><label>Web address<input aria-label="Link URL" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://example.com" /></label><div className="position-grid">{(['x','y','width','height'] as const).map((key) => <label key={key}>{key}<input aria-label={`Link ${key} percent`} type="number" min="0" max="100" value={linkRect[key]} onChange={(e) => setLinkRect({ ...linkRect, [key]: Number(e.target.value) })} /><span>%</span></label>)}</div><button onClick={createLink}>Add clickable link</button></div>
+      case 'bookmark':
+        return <div className="advanced-focus-form"><label>Bookmark title<input aria-label="Bookmark title" value={bookmarkTitle} onChange={(e) => setBookmarkTitle(e.target.value)} placeholder={`Page ${currentPage + 1} bookmark`} /></label><button onClick={createBookmark}>Bookmark current page</button></div>
+      case 'bates':
+        return <div className="advanced-focus-form"><div className="advanced-row"><label>Prefix<input aria-label="Bates prefix" value={batesPrefix} onChange={(e) => setBatesPrefix(e.target.value)} placeholder="DOC-" /></label><label>Start<input aria-label="Bates start" type="number" min="0" value={batesStart} onChange={(e) => setBatesStart(Number(e.target.value))} /></label></div><label>Digits<input aria-label="Bates digits" type="number" min="1" max="12" value={batesDigits} onChange={(e) => setBatesDigits(Number(e.target.value))} /></label><button onClick={applyBates}>Apply Bates numbers</button></div>
+      case 'privacy':
+        return <div className="advanced-focus-form danger-focus"><p>Removes metadata, document/page additional actions, JavaScript name trees, embedded-file name trees, file-attachment annotations, and JavaScript/Launch annotation actions.</p><button className="danger-action" onClick={privacyCleanup}>Remove privacy data & active content</button></div>
+      case 'redaction':
+        return <div className="advanced-focus-form danger-focus"><p>Pages containing redaction marks are rasterized so the covered source content is permanently removed, not merely hidden by a rectangle.</p><button className="danger-action" onClick={applyRedactions}>Apply marked redactions</button></div>
+      case 'ocr':
+        return <div className="advanced-focus-form"><p>Add an invisible text layer to scanned pages so the exported document remains searchable outside PDF Forge.</p><button onClick={searchable}>Make PDF searchable</button></div>
+      case 'optimize':
+        return <div className="advanced-focus-form"><p>Recompress streams, generate object streams, and linearize the PDF using local QPDF/WASM. Native text and forms are preserved.</p><button onClick={optimize}>Optimize PDF</button></div>
+      case 'compress':
+        return <div className="advanced-focus-form"><p>Designed for scans and image-heavy PDFs. This rasterizes pages, so native text, links, and forms become page imagery.</p><label>JPEG quality<input type="range" min="40" max="90" value={compressionQuality} onChange={(e) => setCompressionQuality(Number(e.target.value))} /><strong>{compressionQuality}%</strong></label><button onClick={strongCompress}>Compress aggressively</button></div>
+      case 'protect':
+        return <div className="advanced-focus-form"><p>Your editable local original stays open. PDF Forge exports a separate AES-256 encrypted copy.</p><label>Open password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" /></label><button onClick={() => void protect()}><ShieldCheck /> Export protected PDF</button></div>
+      case 'print':
+        return <div className="advanced-focus-form"><p>Pending rotations, annotations, notes, and redactions are finalized before the browser print dialog opens.</p><button onClick={() => void print()}>Print document</button></div>
+    }
+  }
+
   return <>
     <button className="soft-btn advanced-tools-button" title="Document tools" onClick={() => setOpen(true)}><WandSparkles /> Tools</button>
-    {open && <div className="modal-backdrop advanced-backdrop" onMouseDown={() => !busy && setOpen(false)}><section className="advanced-modal" onMouseDown={(event) => event.stopPropagation()} aria-label="Document tools">
-      <header><div><span className="eyebrow">COMPLETE TOOLSET</span><h2>Document tools</h2><p>Permanent PDF operations run locally in your browser.</p></div><button className="icon-btn" disabled={Boolean(busy)} onClick={() => setOpen(false)}><X /></button></header>
-      {busy && <div className="advanced-busy"><Sparkles /> {busy}…</div>}
-      <nav className="advanced-category-nav" aria-label="Document tool categories"><button onClick={() => document.getElementById('advanced-pages-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Pages & content</button><button onClick={() => document.getElementById('advanced-forms-navigation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Forms & navigation</button><button onClick={() => document.getElementById('advanced-security')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Security & privacy</button><button onClick={() => document.getElementById('advanced-output')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Output & optimize</button></nav><div className="advanced-grid"><div className="advanced-category-marker" id="advanced-pages-content"><span>01</span><div><strong>Pages & content</strong><small>Build pages and add visible document content.</small></div></div>
-        <section className="advanced-card"><h3><FilePlus2 /> Pages</h3><p>Build, insert and replace document pages.</p><div className="advanced-row"><button onClick={() => insertAt(currentPage)}>Blank before</button><button onClick={() => insertAt(currentPage + 1)}>Blank after</button></div><div className="advanced-row"><button onClick={() => chooseInsert('before')}>Insert file before</button><button onClick={() => chooseInsert('after')}>Insert file after</button></div><button onClick={() => replaceInput.current?.click()}>Replace current page</button><input ref={insertInput} hidden multiple type="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => void insertExternal(e.target.files)} /><input ref={replaceInput} hidden type="file" accept="application/pdf,image/png,image/jpeg" onChange={(e) => void replaceCurrent(e.target.files?.[0])} /></section>
-        <section className="advanced-card"><h3><Crop /> Crop page</h3><p>Set visible crop margins for the current page.</p><div className="crop-grid">{(['top', 'right', 'bottom', 'left'] as const).map((side) => <label key={side}>{side}<input type="number" min="0" max="45" value={crop[side]} onChange={(e) => setCrop({ ...crop, [side]: Number(e.target.value) })} /><span>%</span></label>)}</div><button onClick={applyCrop}>Apply crop</button></section>
-        <section className="advanced-card"><h3><Stamp /> Watermark & stamps</h3><input value={watermark} onChange={(e) => setWatermark(e.target.value)} placeholder="Watermark text" /><div className="advanced-row"><button onClick={() => applyWatermark()}>All pages</button><button onClick={() => applyWatermark(watermark, true)}>Current page</button></div><div className="stamp-row">{['APPROVED', 'DRAFT', 'CONFIDENTIAL'].map((stamp) => <button key={stamp} onClick={() => applyWatermark(stamp, true)}>{stamp}</button>)}</div></section>
-        <section className="advanced-card"><h3><Type /> Header, footer & numbers</h3><input value={header} onChange={(e) => setHeader(e.target.value)} placeholder="Header — supports {page} and {pages}" /><input value={footer} onChange={(e) => setFooter(e.target.value)} placeholder="Footer text" /><button onClick={addPageFurniture}>Apply + page numbers</button></section>
-        <section className="advanced-card"><h3><ImagePlus /> Insert image</h3><p>Place a PNG/JPG centered on the current page.</p><label>Width <input type="range" min="10" max="90" value={imageWidth} onChange={(e) => setImageWidth(Number(e.target.value))} /> {imageWidth}%</label><button onClick={() => imageInput.current?.click()}>Choose image</button><input ref={imageInput} hidden type="file" accept="image/png,image/jpeg" onChange={(e) => void addImage(e.target.files?.[0])} /></section>
-        <div className="advanced-category-marker" id="advanced-forms-navigation"><span>02</span><div><strong>Forms & navigation</strong><small>Interactive fields, links, bookmarks and document identifiers.</small></div></div><section className="advanced-card structure-card"><h3><Type /> Create form field</h3><p>Add a real AcroForm widget to the current page.</p><div className="advanced-row"><select aria-label="Form field type" value={formKind} onChange={(e) => setFormKind(e.target.value as FormFieldKind)}><option value="text">Text field</option><option value="checkbox">Checkbox</option><option value="dropdown">Dropdown</option><option value="list">Option list</option><option value="radio">Radio group</option></select><input aria-label="Form field name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Field name" /></div>{['dropdown','list','radio'].includes(formKind) && <input aria-label="Form field options" value={formOptions} onChange={(e) => setFormOptions(e.target.value)} placeholder="Option 1, Option 2" />}<div className="position-grid">{(['x','y','width','height'] as const).map((key) => <label key={key}>{key}<input aria-label={`Field ${key} percent`} type="number" min="0" max="100" value={fieldRect[key]} onChange={(e) => setFieldRect({ ...fieldRect, [key]: Number(e.target.value) })} /><span>%</span></label>)}</div><label className="check-row"><input type="checkbox" checked={formRequired} onChange={(e) => setFormRequired(e.target.checked)} /> Required field</label><div className="advanced-row"><button onClick={createFormField}>Add form field</button><button onClick={flattenForm}>Flatten form fields</button></div></section>
-        <section className="advanced-card structure-card"><h3><FileSearch /> Add web link</h3><p>Create a native clickable URI link rectangle on the current page.</p><input aria-label="Link URL" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://example.com" /><div className="position-grid">{(['x','y','width','height'] as const).map((key) => <label key={key}>{key}<input aria-label={`Link ${key} percent`} type="number" min="0" max="100" value={linkRect[key]} onChange={(e) => setLinkRect({ ...linkRect, [key]: Number(e.target.value) })} /><span>%</span></label>)}</div><button onClick={createLink}>Add clickable link</button></section>
-        <section className="advanced-card structure-card"><h3><FilePlus2 /> Bookmark current page</h3><p>Add a top-level bookmark to the PDF outline.</p><input aria-label="Bookmark title" value={bookmarkTitle} onChange={(e) => setBookmarkTitle(e.target.value)} placeholder={`Page ${currentPage + 1} bookmark`} /><button onClick={createBookmark}>Add bookmark</button></section>
-        <section className="advanced-card structure-card"><h3><Type /> Bates numbering</h3><p>Apply stable document-control IDs to every page.</p><div className="advanced-row"><input aria-label="Bates prefix" value={batesPrefix} onChange={(e) => setBatesPrefix(e.target.value)} placeholder="Prefix" /><input aria-label="Bates start" type="number" min="0" value={batesStart} onChange={(e) => setBatesStart(Number(e.target.value))} /></div><label>Digits <input aria-label="Bates digits" type="number" min="1" max="12" value={batesDigits} onChange={(e) => setBatesDigits(Number(e.target.value))} /></label><button onClick={applyBates}>Apply Bates numbers</button></section>
-        <div className="advanced-category-marker" id="advanced-security"><span>03</span><div><strong>Security & privacy</strong><small>Remove sensitive information and apply irreversible changes deliberately.</small></div></div><section className="advanced-card danger-card"><h3><ShieldCheck /> Privacy cleanup</h3><p>Remove document metadata, document/page additional actions, JavaScript name trees, embedded-file name trees, file-attachment annotations, and JavaScript/Launch annotation actions.</p><button className="danger-action" onClick={privacyCleanup}>Remove privacy data & active content</button></section>
-        <section className="advanced-card danger-card"><h3><ScanLine /> Secure redaction</h3><p>Rasterizes pages containing redaction marks, permanently removing the original underlying content from those pages.</p><button className="danger-action" onClick={applyRedactions}>Apply marked redactions</button></section>
-        <div className="advanced-category-marker" id="advanced-output"><span>04</span><div><strong>Output & optimize</strong><small>Searchability, compression, protection and printing.</small></div></div><section className="advanced-card"><h3><FileSearch /> OCR searchable PDF</h3><p>Add an invisible text layer to scanned pages so exported PDFs remain searchable outside PDF Forge.</p><button onClick={searchable}>Make PDF searchable</button></section>
-        <section className="advanced-card"><h3><Sparkles /> Lossless optimize</h3><p>Recompress streams, generate object streams and linearize the PDF using local QPDF/WASM. Native text and forms are preserved.</p><button onClick={optimize}>Optimize PDF</button></section>
-        <section className="advanced-card"><h3><Sparkles /> Strong compression</h3><p>For scans and image-heavy PDFs. Rasterizes pages to JPEG, so native text, links and forms become page imagery. OCR can be added again afterward.</p><label>JPEG quality <input type="range" min="40" max="90" value={compressionQuality} onChange={(e) => setCompressionQuality(Number(e.target.value))} /> {compressionQuality}%</label><button onClick={strongCompress}>Compress aggressively</button></section>
-        <section className="advanced-card"><h3><FileLock2 /> Password protect</h3><p>Export a separate AES-256 encrypted copy. Your editable local original stays open.</p><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Open password" /><button onClick={() => void protect()}><ShieldCheck /> Export protected PDF</button></section>
-        <section className="advanced-card"><h3><Printer /> Print</h3><p>Print the finalized PDF. Pending rotations, annotations and redactions are applied first.</p><button onClick={() => void print()}>Print document</button></section>
-      </div>
-      <footer><BadgeCheck /> Local-first: these tools operate on this device.</footer>
-    </section></div>}
+    {open && <div className="modal-backdrop advanced-backdrop" onMouseDown={() => !busy && setOpen(false)}>
+      <section className="advanced-modal advanced-focus-modal" onMouseDown={(event) => event.stopPropagation()} aria-label="Document tools">
+        <header><div><span className="eyebrow">COMPLETE TOOLSET</span><h2>Document tools</h2><p>Choose a category, then one task. Only the controls for that task stay on screen.</p></div><button className="icon-btn" disabled={Boolean(busy)} title="Close Document tools" onClick={() => setOpen(false)}><X /></button></header>
+        {busy && <div className="advanced-busy"><Sparkles /> {busy}…</div>}
+        <div className="advanced-focus-layout">
+          <nav className="advanced-category-rail" aria-label="Document tool categories">
+            {categories.map((category, index) => <button key={category.id} className={activeCategory === category.id ? 'active' : ''} onClick={() => chooseCategory(category.id)}><i>{String(index + 1).padStart(2, '0')}</i><span><strong>{category.label}</strong><small>{category.description}</small></span></button>)}
+          </nav>
+          <nav className="advanced-tool-rail" aria-label={`${currentCategory.label} tools`}>
+            <div><span>TOOLS</span><strong>{currentCategory.label}</strong></div>
+            {currentCategory.tools.map((item) => {
+              const Icon = item.icon
+              return <button key={item.id} className={activeTool === item.id ? 'active' : ''} onClick={() => setActiveTool(item.id)}><Icon size={16} /><span>{item.label}</span></button>
+            })}
+          </nav>
+          <main className="advanced-tool-pane">
+            <header><span className="advanced-tool-glyph"><ToolIcon size={21} /></span><div><span className="eyebrow">{currentCategory.label}</span><h3>{currentTool.label}</h3><p>{currentTool.description}</p></div></header>
+            <div className="advanced-tool-content">{toolContent()}</div>
+          </main>
+        </div>
+        <footer><BadgeCheck /> Local-first: these tools operate on this device.</footer>
+      </section>
+    </div>}
   </>
 }

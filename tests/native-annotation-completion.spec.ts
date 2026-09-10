@@ -15,7 +15,7 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function exportPdf(page: Page, path: string) {
@@ -102,6 +102,11 @@ async function makeCommentDetailPdf(path: string) {
   await writeFile(path, await pdf.save())
 }
 
+async function chooseObjectTool(modal: ReturnType<Page['locator']>, category: string, tool: string) {
+  await modal.locator('.object-category-rail').getByRole('button', { name: new RegExp(category, 'i') }).click()
+  await modal.locator('.object-tool-rail').getByRole('button', { name: tool, exact: true }).click()
+}
+
 test('manages Ink, Polygon, PolyLine, Stamp, Caret and page FileAttachment annotations', async ({ page }, testInfo) => {
   test.setTimeout(90_000)
   const source = testInfo.outputPath('extended-source.pdf')
@@ -110,6 +115,8 @@ test('manages Ink, Polygon, PolyLine, Stamp, Caret and page FileAttachment annot
 
   await page.getByTitle('Embedded PDF objects').click()
   const modal = page.locator('.native-object-modal')
+  await expect(modal).toBeVisible()
+  await chooseObjectTool(modal, 'Annotations', 'Extended annotations')
   const manager = modal.locator('.native-extended-manager')
   await expect(manager).toContainText('Ink 1')
   await expect(manager).toContainText('Polygon 1')
@@ -184,6 +191,8 @@ test('moves and resizes native Square/Circle-style rectangles and transforms tex
   await openFile(page, source)
   await page.getByTitle('Embedded PDF objects').click()
   const modal = page.locator('.native-object-modal')
+  await expect(modal).toBeVisible()
+  await chooseObjectTool(modal, 'Annotations', 'Shapes')
 
   const square = modal.locator('.native-shape-row').filter({ hasText: 'Square' })
   await square.getByLabel(/Native shape x /).fill('20')
@@ -193,6 +202,7 @@ test('moves and resizes native Square/Circle-style rectangles and transforms tex
   await square.getByRole('button', { name: 'Save' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Updating native shape annotation complete', { timeout: 20_000 })
 
+  await modal.locator('.object-tool-rail').getByRole('button', { name: 'Markup', exact: true }).click()
   const markup = modal.locator('.native-markup-row').filter({ hasText: 'Highlight' })
   await markup.getByLabel(/Native markup x /).fill('10')
   await markup.getByLabel(/Native markup y /).fill('40')
@@ -225,6 +235,8 @@ test('edits sticky-note placement/icon/open state and FreeText typography withou
   await openFile(page, source)
   await page.getByTitle('Embedded PDF objects').click()
   const modal = page.locator('.native-object-modal')
+  await expect(modal).toBeVisible()
+  await chooseObjectTool(modal, 'Comments & links', 'Comment details')
   const manager = modal.locator('.native-comment-detail-manager')
 
   const sticky = manager.locator('.native-comment-detail-row').filter({ hasText: '· Text' })

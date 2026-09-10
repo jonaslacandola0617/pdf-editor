@@ -39,9 +39,11 @@ type DragPreview = {
 
 type AnnotationEdit = {
   id: string
-  mode: 'move' | 'resize'
+  mode: 'move' | 'resize' | 'rotate' | 'skew'
   start: Point
   original: Annotation
+  center?: Point
+  startAngle?: number
 }
 
 type CancelableRenderTask = { promise: Promise<unknown>; cancel: () => void }
@@ -120,6 +122,50 @@ function textHintFromTarget(target: EventTarget | null) {
 }
 
 function clamp(value: number, min = 0, max = 1) { return Math.max(min, Math.min(max, value)) }
+function clampDegrees(value: number) { return Math.max(-45, Math.min(45, value)) }
+function normalizeDegrees(value: number) {
+  let next = value % 360
+  if (next > 180) next -= 360
+  if (next < -180) next += 360
+  return Math.round(next * 10) / 10
+}
+
+function annotationBounds(ann: Annotation) {
+  if (ann.points?.length) {
+    const xs = ann.points.map((point) => point.x)
+    const ys = ann.points.map((point) => point.y)
+    const x = Math.min(...xs); const y = Math.min(...ys)
+    return { x, y, width: Math.max(0.02, Math.max(...xs) - x), height: Math.max(0.018, Math.max(...ys) - y) }
+  }
+  if (ann.type === 'text') {
+    const width = ann.width || Math.max(0.06, Math.min(0.48, ((ann.text?.length || 6) * (ann.fontSize || 18)) / 9500))
+    const height = ann.height || Math.max(0.026, (ann.fontSize || 18) / 700)
+    return { x: ann.x, y: ann.y, width, height }
+  }
+  if (ann.type === 'note') return { x: ann.x, y: ann.y, width: 0.045, height: 0.045 }
+  return { x: ann.x, y: ann.y, width: ann.width || 0.2, height: ann.height || 0.06 }
+}
+
+function annotationTransform(ann: Annotation) {
+  return `rotate(${ann.rotation || 0}deg) skewX(${ann.skewX || 0}deg) skewY(${ann.skewY || 0}deg)`
+}
+
+function transformPoint(point: Point, ann: Annotation) {
+  const bounds = annotationBounds(ann)
+  const cx = bounds.x + bounds.width / 2
+  const cy = bounds.y + bounds.height / 2
+  let dx = point.x - cx
+  let dy = point.y - cy
+  const skewX = Math.tan(((ann.skewX || 0) * Math.PI) / 180)
+  const skewY = Math.tan(((ann.skewY || 0) * Math.PI) / 180)
+  const skewedX = dx + skewX * dy
+  const skewedY = dy + skewY * dx
+  const angle = ((ann.rotation || 0) * Math.PI) / 180
+  const cos = Math.cos(angle); const sin = Math.sin(angle)
+  dx = skewedX * cos - skewedY * sin
+  dy = skewedX * sin + skewedY * cos
+  return { x: cx + dx, y: cy + dy }
+}
 
 export function PdfPageCanvas({
   pdf, pageIndex, zoom, rotation, annotations, tool, color, strokeWidth, fontSize,
@@ -211,12 +257,17 @@ export function PdfPageCanvas({
     return { x: clamp((e.clientX - rect.left) / rect.width), y: clamp((e.clientY - rect.top) / rect.height) }
   }
 
-  const beginAnnotationEdit = (e: React.PointerEvent, ann: Annotation, mode: 'move' | 'resize') => {
+  const angleForPoint = (point: Point, center: Point) => Math.atan2((point.y - center.y) * size.height, (point.x - center.x) * size.width)
+
+  const beginAnnotationEdit = (e: React.PointerEvent, ann: Annotation, mode: AnnotationEdit['mode']) => {
     if (tool !== 'select') return
     e.stopPropagation(); e.preventDefault()
     ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
     onSelect(ann.id); onBeginAnnotationEdit?.()
-    editRef.current = { id: ann.id, mode, start: pointFromEvent(e), original: structuredClone(ann) }
+    const start = pointFromEvent(e)
+    const bounds = annotationBounds(ann)
+    const center = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
+    editRef.current = { id: ann.id, mode, start, original: structuredClone(ann), center, startAngle: angleForPoint(start, center) }
   }
 
   const pointerDown = (e: React.PointerEvent) => {
@@ -224,7 +275,10 @@ export function PdfPageCanvas({
     if (tool === 'editText') { onPickNativeText(pointFromEvent(e), textHintFromTarget(e.target)); return }
     if (tool === 'select') {
       const p = pointFromEvent(e)
-      const ink = [...annotations].reverse().find((ann) => (ann.type === 'ink' || ann.type === 'signature') && (ann.points || []).some((pt) => Math.hypot(pt.x - p.x, pt.y - p.y) < 0.018))
+      const ink = [...annotations].reverse().find((ann) => (ann.type === 'ink' || ann.type === 'signature') && (ann.points || []).some((pt) => {
+        const transformed = transformPoint(pt, ann)
+        return Math.hypot(transformed.x - p.x, transformed.y - p.y) < 0.018
+      }))
       onSelect(ink?.id || null)
       return
     }
@@ -243,9 +297,43 @@ export function PdfPageCanvas({
       const dx = point.x - editing.start.x
       const dy = point.y - editing.start.y
       const ann = editing.original
+      const bounds = annotationBounds(ann)
+
+      if (editing.mode === 'rotate' && editing.center && editing.startAngle !== undefined) {
+        const delta = ((angleForPoint(point, editing.center) - editing.startAngle) * 180) / Math.PI
+        onUpdateAnnotation(editing.id, { rotation: normalizeDegrees((ann.rotation || 0) + delta) })
+        return
+      }
+
+      if (editing.mode === 'skew') {
+        onUpdateAnnotation(editing.id, {
+          skewX: Math.round(clampDegrees((ann.skewX || 0) + dx * 110) * 10) / 10,
+          skewY: Math.round(clampDegrees((ann.skewY || 0) + dy * 110) * 10) / 10,
+        })
+        return
+      }
+
       if (editing.mode === 'resize') {
-        onUpdateAnnotation(editing.id, { width: Math.max(0.02, Math.min(1 - ann.x, (ann.width || 0.2) + dx)), height: Math.max(0.018, Math.min(1 - ann.y, (ann.height || 0.06) + dy)) })
-      } else if (ann.points?.length) {
+        if (ann.points?.length) {
+          const newWidth = Math.max(0.025, Math.min(1 - bounds.x, bounds.width + dx))
+          const newHeight = Math.max(0.025, Math.min(1 - bounds.y, bounds.height + dy))
+          const sx = newWidth / Math.max(0.001, bounds.width)
+          const sy = newHeight / Math.max(0.001, bounds.height)
+          const points = ann.points.map((p) => ({ x: bounds.x + (p.x - bounds.x) * sx, y: bounds.y + (p.y - bounds.y) * sy }))
+          onUpdateAnnotation(editing.id, { x: bounds.x, y: bounds.y, points })
+        } else if (ann.type === 'text') {
+          const growth = (dx * size.width + dy * size.height) / 18
+          onUpdateAnnotation(editing.id, { fontSize: Math.max(8, Math.min(160, (ann.fontSize || 18) + growth)) })
+        } else {
+          onUpdateAnnotation(editing.id, {
+            width: Math.max(0.02, Math.min(1 - ann.x, (ann.width || 0.2) + dx)),
+            height: Math.max(0.018, Math.min(1 - ann.y, (ann.height || 0.06) + dy)),
+          })
+        }
+        return
+      }
+
+      if (ann.points?.length) {
         const minX = Math.min(...ann.points.map((p) => p.x)); const maxX = Math.max(...ann.points.map((p) => p.x))
         const minY = Math.min(...ann.points.map((p) => p.y)); const maxY = Math.max(...ann.points.map((p) => p.y))
         const safeDx = clamp(dx, -minX, 1 - maxX); const safeDy = clamp(dy, -minY, 1 - maxY)
@@ -256,6 +344,7 @@ export function PdfPageCanvas({
       }
       return
     }
+
     const active = previewRef.current
     if (!active) return
     const p = pointFromEvent(e)
@@ -286,13 +375,21 @@ export function PdfPageCanvas({
     updatePreview(null)
   }
 
-  const rectStyle = (ann: Annotation) => ({ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, width: `${(ann.width || 0.2) * 100}%`, height: `${(ann.height || 0.06) * 100}%` })
+  const rectStyle = (ann: Annotation) => ({
+    left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, width: `${(ann.width || 0.2) * 100}%`, height: `${(ann.height || 0.06) * 100}%`,
+    transform: annotationTransform(ann), transformOrigin: 'center center',
+  })
+
   const renderInk = (ann: Annotation, isPreview = false) => {
-    const points = ann.points || []
+    const points = (ann.points || []).map((point) => transformPoint(point, ann))
     const path = points.map((p) => `${p.x * size.width},${p.y * size.height}`).join(' ')
     return <svg className="ink-layer" width={size.width} height={size.height} aria-hidden="true"><polyline points={path} fill="none" stroke={ann.color} strokeWidth={ann.strokeWidth || 2} strokeLinecap="round" strokeLinejoin="round" opacity={isPreview ? 0.7 : 0.95} /></svg>
   }
+
   const nativeBounds = nativeSelection?.page === pageIndex ? displaySelectionBounds(nativeSelection, rotation) : null
+  const selectedAnnotation = tool === 'select' ? annotations.find((ann) => ann.id === selectedId) : undefined
+  const selectedBounds = selectedAnnotation ? annotationBounds(selectedAnnotation) : null
+  const transformable = selectedAnnotation && selectedAnnotation.type !== 'note' && selectedAnnotation.type !== 'redaction'
 
   return (
     <div ref={wrapRef} className={`pdf-page tool-${tool}`} style={{ width: size.width, height: size.height }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={() => { updatePreview(null); editRef.current = null }}>
@@ -305,12 +402,21 @@ export function PdfPageCanvas({
         {annotations.map((ann) => {
           const selected = ann.id === selectedId
           if (ann.type === 'note') return <button key={ann.id} className={`annotation note-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%` }} title={ann.text || 'Note'} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}><span>💬</span></button>
-          if (ann.type === 'text') return <button key={ann.id} className={`annotation text-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, color: ann.color, fontSize: ann.fontSize }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{ann.text}</button>
-          if (ann.type === 'highlight' || ann.type === 'rectangle' || ann.type === 'redaction') return <button key={ann.id} className={`annotation box-annotation ${ann.type} ${selected ? 'selected' : ''}`} style={{ ...rectStyle(ann), background: ann.type === 'highlight' ? `${ann.color}55` : ann.type === 'redaction' ? 'rgba(180,30,25,.72)' : 'transparent', borderColor: ann.type === 'rectangle' ? ann.color : ann.type === 'redaction' ? '#ff625a' : 'transparent', borderWidth: ann.type === 'rectangle' || ann.type === 'redaction' ? ann.strokeWidth || 2 : 0 }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>
-            {selected && <span className="annotation-resize-handle" role="button" aria-label="Resize annotation" onPointerDown={(e) => beginAnnotationEdit(e, ann, 'resize')} />}
-          </button>
+          if (ann.type === 'text') return <button key={ann.id} className={`annotation text-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, color: ann.color, fontSize: ann.fontSize, transform: annotationTransform(ann), transformOrigin: 'center center' }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{ann.text}</button>
+          if (ann.type === 'highlight' || ann.type === 'rectangle' || ann.type === 'redaction') return <button key={ann.id} className={`annotation box-annotation ${ann.type} ${selected ? 'selected' : ''}`} style={{ ...rectStyle(ann), background: ann.type === 'highlight' ? `${ann.color}55` : ann.type === 'redaction' ? 'rgba(180,30,25,.72)' : 'transparent', borderColor: ann.type === 'rectangle' ? ann.color : ann.type === 'redaction' ? '#ff625a' : 'transparent', borderWidth: ann.type === 'rectangle' || ann.type === 'redaction' ? ann.strokeWidth || 2 : 0 }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')} />
           return <button key={ann.id} className={`annotation ink-hitbox ${selected ? 'selected' : ''}`} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{renderInk(ann)}</button>
         })}
+
+        {selectedAnnotation && selectedBounds && (
+          <div className={`annotation-transform-box ${transformable ? 'full-transform' : 'resize-only'}`} style={{ left: `${selectedBounds.x * 100}%`, top: `${selectedBounds.y * 100}%`, width: `${selectedBounds.width * 100}%`, height: `${selectedBounds.height * 100}%`, transform: annotationTransform(selectedAnnotation), transformOrigin: 'center center' }}>
+            <button className="annotation-transform-handle resize" aria-label="Resize selection" title="Resize" onPointerDown={(e) => beginAnnotationEdit(e, selectedAnnotation, 'resize')} />
+            {transformable && <>
+              <button className="annotation-transform-handle rotate" aria-label="Rotate selection" title="Rotate" onPointerDown={(e) => beginAnnotationEdit(e, selectedAnnotation, 'rotate')} />
+              <button className="annotation-transform-handle skew" aria-label="Skew selection" title="Skew" onPointerDown={(e) => beginAnnotationEdit(e, selectedAnnotation, 'skew')} />
+            </>}
+          </div>
+        )}
+
         {preview && (preview.type === 'ink' || preview.type === 'signature') && renderInk({ id: 'preview', page: pageIndex, type: preview.type, x: 0, y: 0, color, strokeWidth, points: preview.points || [] }, true)}
         {preview && (preview.type === 'highlight' || preview.type === 'rectangle' || preview.type === 'redaction') && preview.start && preview.end && <div className={`preview-box ${preview.type}`} style={{ left: `${Math.min(preview.start.x, preview.end.x) * 100}%`, top: `${Math.min(preview.start.y, preview.end.y) * 100}%`, width: `${Math.abs(preview.end.x - preview.start.x) * 100}%`, height: `${Math.abs(preview.end.y - preview.start.y) * 100}%`, background: preview.type === 'highlight' ? `${color}55` : preview.type === 'redaction' ? 'rgba(180,30,25,.72)' : 'transparent', borderColor: preview.type === 'redaction' ? '#ff625a' : color }} />}
       </div>

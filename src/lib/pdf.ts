@@ -9,7 +9,7 @@ import {
   PDFRadioGroup,
   PDFTextField,
 } from 'pdf-lib'
-import type { Annotation, FormFieldState, PdfMetadata } from '../types'
+import type { Annotation, FormFieldState, PdfMetadata, Point } from '../types'
 
 export function fileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -168,6 +168,34 @@ function hexToRgb(hex: string) {
   return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255)
 }
 
+function annotationBounds(ann: Annotation) {
+  if (ann.points?.length) {
+    const xs = ann.points.map((point) => point.x)
+    const ys = ann.points.map((point) => point.y)
+    const x = Math.min(...xs); const y = Math.min(...ys)
+    return { x, y, width: Math.max(0.0001, Math.max(...xs) - x), height: Math.max(0.0001, Math.max(...ys) - y) }
+  }
+  return { x: ann.x, y: ann.y, width: ann.width || 0.2, height: ann.height || 0.06 }
+}
+
+function transformedAnnotationPoint(point: Point, ann: Annotation) {
+  if (!ann.rotation && !ann.skewX && !ann.skewY) return point
+  const bounds = annotationBounds(ann)
+  const cx = bounds.x + bounds.width / 2
+  const cy = bounds.y + bounds.height / 2
+  let dx = point.x - cx
+  let dy = point.y - cy
+  const skewX = Math.tan(((ann.skewX || 0) * Math.PI) / 180)
+  const skewY = Math.tan(((ann.skewY || 0) * Math.PI) / 180)
+  const skewedX = dx + skewX * dy
+  const skewedY = dy + skewY * dx
+  const angle = ((ann.rotation || 0) * Math.PI) / 180
+  const cos = Math.cos(angle); const sin = Math.sin(angle)
+  dx = skewedX * cos - skewedY * sin
+  dy = skewedX * sin + skewedY * cos
+  return { x: cx + dx, y: cy + dy }
+}
+
 export async function addWatermark(
   bytes: ArrayBuffer,
   options: { text: string; opacity?: number; size?: number; angle?: number; color?: string; pageIndex?: number },
@@ -281,6 +309,9 @@ export async function flattenAnnotations(
         size: ann.fontSize || 18,
         font: helvetica,
         color,
+        rotate: degrees(ann.rotation || 0),
+        xSkew: degrees(ann.skewX || 0),
+        ySkew: degrees(ann.skewY || 0),
       })
     }
 
@@ -289,7 +320,7 @@ export async function flattenAnnotations(
       const h = (ann.height || 0.06) * height
       const y = height - (ann.y * height) - h
       if (ann.type === 'highlight') {
-        page.drawRectangle({ x: ann.x * width, y, width: w, height: h, color, opacity: 0.28 })
+        page.drawRectangle({ x: ann.x * width, y, width: w, height: h, color, opacity: 0.28, rotate: degrees(ann.rotation || 0), xSkew: degrees(ann.skewX || 0), ySkew: degrees(ann.skewY || 0) })
       } else if (ann.type === 'redaction') {
         page.drawRectangle({ x: ann.x * width, y, width: w, height: h, color: rgb(0, 0, 0), opacity: 1 })
       } else {
@@ -301,12 +332,15 @@ export async function flattenAnnotations(
           borderColor: color,
           borderWidth: ann.strokeWidth || 2,
           opacity: 0,
+          rotate: degrees(ann.rotation || 0),
+          xSkew: degrees(ann.skewX || 0),
+          ySkew: degrees(ann.skewY || 0),
         })
       }
     }
 
     if (ann.type === 'ink' || ann.type === 'signature') {
-      const points = ann.points || []
+      const points = (ann.points || []).map((point) => transformedAnnotationPoint(point, ann))
       for (let i = 1; i < points.length; i++) {
         page.drawLine({
           start: { x: points[i - 1].x * width, y: height - points[i - 1].y * height },

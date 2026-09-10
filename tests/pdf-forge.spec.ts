@@ -37,14 +37,14 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 const pageNumber = (page: Page) => page.locator('.floating-nav input')
 const stageStatus = (page: Page) => page.locator('.stage-top-hint')
 
 async function dragOnPdf(page: Page, fromX: number, fromY: number, toX: number, toY: number) {
-  const box = await page.locator('.pdf-page').boundingBox()
+  const box = await page.locator('.pdf-page').first().boundingBox()
   if (!box) throw new Error('PDF page has no bounding box')
   await page.mouse.move(box.x + box.width * fromX, box.y + box.height * fromY)
   await page.mouse.down()
@@ -79,9 +79,9 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   await expect(stageStatus(page)).toContainText('1 matching page')
   await expect(pageNumber(page)).toHaveValue('3')
 
-  const beforeRotate = await page.locator('.pdf-page').boundingBox()
+  const beforeRotate = await page.locator('.pdf-page').first().boundingBox()
   await page.getByTitle('Rotate left').click()
-  await expect.poll(async () => (await page.locator('.pdf-page').boundingBox())?.width || 0).not.toBe(beforeRotate?.width || 0)
+  await expect.poll(async () => (await page.locator('.pdf-page').first().boundingBox())?.width || 0).not.toBe(beforeRotate?.width || 0)
   await page.getByTitle('Rotate right').click()
   await page.getByRole('button', { name: 'Duplicate' }).click(); await expect(page.locator('.thumbnail')).toHaveCount(4)
   await page.getByRole('button', { name: 'Delete' }).click(); await expect(page.locator('.thumbnail')).toHaveCount(3)
@@ -106,7 +106,7 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   expect((await PDFDocument.load(await readFile(extractedPath))).getPageCount()).toBe(2)
 
   await page.locator('.forge-editor-switch').getByRole('button', { name: 'Edit', exact: true }).click()
-  await page.getByTitle('Add text').click(); await page.locator('.pdf-page').click({ position: { x: 250, y: 220 } })
+  await page.getByTitle('Add text').click(); await page.locator('.pdf-page').first().click({ position: { x: 250, y: 220 } })
   await page.locator('.right-panel textarea').fill('QA NOTE 8844')
   await expect(page.locator('.text-annotation')).toContainText('QA NOTE 8844')
 

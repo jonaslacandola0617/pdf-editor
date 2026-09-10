@@ -35,7 +35,7 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function exportPdf(page: Page, path: string) {
@@ -73,6 +73,8 @@ test('edits native square and line properties and deletes a native circle annota
   await page.getByTitle('Embedded PDF objects').click()
   const modal = page.locator('.native-object-modal')
   await expect(modal).toBeVisible()
+  await modal.locator('.object-category-rail').getByRole('button', { name: /Annotations/i }).click()
+  await modal.locator('.object-tool-rail').getByRole('button', { name: 'Shapes', exact: true }).click()
   const manager = modal.locator('.native-shape-manager')
   await expect(manager).toContainText('Square')
   await expect(manager).toContainText('Circle')

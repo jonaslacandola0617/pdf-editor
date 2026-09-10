@@ -51,7 +51,13 @@ export function LazyPdfPage(props: Props) {
     if (!node) return
     const observer = new IntersectionObserver((entries) => {
       setVisible(entries[0]?.isIntersecting || false)
-    }, { root: node.closest('.page-scroll'), rootMargin: '1100px 0px' })
+    }, {
+      root: node.closest('.page-scroll'),
+      // Keep only the current/near-visible page rendered. The placeholder preserves
+      // exact geometry, while the small look-ahead still primes the next page before
+      // it enters view without eagerly mounting several full PDF canvases.
+      rootMargin: '48px 0px',
+    })
     observer.observe(node)
     return () => observer.disconnect()
   }, [])

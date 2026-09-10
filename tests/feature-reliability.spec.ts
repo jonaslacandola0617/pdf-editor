@@ -14,7 +14,7 @@ async function source(path: string, count = 3) {
 async function open(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type=file]').first().setInputFiles(path)
-  await expect(page.locator('.pdf-page canvas')).toBeVisible()
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible()
 }
 async function exported(page: Page, path: string) {
   const download = page.waitForEvent('download')
@@ -94,7 +94,8 @@ test('viewer modes, fit, fullscreen and boundary navigation remain usable', asyn
   await source(path)
   await open(page, path)
   await page.getByTitle('Continuous view', { exact: true }).click()
-  await expect(page.locator('.pdf-page')).toHaveCount(3)
+  await expect(page.locator('.continuous-stack .page-view')).toHaveCount(3)
+  await expect(page.locator('.continuous-stack .pdf-page canvas').first()).toBeVisible()
   await page.getByTitle('Two-page view', { exact: true }).click()
   await expect(page.locator('.pdf-page')).toHaveCount(2)
   await page.getByTitle('Single page view', { exact: true }).click()
@@ -126,7 +127,7 @@ test('existing page rotations render and export without flattening document stru
   const path = info.outputPath('pre-rotated.pdf')
   await writeFile(path, await pdf.save())
   await open(page, path)
-  const canvas = await page.locator('.pdf-page canvas').boundingBox()
+  const canvas = await page.locator('.pdf-page canvas').first().boundingBox()
   expect(canvas!.width).toBeGreaterThan(canvas!.height)
   const reopened = await exported(page, info.outputPath('pre-rotated-export.pdf'))
   expect(reopened.getPage(0).getRotation().angle).toBe(90)

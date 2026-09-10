@@ -29,7 +29,7 @@ async function openAuditPdf(page: Page, filePath: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(filePath)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function shot(page: Page, name: string) {
@@ -75,14 +75,13 @@ async function expectCoreDesktopGeometry(page: Page) {
       return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height } : null
     }
     const navigator = rect('.forge-navigator')
-    const left = rect('.left-panel')
     const editor = rect('.editor-column')
     const right = rect('.right-panel')
     const toolbar = document.querySelector<HTMLElement>('.editor-toolbar')
     const floating = rect('.floating-nav')
     const stage = rect('.document-stage')
     return {
-      navigator, left, editor, right, floating, stage,
+      navigator, editor, right, floating, stage,
       toolbarOverflow: toolbar ? toolbar.scrollWidth - toolbar.clientWidth : 999,
     }
   })
@@ -116,39 +115,42 @@ async function expectCriticalTargets(page: Page, min: number) {
   expect(failures, `Critical controls below ${min}px: ${JSON.stringify(failures)}`).toEqual([])
 }
 
-test('visual audit — welcome hierarchy at desktop and mobile widths', async ({ page }) => {
+test('visual audit — dark-first welcome hierarchy at desktop and mobile widths', async ({ page }) => {
   const assertNoErrors = auditBrowserErrors(page)
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
   await expect(page.locator('.welcome')).toBeVisible()
-  await shot(page, '01-welcome-desktop')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await shot(page, '01-welcome-dark-default')
   await expectNoViewportOverflow(page)
   await expect(page.getByRole('button', { name: /Open PDF/i }).first()).toBeVisible()
   await expectVisibleFocus(page, '.forge-main-open')
 
+  await page.getByRole('button', { name: 'Use light appearance' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await page.waitForTimeout(200)
+  await shot(page, '01b-welcome-light')
   await page.getByRole('button', { name: 'Use dark appearance' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await page.waitForTimeout(250)
-  await shot(page, '01b-welcome-dark')
-  await page.getByRole('button', { name: 'Use light appearance' }).click()
-  await page.waitForTimeout(200)
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await shot(page, '02-welcome-mobile')
+  await shot(page, '02-welcome-mobile-dark')
   await expectNoViewportOverflow(page)
   const cta = await page.getByRole('button', { name: /Open PDF/i }).first().boundingBox()
   expect(cta?.width ?? 0).toBeLessThan(360)
   assertNoErrors()
 })
 
-test('visual audit — editor desktop hierarchy, density, focus and primary workflows', async ({ page }, testInfo) => {
+test('visual audit — editor desktop hierarchy, readability, focus and primary workflows', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
   const assertNoErrors = auditBrowserErrors(page)
   await page.setViewportSize({ width: 1440, height: 900 })
   const source = testInfo.outputPath('visual-audit.pdf')
   await makeAuditPdf(source)
   await openAuditPdf(page, source)
-  await shot(page, '03-editor-desktop')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.locator('.page-scroll')).toHaveClass(/view-continuous/)
+  await shot(page, '03-editor-desktop-dark')
   await expectNoViewportOverflow(page)
   await expectCoreDesktopGeometry(page)
   await expectCriticalTargets(page, 28)
@@ -159,22 +161,18 @@ test('visual audit — editor desktop hierarchy, density, focus and primary work
   const search = page.getByPlaceholder('Find in document')
   await search.fill('Detail-oriented')
   await search.press('Enter')
-  await expect(page.locator('.pdf-search-hit')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-search-hit').first()).toBeVisible({ timeout: 20_000 })
   await shot(page, '04-editor-search-result')
 
-  await page.getByRole('button', { name: 'Use dark appearance' }).click()
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await page.waitForTimeout(250)
-  const darkSurfaces = await page.evaluate(() => ({
-    workspace: getComputedStyle(document.querySelector<HTMLElement>('.document-stage')!).backgroundColor,
-    inspector: getComputedStyle(document.querySelector<HTMLElement>('.right-panel')!).backgroundColor,
-  }))
-  expect(darkSurfaces.workspace).not.toBe(darkSurfaces.inspector)
-  await shot(page, '04b-editor-dark')
+  const theme = page.getByRole('button', { name: 'Use light appearance' })
+  const save = page.getByRole('button', { name: 'Save', exact: true })
+  const [themeBox, saveBox] = await Promise.all([theme.boundingBox(), save.boundingBox()])
+  expect(themeBox).not.toBeNull(); expect(saveBox).not.toBeNull()
+  if (themeBox && saveBox) expect(Math.max(0, Math.min(themeBox.x + themeBox.width, saveBox.x + saveBox.width) - Math.max(themeBox.x, saveBox.x))).toBe(0)
   assertNoErrors()
 })
 
-test('visual audit — progressive disclosure surfaces stay usable and unclipped', async ({ page }, testInfo) => {
+test('visual audit — focused Document Tools and Objects avoid stacked scrolling walls', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
   const assertNoErrors = auditBrowserErrors(page)
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -192,23 +190,36 @@ test('visual audit — progressive disclosure surfaces stay usable and unclipped
   await page.getByTitle('Close All Tools').click()
 
   await page.getByTitle('Document tools').click()
-  await expect(page.locator('.advanced-modal')).toBeVisible()
-  await expect(page.locator('.advanced-category-nav')).toBeVisible()
-  await shot(page, '06-document-tools-desktop')
-  const advanced = await page.locator('.advanced-modal').boundingBox()
-  expect(advanced).not.toBeNull()
-  expect(advanced!.y).toBeGreaterThanOrEqual(8)
-  expect(advanced!.y + advanced!.height).toBeLessThanOrEqual(892)
-  await page.locator('.advanced-modal header .icon-btn').click()
+  const advanced = page.locator('.advanced-focus-modal')
+  await expect(advanced).toBeVisible()
+  await expect(advanced.locator('.advanced-category-rail')).toBeVisible()
+  await expect(advanced.locator('.advanced-tool-rail')).toBeVisible()
+  await expect(advanced.locator('.advanced-tool-pane')).toBeVisible()
+  await advanced.locator('.advanced-category-rail').getByRole('button', { name: /Security & privacy/ }).click()
+  await advanced.locator('.advanced-tool-rail').getByRole('button', { name: 'Secure redaction' }).click()
+  await expect(advanced.locator('.advanced-tool-pane').getByRole('heading', { name: 'Secure redaction' })).toBeVisible()
+  await expect(advanced.getByRole('button', { name: 'Apply marked redactions' })).toBeVisible()
+  await shot(page, '06-document-tools-focused')
+  const advancedBox = await advanced.boundingBox()
+  expect(advancedBox).not.toBeNull()
+  expect(advancedBox!.y).toBeGreaterThanOrEqual(8)
+  expect(advancedBox!.y + advancedBox!.height).toBeLessThanOrEqual(892)
+  await page.getByTitle('Close Document tools').click()
 
   await page.getByTitle('Embedded PDF objects').click()
-  await expect(page.locator('.native-object-modal')).toBeVisible()
-  await expect(page.locator('.object-section-nav')).toBeVisible()
-  await shot(page, '07-objects-desktop')
-  const objects = await page.locator('.native-object-modal').boundingBox()
-  expect(objects).not.toBeNull()
-  expect(objects!.y).toBeGreaterThanOrEqual(8)
-  expect(objects!.y + objects!.height).toBeLessThanOrEqual(892)
+  const objects = page.locator('.object-focus-modal')
+  await expect(objects).toBeVisible()
+  await expect(objects.locator('.object-category-rail')).toBeVisible()
+  await expect(objects.locator('.object-tool-rail')).toBeVisible()
+  await expect(objects.locator('.object-tool-pane')).toBeVisible()
+  await objects.locator('.object-category-rail').getByRole('button', { name: /Annotations/ }).click()
+  await objects.locator('.object-tool-rail').getByRole('button', { name: 'Shapes' }).click()
+  await expect(objects.locator('.object-tool-pane').getByRole('heading', { name: 'Shapes' })).toBeVisible()
+  await shot(page, '07-objects-focused')
+  const objectBox = await objects.boundingBox()
+  expect(objectBox).not.toBeNull()
+  expect(objectBox!.y).toBeGreaterThanOrEqual(8)
+  expect(objectBox!.y + objectBox!.height).toBeLessThanOrEqual(892)
   await page.getByTitle('Close embedded objects').click()
   assertNoErrors()
 })

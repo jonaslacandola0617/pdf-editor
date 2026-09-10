@@ -16,6 +16,11 @@ export type Annotation = {
   fontSize?: number
   strokeWidth?: number
   points?: Point[]
+  /** Rotation applied around the annotation center, in degrees. */
+  rotation?: number
+  /** Horizontal/vertical skew applied around the annotation center, in degrees. */
+  skewX?: number
+  skewY?: number
 }
 
 export type NativeTextSelection = {
