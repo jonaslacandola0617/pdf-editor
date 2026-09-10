@@ -47,33 +47,33 @@ test('right-click menu exposes nested tools and real annotation clipboard action
   await expect(submenu.getByRole('menuitem', { name: 'Highlight', exact: true })).toBeVisible()
   await expect(submenu.getByRole('menuitem', { name: 'Signature', exact: true })).toBeVisible()
 
-  await expect(menu.getByRole('menuitem', { name: 'Paste', exact: true })).toBeDisabled()
-  await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click()
+  await expect(menu.getByRole('menuitem', { name: /^Paste\b/ })).toBeDisabled()
+  await menu.getByRole('menuitem', { name: /^Copy\b/ }).click()
 
   const pasteMenu = await rightClickBlankPage(page)
-  await expect(pasteMenu.getByRole('menuitem', { name: 'Paste', exact: true })).toBeEnabled()
-  await pasteMenu.getByRole('menuitem', { name: 'Paste', exact: true }).click()
+  await expect(pasteMenu.getByRole('menuitem', { name: /^Paste\b/ })).toBeEnabled()
+  await pasteMenu.getByRole('menuitem', { name: /^Paste\b/ }).click()
   await expect(page.locator('.text-annotation')).toHaveCount(2)
 
   const pasted = page.locator('.text-annotation.selected')
   await expect(pasted).toHaveCount(1)
   await pasted.click({ button: 'right' })
-  await page.getByRole('menu', { name: 'PDF actions' }).getByRole('menuitem', { name: 'Duplicate', exact: true }).click()
+  await page.getByRole('menu', { name: 'PDF actions' }).getByRole('menuitem', { name: /^Duplicate\b/ }).click()
   await expect(page.locator('.text-annotation')).toHaveCount(3)
 
   const duplicate = page.locator('.text-annotation.selected')
   await duplicate.click({ button: 'right' })
   const deleteMenu = page.getByRole('menu', { name: 'PDF actions' })
   await expect(deleteMenu.getByRole('menuitem', { name: 'Properties', exact: true })).toBeVisible()
-  await deleteMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click()
+  await deleteMenu.getByRole('menuitem', { name: /^Delete\b/ }).click()
   await expect(page.locator('.text-annotation')).toHaveCount(2)
 
   const undoMenu = await rightClickBlankPage(page)
-  await undoMenu.getByRole('menuitem', { name: 'Undo', exact: true }).click()
+  await undoMenu.getByRole('menuitem', { name: /^Undo\b/ }).click()
   await expect(page.locator('.text-annotation')).toHaveCount(3)
 
   const redoMenu = await rightClickBlankPage(page)
-  await redoMenu.getByRole('menuitem', { name: 'Redo', exact: true }).click()
+  await redoMenu.getByRole('menuitem', { name: /^Redo\b/ }).click()
   await expect(page.locator('.text-annotation')).toHaveCount(2)
 })
 
