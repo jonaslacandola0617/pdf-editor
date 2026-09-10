@@ -200,7 +200,7 @@ export default function App() {
   const [zoom, setZoom] = useState(1.05)
   const [viewMode, setViewMode] = useState<ViewMode>('single')
   const [panel, setPanel] = useState<Panel>('pages')
-  const [navigatorOpen, setNavigatorOpen] = useState(true)
+  const [navigatorOpen, setNavigatorOpen] = useState(() => window.innerWidth > 760)
   const [inspectorOpen, setInspectorOpen] = useState(false)
   const [metadata, setMetadata] = useState<PdfMetadata>(EMPTY_META)
   const [formFields, setFormFields] = useState<FormFieldState[]>([])
@@ -253,6 +253,17 @@ export default function App() {
   useEffect(() => {
     if (selectedId || nativeSelection || tool !== 'select') setInspectorOpen(true)
   }, [selectedId, nativeSelection, tool])
+
+  useEffect(() => {
+    const adaptWorkbench = () => {
+      if (window.innerWidth <= 760) {
+        setNavigatorOpen(false)
+        setInspectorOpen(false)
+      }
+    }
+    window.addEventListener('resize', adaptWorkbench)
+    return () => window.removeEventListener('resize', adaptWorkbench)
+  }, [])
 
   useEffect(() => {
     if (!bytes) {
@@ -1311,11 +1322,11 @@ export default function App() {
             <button className="forge-panel-collapse" title="Hide navigator" aria-label="Hide navigator" onClick={() => setNavigatorOpen(false)}><ChevronLeft /></button>
           </div>
           <nav className="forge-navigator-tabs" aria-label="Document navigator">
-            <button className={panel === 'pages' ? 'active' : ''} title="Pages" onClick={() => setPanel('pages')}><Files /><span>Pages</span></button>
-            <button className={panel === 'comments' ? 'active' : ''} title="Comments" onClick={() => setPanel('comments')}><StickyNote /><span>Comments</span></button>
-            <button className={panel === 'forms' ? 'active' : ''} title="Form fields" onClick={() => setPanel('forms')}><FormInput /><span>Forms</span></button>
-            <button className={panel === 'library' ? 'active' : ''} title="Library" onClick={() => setPanel('library')}><Library /><span>Library</span></button>
-            <button className={panel === 'info' ? 'active' : ''} title="Document info" onClick={() => setPanel('info')}><Info /><span>Info</span></button>
+            <button className={panel === 'pages' ? 'active' : ''} title="Pages" onClick={() => { setPanel('pages'); setNavigatorOpen(true) }}><Files /><span>Pages</span></button>
+            <button className={panel === 'comments' ? 'active' : ''} title="Comments" onClick={() => { setPanel('comments'); setNavigatorOpen(true) }}><StickyNote /><span>Comments</span></button>
+            <button className={panel === 'forms' ? 'active' : ''} title="Form fields" onClick={() => { setPanel('forms'); setNavigatorOpen(true) }}><FormInput /><span>Forms</span></button>
+            <button className={panel === 'library' ? 'active' : ''} title="Library" onClick={() => { setPanel('library'); setNavigatorOpen(true) }}><Library /><span>Library</span></button>
+            <button className={panel === 'info' ? 'active' : ''} title="Document info" onClick={() => { setPanel('info'); setNavigatorOpen(true) }}><Info /><span>Info</span></button>
           </nav>
           {panel === 'pages' && (
             <>
