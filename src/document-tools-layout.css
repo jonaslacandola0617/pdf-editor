@@ -199,6 +199,48 @@ body.pdf-product-editor .advanced-focus-modal .advanced-focus-form > p {
   line-height: 1.6 !important;
 }
 
+/* Action controls in the focused pane must never collapse into narrow text stacks. */
+body.pdf-product-editor .advanced-focus-modal .advanced-focus-form {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-focus-form > button,
+body.pdf-product-editor .advanced-focus-modal .advanced-focus-form .advanced-row > button {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 44px !important;
+  padding: 10px 14px !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  line-height: 1.3 !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .advanced-focus-form .advanced-row {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+body.pdf-product-editor .advanced-focus-modal .danger-focus .danger-action {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 300px !important;
+  min-height: 44px !important;
+  padding: 10px 14px !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  line-height: 1.3 !important;
+}
+
 /* Medium widths: reduce rail width without crushing labels. */
 @media (max-width: 1120px) and (min-width: 901px) {
   body.pdf-product-editor .advanced-focus-modal .advanced-focus-layout,
@@ -256,6 +298,10 @@ body.pdf-product-editor .advanced-focus-modal .advanced-focus-form > p {
     min-height: 42px !important;
     padding-inline: 12px !important;
     border: 1px solid var(--forge-line) !important;
+  }
+
+  body.pdf-product-editor .advanced-focus-modal .advanced-focus-form .advanced-row {
+    grid-template-columns: 1fr !important;
   }
 
   body.pdf-product-editor .advanced-focus-modal .advanced-tool-pane,
