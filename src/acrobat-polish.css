@@ -56,39 +56,12 @@
   border-color: #0d0d0f;
 }
 
-/* Desktop-document-editor proportions. */
+/* Desktop-document-editor polish. */
 .topbar {
   height: 56px;
   flex-basis: 56px;
   background: linear-gradient(180deg, #19191c, #151517);
   box-shadow: 0 1px 0 rgba(255,255,255,.025), 0 8px 24px rgba(0,0,0,.15);
-}
-
-.workspace {
-  grid-template-columns: 48px 236px minmax(500px, 1fr) 232px;
-}
-
-.rail {
-  background: #121214;
-  padding-top: 7px;
-}
-
-.rail button {
-  width: 34px;
-  height: 34px;
-  border-radius: 7px;
-}
-
-.rail button.active {
-  background: #29292d;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.035);
-}
-
-.rail button.active::before {
-  left: -7px;
-  width: 3px;
-  height: 22px;
-  border-radius: 0 3px 3px 0;
 }
 
 .left-panel,
@@ -232,18 +205,7 @@ select:focus {
   color: #8b8b94;
 }
 
-/* Keep narrow screens usable without sacrificing the desktop layout. */
-@media (max-width: 1180px) {
-  .workspace {
-    grid-template-columns: 46px 210px minmax(440px, 1fr) 210px;
-  }
-}
-
 @media (max-width: 920px) {
-  .workspace {
-    grid-template-columns: 44px 190px minmax(400px, 1fr);
-  }
-
   .right-panel {
     display: none;
   }
