@@ -52,8 +52,8 @@ function workspaceFromDom(): WorkspaceState | null {
     panel: document.querySelector<HTMLButtonElement>('.forge-navigator-tabs button.active')?.title || 'Pages',
     pageScrollTop: document.querySelector<HTMLElement>('.page-scroll')?.scrollTop || 0,
     pageScrollLeft: document.querySelector<HTMLElement>('.page-scroll')?.scrollLeft || 0,
-    leftScrollTop: document.querySelector<HTMLElement>('.left-panel')?.scrollTop || 0,
-    rightScrollTop: document.querySelector<HTMLElement>('.right-panel')?.scrollTop || 0,
+    leftScrollTop: document.querySelector<HTMLElement>('.forge-navigator')?.scrollTop || 0,
+    rightScrollTop: document.querySelector<HTMLElement>('.forge-inspector')?.scrollTop || 0,
   }
 }
 
@@ -104,9 +104,9 @@ function restoreWorkspace() {
       pageScroll.scrollTop = saved.pageScrollTop || 0
       pageScroll.scrollLeft = saved.pageScrollLeft || 0
     }
-    const left = document.querySelector<HTMLElement>('.left-panel')
+    const left = document.querySelector<HTMLElement>('.forge-navigator')
     if (left) left.scrollTop = saved.leftScrollTop || 0
-    const right = document.querySelector<HTMLElement>('.right-panel')
+    const right = document.querySelector<HTMLElement>('.forge-inspector')
     if (right) right.scrollTop = saved.rightScrollTop || 0
   }
 
@@ -127,7 +127,7 @@ function installWorkspacePersistence() {
   window.addEventListener('change', scheduleSave, true)
   window.addEventListener('scroll', (event) => {
     const target = event.target as HTMLElement | null
-    if (target?.matches?.('.page-scroll, .left-panel, .right-panel')) scheduleSave()
+    if (target?.matches?.('.page-scroll, .forge-navigator, .forge-inspector')) scheduleSave()
   }, true)
 
   let restored = false
@@ -162,9 +162,7 @@ function installEditorResume() {
       return
     }
 
-    if (target.closest('.recent-row, .forge-shelf-file, .forge-archive-open') || target.closest('.library-item > button:first-child')) {
-      markOpen()
-    }
+    if (target.closest('.forge-shelf-file, .forge-archive-open')) markOpen()
   }, true)
 
   window.addEventListener('change', (event) => {
@@ -180,7 +178,7 @@ function installEditorResume() {
 
   const tryResume = () => {
     if (document.querySelector('.app-shell')) return true
-    const recent = document.querySelector<HTMLButtonElement>('.forge-shelf-file, .recent-row')
+    const recent = document.querySelector<HTMLButtonElement>('.forge-shelf-file')
     if (!recent) return false
     recent.click()
     return true
