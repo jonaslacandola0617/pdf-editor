@@ -74,7 +74,7 @@ async function expectCoreDesktopGeometry(page: Page) {
       const r = node?.getBoundingClientRect()
       return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height } : null
     }
-    const rail = rect('.rail')
+    const navigator = rect('.forge-navigator')
     const left = rect('.left-panel')
     const editor = rect('.editor-column')
     const right = rect('.right-panel')
@@ -82,15 +82,14 @@ async function expectCoreDesktopGeometry(page: Page) {
     const floating = rect('.floating-nav')
     const stage = rect('.document-stage')
     return {
-      rail, left, editor, right, floating, stage,
+      navigator, left, editor, right, floating, stage,
       toolbarOverflow: toolbar ? toolbar.scrollWidth - toolbar.clientWidth : 999,
     }
   })
-  expect(result.rail).not.toBeNull()
+  expect(result.navigator).not.toBeNull()
   expect(result.editor).not.toBeNull()
   expect(result.toolbarOverflow).toBeLessThanOrEqual(1)
-  if (result.rail && result.left) expect(result.rail.right).toBeLessThanOrEqual(result.left.left + 1)
-  if (result.left && result.editor) expect(result.left.right).toBeLessThanOrEqual(result.editor.left + 1)
+  if (result.navigator && result.editor) expect(result.navigator.right).toBeLessThanOrEqual(result.editor.left + 1)
   if (result.editor && result.right && result.right.width > 0) expect(result.editor.right).toBeLessThanOrEqual(result.right.left + 1)
   if (result.floating && result.stage) {
     expect(result.floating.left).toBeGreaterThanOrEqual(result.stage.left)
@@ -101,7 +100,7 @@ async function expectCoreDesktopGeometry(page: Page) {
 async function expectCriticalTargets(page: Page, min: number) {
   const failures = await page.evaluate(({ min }) => {
     const selectors = [
-      '.top-actions button:not([disabled])', '.rail button', '.tool-group button',
+      '.top-actions button:not([disabled])', '.forge-navigator-tabs button', '.tool-group button',
       '.floating-nav button', '.all-tools-launcher', '.all-tools-close', '.mobile-workspace-bar button',
     ]
     const nodes = selectors.flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)))
