@@ -359,13 +359,13 @@ export function ProductExperience() {
       <aside className="forge-mast">
         <ProductBrand />
         <nav className="forge-mast-nav" aria-label="PDF Forge sections">
-          <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} title="Workbench">
+          <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} title="Workbench" aria-label="Workbench">
             <span>01</span><Clock3 size={17} /><em>Workbench</em>
           </button>
-          <button className={view === 'documents' ? 'active' : ''} onClick={() => setView('documents')} title="Documents">
+          <button className={view === 'documents' ? 'active' : ''} onClick={() => setView('documents')} title="Documents" aria-label="Documents">
             <span>02</span><Library size={17} /><em>Documents</em>
           </button>
-          <button className={view === 'tools' ? 'active' : ''} onClick={() => setView('tools')} title="Tool index">
+          <button className={view === 'tools' ? 'active' : ''} onClick={() => setView('tools')} title="Tool index" aria-label="Tools">
             <span>03</span><Menu size={17} /><em>Tools</em>
           </button>
         </nav>
@@ -564,10 +564,10 @@ export function ProductExperience() {
     <>
       <div className="forge-editor-switch" role="navigation" aria-label="Editor modes">
         <span className="forge-switch-label">WORKFLOW</span>
-        <button className={mode === 'edit' ? 'active' : ''} onClick={() => setEditorMode('edit')}><i>01</i>Edit</button>
-        <button className={mode === 'annotate' ? 'active' : ''} onClick={() => setEditorMode('annotate')}><i>02</i>Review</button>
-        <button className={mode === 'sign' ? 'active' : ''} onClick={() => setEditorMode('sign')}><i>03</i>Sign</button>
-        <button className={mode === 'organize' ? 'active' : ''} onClick={() => setEditorMode('organize')}><i>04</i>Pages</button>
+        <button className={mode === 'edit' ? 'active' : ''} aria-label="Edit" onClick={() => setEditorMode('edit')}><i>01</i>Edit</button>
+        <button className={mode === 'annotate' ? 'active' : ''} aria-label="Review" onClick={() => setEditorMode('annotate')}><i>02</i>Review</button>
+        <button className={mode === 'sign' ? 'active' : ''} aria-label="Sign" onClick={() => setEditorMode('sign')}><i>03</i>Sign</button>
+        <button className={mode === 'organize' ? 'active' : ''} aria-label="Pages" onClick={() => setEditorMode('organize')}><i>04</i>Pages</button>
         <button className="forge-command-trigger" title="Quick Actions · Ctrl/Cmd + K" onClick={() => { setPaletteOpen(true); setPaletteQuery('') }}><Search size={13} /><span>Actions</span><kbd>⌘K</kbd></button>
       </div>
       <button className="forge-editor-theme" type="button" aria-label={`Use ${theme === 'light' ? 'dark' : 'light'} appearance`} title="Change appearance" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</button>
