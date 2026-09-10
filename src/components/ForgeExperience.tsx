@@ -231,6 +231,13 @@ export function ForgeExperience() {
   }, [editorVisible])
 
   useEffect(() => {
+    if (!editorVisible || window.innerWidth > 760) return
+    const fitMobileDocument = () => findButtonByTitle('Fit width')?.click()
+    const timer = window.setTimeout(fitMobileDocument, 220)
+    return () => window.clearTimeout(timer)
+  }, [editorVisible])
+
+  useEffect(() => {
     const observeMode = (event: Event) => {
       const target = event.target as HTMLElement | null
       const button = target?.closest<HTMLButtonElement>('.editor-toolbar button, .rail button')
