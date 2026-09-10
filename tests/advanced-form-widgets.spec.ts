@@ -65,12 +65,15 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function openAdvancedForms(page: Page) {
   await page.getByTitle('Embedded PDF objects').click()
   const modal = page.locator('.native-object-modal')
+  await expect(modal).toBeVisible()
+  await modal.locator('.object-category-rail').getByRole('button', { name: /Forms/i }).click()
+  await modal.locator('.object-tool-rail').getByRole('button', { name: 'Widget layout', exact: true }).click()
   const manager = modal.locator('.advanced-form-widget-manager')
   await expect(manager).toBeVisible()
   await expect(manager).toContainText('notes', { timeout: 30_000 })
@@ -246,7 +249,7 @@ test('selects, drags, resizes, aligns, distributes, duplicates and copies fields
   await page.getByRole('button', { name: 'Distribute V' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Distribute vertical complete', { timeout: 30_000 })
 
-  await page.locator('.pdf-page').click({ position: { x: 5, y: 5 } })
+  await page.locator('.pdf-page').first().click({ position: { x: 5, y: 5 } })
   await page.getByRole('button', { name: 'Form widget alpha 1', exact: true }).click()
   await page.getByRole('button', { name: 'Duplicate selected fields' }).click()
   await expect(page.getByRole('button', { name: 'Form widget alpha_copy 1', exact: true })).toBeVisible({ timeout: 30_000 })
