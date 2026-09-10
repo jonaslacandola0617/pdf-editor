@@ -49,7 +49,7 @@ function workspaceFromDom(): WorkspaceState | null {
     name,
     page,
     zoom: zoomFromDom(),
-    panel: document.querySelector<HTMLButtonElement>('.rail button.active')?.title || 'Pages',
+    panel: document.querySelector<HTMLButtonElement>('.forge-navigator-tabs button.active')?.title || 'Pages',
     pageScrollTop: document.querySelector<HTMLElement>('.page-scroll')?.scrollTop || 0,
     pageScrollLeft: document.querySelector<HTMLElement>('.page-scroll')?.scrollLeft || 0,
     leftScrollTop: document.querySelector<HTMLElement>('.left-panel')?.scrollTop || 0,
@@ -80,7 +80,7 @@ function restoreWorkspace() {
   if (!currentName || saved.name !== currentName) return
   restoringWorkspace = true
 
-  const panel = Array.from(document.querySelectorAll<HTMLButtonElement>('.rail button'))
+  const panel = Array.from(document.querySelectorAll<HTMLButtonElement>('.forge-navigator-tabs button'))
     .find((button) => button.title === saved.panel)
   panel?.click()
 
@@ -162,7 +162,7 @@ function installEditorResume() {
       return
     }
 
-    if (target.closest('.recent-row') || target.closest('.library-item > button:first-child')) {
+    if (target.closest('.recent-row, .forge-shelf-file, .forge-archive-open') || target.closest('.library-item > button:first-child')) {
       markOpen()
     }
   }, true)
@@ -180,7 +180,7 @@ function installEditorResume() {
 
   const tryResume = () => {
     if (document.querySelector('.app-shell')) return true
-    const recent = document.querySelector<HTMLButtonElement>('.recent-row')
+    const recent = document.querySelector<HTMLButtonElement>('.forge-shelf-file, .recent-row')
     if (!recent) return false
     recent.click()
     return true
