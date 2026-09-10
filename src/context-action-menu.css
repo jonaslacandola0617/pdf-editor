@@ -1,0 +1,146 @@
+/* PDF Forge contextual action menu — compact, keyboard-readable, nested flyout. */
+.forge-context-menu,
+.forge-context-menu * { box-sizing: border-box; }
+
+.forge-context-menu {
+  position: fixed;
+  z-index: 1200;
+  width: 256px;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-top: 2px solid var(--forge-copper);
+  border-radius: 3px;
+  background: rgba(24,23,19,.985);
+  color: #f1eadf;
+  box-shadow: 0 24px 70px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.28);
+  backdrop-filter: blur(18px);
+  user-select: none;
+}
+
+.forge-context-action,
+.forge-context-submenu > button {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: rgba(255,255,255,.82);
+  display: grid;
+  grid-template-columns: 20px minmax(0,1fr) auto;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  font: 600 12px/1.2 var(--forge-ui);
+  white-space: nowrap;
+}
+
+.forge-context-action > svg,
+.forge-context-submenu > button > svg {
+  width: 16px;
+  height: 16px;
+  color: rgba(255,255,255,.46);
+}
+
+.forge-context-action:hover:not(:disabled),
+.forge-context-action:focus-visible,
+.forge-context-submenu > button:hover,
+.forge-context-submenu > button:focus-visible,
+.forge-context-submenu-host.open > .forge-context-action {
+  background: rgba(255,255,255,.065);
+  color: #fff;
+}
+
+.forge-context-action:hover:not(:disabled) > svg,
+.forge-context-submenu > button:hover > svg,
+.forge-context-submenu-host.open > .forge-context-action > svg {
+  color: var(--forge-copper);
+}
+
+.forge-context-action:disabled {
+  cursor: default;
+  color: rgba(255,255,255,.25);
+}
+
+.forge-context-action:disabled > svg { color: rgba(255,255,255,.18); }
+
+.forge-context-action kbd {
+  justify-self: end;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.32);
+  font: 500 9px/1 var(--forge-mono);
+  letter-spacing: -.02em;
+}
+
+.forge-context-action.has-submenu .forge-context-chevron {
+  justify-self: end;
+  color: rgba(255,255,255,.38);
+}
+
+.forge-context-action.danger { color: #e6a096; }
+.forge-context-action.danger > svg { color: #d97062; }
+.forge-context-action.danger:hover { background: rgba(185,65,52,.14); color: #ffc0b7; }
+
+.forge-context-separator {
+  height: 1px;
+  margin: 5px 4px;
+  background: rgba(255,255,255,.09);
+}
+
+.forge-context-submenu-host { position: relative; }
+
+.forge-context-submenu {
+  position: absolute;
+  z-index: 1201;
+  left: calc(100% + 7px);
+  top: -6px;
+  width: 238px;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-top: 2px solid var(--forge-copper);
+  border-radius: 3px;
+  background: rgba(24,23,19,.99);
+  box-shadow: 0 24px 70px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.28);
+}
+
+.forge-context-menu.flyout-left .forge-context-submenu {
+  left: auto;
+  right: calc(100% + 7px);
+}
+
+.forge-context-submenu-title {
+  min-height: 27px;
+  padding: 8px 9px 5px;
+  color: var(--forge-copper);
+  font: 500 8px/1 var(--forge-mono);
+  letter-spacing: .13em;
+}
+
+.forge-context-submenu > button {
+  grid-template-columns: 20px minmax(0,1fr);
+}
+
+@media (max-width: 760px) {
+  .forge-context-menu {
+    width: min(270px, calc(100vw - 16px));
+  }
+
+  .forge-context-submenu {
+    position: fixed;
+    left: 8px !important;
+    right: 8px !important;
+    top: auto;
+    bottom: 8px;
+    width: auto;
+    max-height: 72dvh;
+    overflow-y: auto;
+  }
+
+  .forge-context-action,
+  .forge-context-submenu > button {
+    min-height: 42px;
+    font-size: 13px;
+  }
+}
