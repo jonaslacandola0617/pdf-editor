@@ -81,6 +81,9 @@ body.pdf-product-home .welcome {
 body.pdf-product-home .welcome > :not(.forge-product-root):not(input[type="file"]) {
   display: none !important;
 }
+body.pdf-product-home .welcome > .forge-product-root {
+  display: grid !important;
+}
 
 .forge-product-root,
 .forge-product-root * { box-sizing: border-box; }
@@ -1545,6 +1548,9 @@ body[data-pdf-mode="organize"] .thumb-drag-wrap.multi-selected {
   body.pdf-product-editor .rail button { width: 38px !important; height: 38px !important; }
   body.pdf-product-editor .editor-toolbar .tool-group button { min-width: 38px !important; height: 38px !important; }
   body.pdf-product-editor .floating-nav button { min-width: 36px !important; height: 36px !important; }
+  body.pdf-product-editor .top-actions .icon-btn,
+  body.pdf-product-editor .top-actions .soft-btn,
+  body.pdf-product-editor .top-actions .primary { min-width: 38px !important; height: 38px !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
