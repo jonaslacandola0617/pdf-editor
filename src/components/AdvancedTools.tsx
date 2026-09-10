@@ -24,81 +24,100 @@ import '../document-view-manager.css'
 import '../form-field-manager.css'
 
 type Props = ComponentProps<typeof BaseAdvancedTools>
-
 type ObjectSection = 'content' | 'comments' | 'annotations' | 'forms' | 'files' | 'view'
+type ObjectTool = 'page-content' | 'links' | 'comment-details' | 'markup' | 'shapes' | 'extended' | 'form-properties' | 'form-layout' | 'attachments' | 'signatures' | 'document-view'
 
-const sections: Array<{ id: ObjectSection; label: string; icon: React.ComponentType<{ size?: number }> }> = [
-  { id: 'content', label: 'Content', icon: FileText },
-  { id: 'comments', label: 'Comments & links', icon: MessageSquareText },
-  { id: 'annotations', label: 'Annotations', icon: Shapes },
-  { id: 'forms', label: 'Forms', icon: SlidersHorizontal },
-  { id: 'files', label: 'Files & signatures', icon: FileArchive },
-  { id: 'view', label: 'View & navigation', icon: View },
+type ToolMeta = { id: ObjectTool; label: string; description: string }
+type SectionMeta = { id: ObjectSection; label: string; description: string; icon: React.ComponentType<{ size?: number }>; tools: ToolMeta[] }
+
+const sections: SectionMeta[] = [
+  { id: 'content', label: 'Content', description: 'Underlying page text and imagery.', icon: FileText, tools: [
+    { id: 'page-content', label: 'Page content', description: 'Inspect and edit native text and images on the current page.' },
+  ] },
+  { id: 'comments', label: 'Comments & links', description: 'Review and navigation objects.', icon: MessageSquareText, tools: [
+    { id: 'links', label: 'Links & bookmarks', description: 'Inspect native links, bookmarks, destinations, and related objects.' },
+    { id: 'comment-details', label: 'Comment details', description: 'Inspect and edit detailed native comment metadata.' },
+  ] },
+  { id: 'annotations', label: 'Annotations', description: 'Native markup and drawing objects.', icon: Shapes, tools: [
+    { id: 'markup', label: 'Markup', description: 'Manage highlights, underlines, strikeouts, and text markup.' },
+    { id: 'shapes', label: 'Shapes', description: 'Manage native line, square, circle, and polygon annotations.' },
+    { id: 'extended', label: 'Extended annotations', description: 'Manage stamps, carets, ink, and other extended annotation types.' },
+  ] },
+  { id: 'forms', label: 'Forms', description: 'Existing AcroForm fields and widgets.', icon: SlidersHorizontal, tools: [
+    { id: 'form-properties', label: 'Field properties', description: 'Edit existing form field behavior and values.' },
+    { id: 'form-layout', label: 'Widget layout', description: 'Inspect and adjust widget geometry on the current page.' },
+  ] },
+  { id: 'files', label: 'Files & signatures', description: 'Embedded files and reusable signatures.', icon: FileArchive, tools: [
+    { id: 'attachments', label: 'Attachments', description: 'Inspect, add, download, or remove embedded files.' },
+    { id: 'signatures', label: 'Image signatures', description: 'Manage locally reusable image-based signatures.' },
+  ] },
+  { id: 'view', label: 'View & navigation', description: 'Opening behavior and page output.', icon: View, tools: [
+    { id: 'document-view', label: 'Document view', description: 'Manage page labels, opening behavior, and page-image export.' },
+  ] },
 ]
 
 export function AdvancedTools(props: Props) {
   const [objectsOpen, setObjectsOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<ObjectSection>('content')
+  const [activeTool, setActiveTool] = useState<ObjectTool>('page-content')
 
-  const jumpTo = (id: ObjectSection) => {
+  const chooseSection = (id: ObjectSection) => {
     setActiveSection(id)
-    document.getElementById(`pdf-object-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const first = sections.find((section) => section.id === id)?.tools[0]
+    if (first) setActiveTool(first.id)
+  }
+
+  const section = sections.find((item) => item.id === activeSection) || sections[0]
+  const tool = section.tools.find((item) => item.id === activeTool) || section.tools[0]
+
+  const toolContent = () => {
+    const common = { bytes: props.bytes, onBeforeMutate: props.onBeforeMutate, onApply: props.onApply, onStatus: props.onStatus }
+    switch (activeTool) {
+      case 'page-content': return <NativePageContentManager {...common} currentPage={props.currentPage} />
+      case 'links': return <NativeObjectManager {...common} />
+      case 'comment-details': return <NativeCommentDetailManager {...common} />
+      case 'markup': return <NativeMarkupManager {...common} />
+      case 'shapes': return <NativeShapeManager {...common} />
+      case 'extended': return <NativeExtendedAnnotationManager {...common} />
+      case 'form-properties': return <FormFieldPropertyManager {...common} />
+      case 'form-layout': return <AdvancedFormWidgetManager {...common} currentPage={props.currentPage} />
+      case 'attachments': return <AttachmentManager {...common} />
+      case 'signatures': return <ImageSignatureManager {...common} currentPage={props.currentPage} />
+      case 'document-view': return <DocumentViewManager {...common} name={props.name} pageCount={props.pageCount} currentPage={props.currentPage} />
+    }
   }
 
   return <>
     <BaseAdvancedTools {...props} />
-    <button className="soft-btn native-objects-button" title="Embedded PDF objects" onClick={() => { setActiveSection('content'); setObjectsOpen(true) }}>
+    <button className="soft-btn native-objects-button" title="Embedded PDF objects" onClick={() => { setActiveSection('content'); setActiveTool('page-content'); setObjectsOpen(true) }}>
       <Layers3 /><span>Objects</span>
     </button>
     {objectsOpen && <div className="modal-backdrop native-object-backdrop" onMouseDown={() => setObjectsOpen(false)}>
-      <section className="native-object-modal" onMouseDown={(event) => event.stopPropagation()} aria-label="Embedded PDF objects">
+      <section className="native-object-modal object-focus-modal" onMouseDown={(event) => event.stopPropagation()} aria-label="Embedded PDF objects">
         <header>
-          <div><span className="eyebrow">PDF STRUCTURE</span><h2>PDF objects</h2><p>Inspect and manage what is actually embedded in the document. Tools are grouped by what you are trying to change.</p></div>
+          <div><span className="eyebrow">PDF STRUCTURE</span><h2>PDF objects</h2><p>Choose an object family, then one tool. Only that manager stays visible.</p></div>
           <button className="icon-btn" title="Close embedded objects" onClick={() => setObjectsOpen(false)}><X /></button>
         </header>
 
-        <nav className="object-section-nav" aria-label="PDF object sections">
-          {sections.map((section) => {
-            const Icon = section.icon
-            return <button key={section.id} className={activeSection === section.id ? 'active' : ''} onClick={() => jumpTo(section.id)}>
-              <Icon size={15} /><span>{section.label}</span>
-            </button>
-          })}
-        </nav>
+        <div className="object-focus-layout">
+          <nav className="object-category-rail" aria-label="PDF object categories">
+            {sections.map((item, index) => {
+              const Icon = item.icon
+              return <button key={item.id} className={activeSection === item.id ? 'active' : ''} onClick={() => chooseSection(item.id)}>
+                <i>{String(index + 1).padStart(2, '0')}</i><Icon size={17} /><span><strong>{item.label}</strong><small>{item.description}</small></span>
+              </button>
+            })}
+          </nav>
 
-        <div className="object-section" id="pdf-object-content">
-          <div className="object-section-heading"><span>01</span><div><strong>Page content</strong><small>Edit or inspect underlying text and images.</small></div></div>
-          <NativePageContentManager bytes={props.bytes} currentPage={props.currentPage} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-        </div>
+          <nav className="object-tool-rail" aria-label={`${section.label} tools`}>
+            <div><span>TOOLS</span><strong>{section.label}</strong></div>
+            {section.tools.map((item) => <button key={item.id} className={activeTool === item.id ? 'active' : ''} onClick={() => setActiveTool(item.id)}><span>{item.label}</span></button>)}
+          </nav>
 
-        <div className="object-section" id="pdf-object-comments">
-          <div className="object-section-heading"><span>02</span><div><strong>Comments, links & bookmarks</strong><small>Review and navigation objects from PDF Forge or other editors.</small></div></div>
-          <NativeObjectManager bytes={props.bytes} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-          <NativeCommentDetailManager bytes={props.bytes} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-        </div>
-
-        <div className="object-section" id="pdf-object-annotations">
-          <div className="object-section-heading"><span>03</span><div><strong>Native annotations</strong><small>Highlights, shapes, ink, stamps, carets and page attachments.</small></div></div>
-          <NativeMarkupManager bytes={props.bytes} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-          <NativeShapeManager bytes={props.bytes} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-          <NativeExtendedAnnotationManager bytes={props.bytes} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-        </div>
-
-        <div className="object-section" id="pdf-object-forms">
-          <div className="object-section-heading"><span>04</span><div><strong>Interactive forms</strong><small>Manage existing AcroForm field properties and behavior.</small></div></div>
-          <FormFieldPropertyManager bytes={props.bytes} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-          <AdvancedFormWidgetManager bytes={props.bytes} currentPage={props.currentPage} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-        </div>
-
-        <div className="object-section" id="pdf-object-files">
-          <div className="object-section-heading"><span>05</span><div><strong>Files & signatures</strong><small>Embedded attachments and locally reusable image signatures.</small></div></div>
-          <AttachmentManager bytes={props.bytes} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-          <ImageSignatureManager bytes={props.bytes} currentPage={props.currentPage} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
-        </div>
-
-        <div className="object-section" id="pdf-object-view">
-          <div className="object-section-heading"><span>06</span><div><strong>View & navigation</strong><small>Page labels, opening behavior and local page-image export.</small></div></div>
-          <DocumentViewManager bytes={props.bytes} name={props.name} pageCount={props.pageCount} currentPage={props.currentPage} onBeforeMutate={props.onBeforeMutate} onApply={props.onApply} onStatus={props.onStatus} />
+          <main className="object-tool-pane">
+            <header><span className="eyebrow">{section.label}</span><h3>{tool.label}</h3><p>{tool.description}</p></header>
+            <div className="object-tool-content">{toolContent()}</div>
+          </main>
         </div>
       </section>
     </div>}
