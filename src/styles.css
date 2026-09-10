@@ -29,7 +29,7 @@ button:disabled { cursor: default; opacity: .35; }
 .brand.compact { width: 220px; font-size: 17px; }
 .brand-mark { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px 9px 9px 3px; background: linear-gradient(145deg, var(--accent-2), var(--accent)); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
 .eyebrow { font: 700 10px/1.3 'Segoe UI', system-ui, sans-serif; letter-spacing: .17em; color: var(--accent-2); }
-.primary, .soft-btn, .icon-btn, .editor-toolbar button, .rail button { border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.primary, .soft-btn, .icon-btn, .editor-toolbar button { border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .primary { background: var(--accent); color: #fff; border-radius: 9px; height: 36px; padding: 0 15px; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
 .primary:hover { background: #ff6848; }
 .primary svg, .soft-btn svg { width: 16px; height: 16px; }
@@ -81,12 +81,6 @@ button:disabled { cursor: default; opacity: .35; }
 .doc-title span { font-size: 10px; color: #6d6d76; }
 .top-actions { display: flex; align-items: center; gap: 5px; }
 .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 52px 220px minmax(480px,1fr) 214px; }
-.rail { border-right: 1px solid var(--line); background: #141416; display: flex; align-items: center; flex-direction: column; padding: 8px 0; gap: 4px; }
-.rail button { width: 36px; height: 36px; background: transparent; border-radius: 8px; color: #7f7f89; position: relative; }
-.rail button:hover { color: #d5d5da; background: #222226; }
-.rail button.active { color: #fff; background: #29292e; }
-.rail button.active::before { content: ''; position: absolute; left: -8px; width: 3px; height: 18px; border-radius: 0 3px 3px 0; background: var(--accent); }
-.rail svg { width: 18px; height: 18px; }
 .left-panel, .right-panel { min-width: 0; background: var(--panel); overflow: auto; }
 .left-panel { border-right: 1px solid var(--line); padding: 16px 12px; }
 .right-panel { border-left: 1px solid var(--line); padding: 16px 13px; }
