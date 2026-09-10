@@ -237,10 +237,7 @@ body.forge-home-active .welcome > :not(.forge-home) {
   min-width: 0;
   height: 100vh;
   overflow: auto;
-  background:
-    linear-gradient(90deg, transparent calc(100% - 1px), rgba(36,32,28,.04) calc(100% - 1px)),
-    var(--forge-paper);
-  background-size: 24px 100%;
+  background: var(--forge-paper);
 }
 
 .forge-home-topline {
