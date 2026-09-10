@@ -3,6 +3,7 @@ dist
 playwright-report/
 test-results/
 visual-audit/
+public/pdfjs-standard-fonts/
 .DS_Store
 *.local
 .env*
