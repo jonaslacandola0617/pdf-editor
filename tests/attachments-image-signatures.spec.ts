@@ -14,7 +14,16 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
+}
+
+async function openObjectTool(page: Page, category: string, tool: string) {
+  await page.getByTitle('Embedded PDF objects').click()
+  const modal = page.locator('.native-object-modal')
+  await expect(modal).toBeVisible()
+  await modal.locator('.object-category-rail').getByRole('button', { name: new RegExp(category, 'i') }).click()
+  await modal.locator('.object-tool-rail').getByRole('button', { name: tool, exact: true }).click()
+  return modal
 }
 
 async function exportPdf(page: Page, path: string) {
@@ -80,9 +89,7 @@ test('adds, extracts and removes a real embedded PDF attachment', async ({ page 
   await makePdf(source)
   await openFile(page, source)
 
-  await page.getByTitle('Embedded PDF objects').click()
-  const modal = page.locator('.native-object-modal')
-  await expect(modal).toBeVisible()
+  let modal = await openObjectTool(page, 'Files & signatures', 'Attachments')
   await modal.getByLabel('Attachment description').fill('QA text attachment')
   const payload = Buffer.from('ATTACHMENT PAYLOAD 8833\nsecond line\n', 'utf8')
   await modal.locator('.attachment-manager input[type="file"]').setInputFiles({ name: 'evidence.txt', mimeType: 'text/plain', buffer: payload })
@@ -103,7 +110,7 @@ test('adds, extracts and removes a real embedded PDF attachment', async ({ page 
   expect(attachments[0].name).toBe('evidence.txt')
   expect(Buffer.compare(Buffer.from(attachments[0].data), payload)).toBe(0)
 
-  await page.getByTitle('Embedded PDF objects').click()
+  modal = await openObjectTool(page, 'Files & signatures', 'Attachments')
   await modal.getByTitle('Remove evidence.txt').click()
   await expect(modal.getByText('No embedded file attachments found.')).toBeVisible({ timeout: 20_000 })
   await modal.getByTitle('Close embedded objects').click()
@@ -118,10 +125,9 @@ test('imports a reusable local PNG signature and embeds it as a page image', asy
   await makePdf(source)
   await openFile(page, source)
 
-  await page.getByTitle('Embedded PDF objects').click()
-  const modal = page.locator('.native-object-modal')
-  await expect(modal).toBeVisible()
+  let modal = await openObjectTool(page, 'Files & signatures', 'Image signatures')
   const manager = modal.locator('.image-signature-manager')
+  await expect(manager).toBeVisible()
   await manager.getByLabel('Preset name').fill('QA Image Signature')
 
   const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8Dwn4GBgYGJAQoAHgQCAaYvJ9sAAAAASUVORK5CYII=', 'base64')
@@ -141,6 +147,6 @@ test('imports a reusable local PNG signature and embeds it as a page image', asy
   await exportPdf(page, exported)
   expect(await imageXObjectCount(exported)).toBeGreaterThan(0)
 
-  await page.getByTitle('Embedded PDF objects').click()
+  modal = await openObjectTool(page, 'Files & signatures', 'Image signatures')
   await expect(modal.locator('.image-signature-manager').getByRole('button', { name: 'QA Image Signature', exact: true })).toBeVisible()
 })
