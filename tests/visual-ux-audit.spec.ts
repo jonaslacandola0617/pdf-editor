@@ -248,7 +248,7 @@ test('visual audit — tablet and mobile flows remain discoverable', async ({ pa
   await shot(page, '11-mobile-pages-sheet')
   await page.getByTitle('Hide navigator').click()
 
-  await page.getByTitle('Properties').click()
+  await page.locator('.forge-context-bar .forge-inspector-toggle').click()
   await expect(page.locator('.forge-inspector')).toBeVisible()
   await shot(page, '12-mobile-properties-sheet')
   assertNoErrors()
