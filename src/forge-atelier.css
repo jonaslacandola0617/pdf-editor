@@ -2332,3 +2332,566 @@ body.forge-editor-active .brand.compact .brand-mark + span {
     height: 38px !important;
   }
 }
+
+
+/* =========================================================
+   SECONDARY WORKSPACES — ONE PRODUCT, NOT PLUG-IN PANELS
+   ========================================================= */
+
+body.forge-editor-active {
+  --pf-app: #191613;
+  --pf-canvas: #c7c0b5;
+  --pf-surface: #211d19;
+  --pf-surface-raised: #241f1b;
+  --pf-surface-muted: #302923;
+  --pf-text: #eee6dc;
+  --pf-text-secondary: #998e84;
+  --pf-text-tertiary: #746a61;
+  --pf-line: rgba(255,250,242,.08);
+  --pf-line-strong: rgba(255,250,242,.13);
+  --pf-accent: #c26443;
+  --pf-accent-hover: #d17352;
+  --pf-accent-soft: rgba(194,100,67,.12);
+  --pf-focus: rgba(217,137,104,.5);
+  --pf-success: #7aa276;
+  --pf-danger: #e07b70;
+  --pf-shadow-menu: 0 24px 68px rgba(17,13,10,.44);
+  color-scheme: dark;
+}
+
+body.forge-editor-active * {
+  scrollbar-color: #4b423a #1b1815;
+}
+
+body.forge-editor-active *::-webkit-scrollbar-track {
+  background: #1b1815 !important;
+  border-color: rgba(255,255,255,.025) !important;
+}
+
+body.forge-editor-active *::-webkit-scrollbar-thumb {
+  background: #4b423a !important;
+  border: 2px solid #1b1815 !important;
+  border-radius: 2px !important;
+}
+
+body.forge-editor-active *::-webkit-scrollbar-thumb:hover {
+  background: #61554b !important;
+}
+
+body.forge-editor-active .all-tools-layer {
+  inset: 68px 0 0 !important;
+}
+
+body.forge-editor-active .all-tools-backdrop {
+  background: rgba(11,8,6,.62) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+body.forge-editor-active .all-tools-launcher {
+  left: 8px !important;
+  top: auto !important;
+  bottom: 12px !important;
+  width: 60px !important;
+  height: 48px !important;
+  border-radius: 3px !important;
+  border: 1px solid transparent !important;
+  color: #766c63 !important;
+  background: transparent !important;
+}
+
+body.forge-editor-active .all-tools-launcher:hover,
+body.forge-editor-active .all-tools-launcher.active {
+  color: #f0e8de !important;
+  background: #2a241f !important;
+  border-color: rgba(255,255,255,.07) !important;
+}
+
+body.forge-editor-active .all-tools-launcher.active::before {
+  left: -8px !important;
+  width: 2px !important;
+  height: 26px !important;
+  border-radius: 0 !important;
+  background: var(--forge-copper) !important;
+}
+
+body.forge-editor-active .all-tools-launcher span {
+  font-size: 7.5px !important;
+  font-weight: 650 !important;
+}
+
+body.forge-editor-active .all-tools-drawer {
+  left: 76px !important;
+  width: min(410px, calc(100vw - 88px)) !important;
+  background: #211d19 !important;
+  border-right: 1px solid #0f0d0b !important;
+  box-shadow: 24px 0 64px rgba(17,13,10,.34) !important;
+  animation: none !important;
+}
+
+body.forge-editor-active .all-tools-header {
+  padding: 24px 20px 14px !important;
+  border-bottom: 0 !important;
+  background: #211d19 !important;
+}
+
+body.forge-editor-active .all-tools-eyebrow {
+  color: #b98772 !important;
+  font: 700 7.5px/1 var(--forge-mono) !important;
+  letter-spacing: .16em !important;
+}
+
+body.forge-editor-active .all-tools-heading h2,
+body.forge-editor-active .all-tools-header h2 {
+  margin: 5px 0 4px !important;
+  color: #f2eade !important;
+  font: 600 25px/1 var(--forge-editorial) !important;
+  letter-spacing: -.025em !important;
+}
+
+body.forge-editor-active .all-tools-heading p,
+body.forge-editor-active .all-tools-header p {
+  color: #8d8278 !important;
+  font-size: 10px !important;
+  line-height: 1.45 !important;
+}
+
+body.forge-editor-active .all-tools-close {
+  width: 34px !important;
+  height: 34px !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 2px !important;
+  background: #29241f !important;
+  color: #93887e !important;
+}
+
+body.forge-editor-active .all-tools-close:hover {
+  background: #342e28 !important;
+  color: #f0e8de !important;
+}
+
+body.forge-editor-active .all-tools-search {
+  min-height: 38px !important;
+  margin: 0 18px 12px !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 2px !important;
+  background: #181512 !important;
+  color: #897e74 !important;
+  box-shadow: none !important;
+}
+
+body.forge-editor-active .all-tools-search:focus-within {
+  border-color: rgba(217,137,104,.48) !important;
+  box-shadow: 0 0 0 2px rgba(217,137,104,.08) !important;
+}
+
+body.forge-editor-active .all-tools-search input {
+  color: #e9e0d6 !important;
+  font-size: 10px !important;
+}
+
+body.forge-editor-active .all-tools-categories {
+  grid-template-columns: repeat(2,1fr) !important;
+  gap: 4px !important;
+  padding: 0 18px 14px !important;
+  border-bottom: 1px solid var(--forge-line-dark) !important;
+}
+
+body.forge-editor-active .all-tools-categories button {
+  min-height: 34px !important;
+  border: 1px solid transparent !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: #857b71 !important;
+  padding: 5px 8px !important;
+  font-size: 9px !important;
+}
+
+body.forge-editor-active .all-tools-categories button:hover {
+  background: #29241f !important;
+  color: #d8cec4 !important;
+}
+
+body.forge-editor-active .all-tools-categories button.active {
+  border-color: rgba(255,255,255,.075) !important;
+  background: #352a24 !important;
+  color: #f2e9df !important;
+  box-shadow: inset 2px 0 0 var(--forge-copper);
+}
+
+body.forge-editor-active .all-tools-content {
+  padding: 13px 13px 22px 18px !important;
+}
+
+body.forge-editor-active .all-tools-section {
+  padding: 6px 0 10px !important;
+  border: 0 !important;
+}
+
+body.forge-editor-active .all-tools-section-title {
+  margin: 0 0 7px !important;
+}
+
+body.forge-editor-active .all-tools-section-title h3 {
+  color: #e9e0d6 !important;
+  font: 600 13px/1.15 var(--forge-editorial) !important;
+}
+
+body.forge-editor-active .all-tools-section-title p {
+  color: #766c63 !important;
+  font-size: 8.5px !important;
+}
+
+body.forge-editor-active .all-tools-grid {
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+}
+
+body.forge-editor-active .all-tools-action {
+  min-height: 56px !important;
+  padding: 8px 3px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-dark) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  grid-template-columns: 32px minmax(0,1fr) !important;
+}
+
+body.forge-editor-active .all-tools-action:hover {
+  background: #28231f !important;
+  transform: none !important;
+}
+
+body.forge-editor-active .all-tools-action-icon {
+  width: 30px !important;
+  height: 30px !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 2px !important;
+  background: #1a1714 !important;
+  color: #a99b90 !important;
+}
+
+body.forge-editor-active .all-tools-action strong {
+  color: #ddd4ca !important;
+  font-size: 9.5px !important;
+}
+
+body.forge-editor-active .all-tools-action small {
+  color: #7d736a !important;
+  font-size: 8.5px !important;
+}
+
+body.forge-editor-active .all-tools-footer {
+  min-height: 42px !important;
+  border-top: 1px solid var(--forge-line-dark) !important;
+  background: #181512 !important;
+  color: #756b62 !important;
+  font: 550 8px/1 var(--forge-mono) !important;
+}
+
+body.forge-editor-active .all-tools-local-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 1px !important;
+  background: #71996e !important;
+  box-shadow: none !important;
+}
+
+/* Document Tools and PDF Structure become focused work surfaces. */
+body.forge-editor-active .advanced-backdrop,
+body.forge-editor-active .native-object-backdrop {
+  background: rgba(10,8,6,.76) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+body.forge-editor-active .advanced-modal,
+body.forge-editor-active .native-object-modal {
+  width: min(1130px, calc(100vw - 40px)) !important;
+  max-height: calc(100dvh - 40px) !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 3px !important;
+  background: #211d19 !important;
+  color: #eee5db !important;
+  box-shadow: 0 34px 88px rgba(13,10,8,.5) !important;
+}
+
+body.forge-editor-active .advanced-modal > header,
+body.forge-editor-active .native-object-modal > header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 20 !important;
+  min-height: 82px;
+  margin: 0 !important;
+  padding: 18px 20px 14px !important;
+  border-bottom: 1px solid var(--forge-line-dark) !important;
+  background: #181512 !important;
+}
+
+body.forge-editor-active .advanced-modal > header .eyebrow,
+body.forge-editor-active .native-object-modal > header .eyebrow {
+  color: #b98772 !important;
+  font: 700 7.5px/1 var(--forge-mono) !important;
+  letter-spacing: .16em !important;
+}
+
+body.forge-editor-active .advanced-modal h2,
+body.forge-editor-active .native-object-modal h2 {
+  margin: 5px 0 3px !important;
+  color: #f2eadd !important;
+  font: 600 24px/1 var(--forge-editorial) !important;
+  letter-spacing: -.025em !important;
+}
+
+body.forge-editor-active .advanced-modal header p,
+body.forge-editor-active .native-object-modal header p {
+  color: #847970 !important;
+  font-size: 9.5px !important;
+  line-height: 1.4 !important;
+}
+
+body.forge-editor-active .advanced-modal > header .icon-btn,
+body.forge-editor-active .native-object-modal > header .icon-btn {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 2px !important;
+  color: #897e74 !important;
+}
+
+body.forge-editor-active .advanced-modal > header .icon-btn:hover,
+body.forge-editor-active .native-object-modal > header .icon-btn:hover {
+  background: #2c2722 !important;
+  color: #eee5db !important;
+}
+
+body.forge-editor-active .advanced-category-nav,
+body.forge-editor-active .object-section-nav {
+  top: 82px !important;
+  margin: 0 !important;
+  padding: 8px 18px !important;
+  gap: 2px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-dark) !important;
+  border-radius: 0 !important;
+  background: #211d19 !important;
+  backdrop-filter: none !important;
+}
+
+body.forge-editor-active .advanced-category-nav {
+  display: grid !important;
+  grid-template-columns: repeat(4,minmax(0,1fr)) !important;
+}
+
+body.forge-editor-active .advanced-category-nav button,
+body.forge-editor-active .object-section-nav button {
+  min-height: 34px !important;
+  border: 1px solid transparent !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: #80766d !important;
+  font-size: 8.5px !important;
+  font-weight: 650 !important;
+}
+
+body.forge-editor-active .advanced-category-nav button:hover,
+body.forge-editor-active .object-section-nav button:hover {
+  background: #29241f !important;
+  color: #ded4ca !important;
+}
+
+body.forge-editor-active .advanced-category-nav button.active,
+body.forge-editor-active .object-section-nav button.active {
+  background: #352a24 !important;
+  border-color: rgba(255,255,255,.07) !important;
+  color: #f1e8de !important;
+  box-shadow: inset 0 -2px 0 var(--forge-copper);
+}
+
+body.forge-editor-active .advanced-grid {
+  padding: 16px 18px 20px !important;
+  gap: 9px !important;
+  background: #211d19;
+}
+
+body.forge-editor-active .advanced-category-marker,
+body.forge-editor-active .object-section-heading {
+  color: #e9dfd4;
+}
+
+body.forge-editor-active .advanced-category-marker {
+  padding: 13px 2px 4px !important;
+  border-top-color: var(--forge-line-dark) !important;
+}
+
+body.forge-editor-active .advanced-category-marker > span,
+body.forge-editor-active .object-section-heading > span {
+  width: 28px !important;
+  height: 28px !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 2px !important;
+  background: #29241f !important;
+  color: #a18f82 !important;
+  font: 650 8px/1 var(--forge-mono) !important;
+}
+
+body.forge-editor-active .advanced-category-marker strong,
+body.forge-editor-active .object-section-heading strong {
+  color: #e9dfd4 !important;
+  font: 600 12px/1.15 var(--forge-editorial) !important;
+}
+
+body.forge-editor-active .advanced-category-marker small,
+body.forge-editor-active .object-section-heading small {
+  color: #796f66 !important;
+  font-size: 8.5px !important;
+}
+
+body.forge-editor-active .advanced-card {
+  gap: 9px !important;
+  padding: 12px !important;
+  border: 1px solid rgba(255,255,255,.075) !important;
+  border-radius: 2px !important;
+  background: #26211d !important;
+  color: #a69a8f !important;
+}
+
+body.forge-editor-active .advanced-card h3 {
+  color: #e9dfd4 !important;
+  font: 650 11px/1.15 var(--forge-ui) !important;
+}
+
+body.forge-editor-active .advanced-card p {
+  color: #81766d !important;
+  font-size: 9px !important;
+}
+
+body.forge-editor-active .advanced-card input:not([type="range"]),
+body.forge-editor-active .advanced-card textarea,
+body.forge-editor-active .advanced-card select {
+  min-height: 34px !important;
+  border: 1px solid rgba(255,255,255,.09) !important;
+  border-radius: 2px !important;
+  background: #181512 !important;
+  color: #e9e0d6 !important;
+  font-size: 9.5px !important;
+}
+
+body.forge-editor-active .advanced-card button {
+  min-height: 34px !important;
+  border: 1px solid rgba(255,255,255,.09) !important;
+  border-radius: 2px !important;
+  background: #302923 !important;
+  color: #d5cbc0 !important;
+  font-size: 9.5px !important;
+}
+
+body.forge-editor-active .advanced-card button:hover {
+  background: #3a322b !important;
+  color: #f1e8de !important;
+}
+
+body.forge-editor-active .advanced-card.danger-card {
+  border-color: rgba(224,123,112,.28) !important;
+  background: #2b201d !important;
+}
+
+body.forge-editor-active .advanced-card .danger-action {
+  border-color: rgba(224,123,112,.3) !important;
+  background: #3b2420 !important;
+  color: #eaa096 !important;
+}
+
+body.forge-editor-active .advanced-modal > footer {
+  margin: 0 !important;
+  padding: 10px 18px 14px !important;
+  border-top: 1px solid var(--forge-line-dark) !important;
+  color: #746a61 !important;
+  font-size: 8.5px !important;
+}
+
+/* Native object manager: remove the old split light/dark composition. */
+body.forge-editor-active .native-object-modal {
+  padding-bottom: 18px !important;
+}
+
+body.forge-editor-active .native-object-modal > .object-section-nav,
+body.forge-editor-active .native-object-modal > section,
+body.forge-editor-active .native-object-modal .object-section {
+  background: #211d19 !important;
+}
+
+body.forge-editor-active .object-section {
+  margin: 0 18px !important;
+  padding: 16px 0 20px !important;
+  border-top-color: var(--forge-line-dark) !important;
+}
+
+body.forge-editor-active .native-page-content-manager,
+body.forge-editor-active .native-object-manager,
+body.forge-editor-active .native-comment-detail-manager,
+body.forge-editor-active .native-markup-manager,
+body.forge-editor-active .native-shape-manager,
+body.forge-editor-active .native-extended-manager,
+body.forge-editor-active .form-field-property-manager,
+body.forge-editor-active .attachment-manager,
+body.forge-editor-active .image-signature-manager,
+body.forge-editor-active .document-view-manager {
+  border-color: rgba(255,255,255,.075) !important;
+  border-radius: 2px !important;
+  background: #26211d !important;
+  color: #d8cec4 !important;
+  box-shadow: none !important;
+}
+
+body.forge-editor-active .native-object-modal input:not([type="range"]),
+body.forge-editor-active .native-object-modal textarea,
+body.forge-editor-active .native-object-modal select {
+  border-color: rgba(255,255,255,.09) !important;
+  border-radius: 2px !important;
+  background: #181512 !important;
+  color: #eee5db !important;
+}
+
+body.forge-editor-active .native-object-modal button:not(.icon-btn):not(.object-section-nav button) {
+  border-radius: 2px !important;
+}
+
+@media (max-width: 760px) {
+  body.forge-editor-active .all-tools-layer {
+    inset: 0 !important;
+  }
+
+  body.forge-editor-active .all-tools-drawer {
+    left: 0 !important;
+    width: 100vw !important;
+  }
+
+  body.forge-editor-active .advanced-modal,
+  body.forge-editor-active .native-object-modal {
+    width: calc(100vw - 12px) !important;
+    max-height: calc(100dvh - 12px) !important;
+  }
+
+  body.forge-editor-active .advanced-category-nav,
+  body.forge-editor-active .object-section-nav {
+    top: 76px !important;
+    display: flex !important;
+    overflow-x: auto !important;
+    padding-inline: 10px !important;
+  }
+
+  body.forge-editor-active .advanced-category-nav button,
+  body.forge-editor-active .object-section-nav button {
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    padding-inline: 9px !important;
+  }
+
+  body.forge-editor-active .advanced-grid {
+    grid-template-columns: 1fr !important;
+    padding-inline: 10px !important;
+  }
+
+  body.forge-editor-active .object-section {
+    margin-inline: 10px !important;
+  }
+}
