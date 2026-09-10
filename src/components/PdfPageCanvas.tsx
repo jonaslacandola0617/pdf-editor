@@ -3,6 +3,7 @@ import { isRetiredPdfResource, pdfjsLib, type PDFDocumentProxy } from '../lib/pd
 import type { Annotation, NativeTextSelection, Point, Tool } from '../types'
 import { OcrTextOverlay } from './OcrTextOverlay'
 import { FormWidgetOverlay, type PageFormWidget } from './FormWidgetOverlay'
+import { SelectionTransformOverlay } from './SelectionTransformOverlay'
 import type { FormWidgetGeometry, FormWidgetTarget } from '../lib/advanced-forms'
 import '../text-layer.css'
 
@@ -124,9 +125,24 @@ function displaySelectionBounds(selection: NativeTextSelection, rotation: number
   return { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) }
 }
 
-function textHintFromTarget(target: EventTarget | null) {
-  if (!(target instanceof Element)) return ''
-  return target.closest('.pdf-text-layer span')?.textContent?.trim() || ''
+function textHintFromTarget(target: EventTarget | null, clientX?: number, clientY?: number) {
+  if (target instanceof Element) {
+    const direct = target.closest('.pdf-text-layer span, .ocr-word')?.textContent?.trim()
+    if (direct) return direct
+  }
+
+  // OCR words are intentionally pointer-transparent. When Edit text is active,
+  // use their visual geometry as a fallback hint without letting the OCR layer
+  // block the real PDF canvas or annotations underneath it.
+  if (typeof clientX === 'number' && typeof clientY === 'number') {
+    const words = Array.from(document.querySelectorAll<HTMLElement>('.ocr-word'))
+    const match = words.find((word) => {
+      const rect = word.getBoundingClientRect()
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+    })
+    if (match?.textContent?.trim()) return match.textContent.trim()
+  }
+  return ''
 }
 
 function clamp(value: number, min = 0, max = 1) { return Math.max(min, Math.min(max, value)) }
@@ -360,7 +376,7 @@ export function PdfPageCanvas({
 
   const pointerDown = (e: React.PointerEvent) => {
     if (formWidgetMode) { onSelectFormWidget?.(null, false); return }
-    if (tool === 'editText') { onPickNativeText(pointFromEvent(e), textHintFromTarget(e.target)); return }
+    if (tool === 'editText') { onPickNativeText(pointFromEvent(e), textHintFromTarget(e.target, e.clientX, e.clientY)); return }
     if (tool === 'select') {
       const p = pointFromEvent(e)
       const ink = [...annotations].reverse().find((ann) => (ann.type === 'ink' || ann.type === 'signature') && (ann.points || []).some((pt) => {
@@ -495,6 +511,7 @@ export function PdfPageCanvas({
           return <button key={ann.id} data-annotation-id={ann.id} className={`annotation ink-hitbox ${selected ? 'selected' : ''}`} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{renderInk(ann)}</button>
         })}
 
+        {/* Kept temporarily for backwards CSS compatibility. Hidden by selection-transform.css. */}
         {selectedAnnotation && selectedBounds && (
           <div className={`annotation-transform-box ${transformable ? 'full-transform' : 'resize-only'}`} style={{ left: `${selectedBounds.x * 100}%`, top: `${selectedBounds.y * 100}%`, width: `${selectedBounds.width * 100}%`, height: `${selectedBounds.height * 100}%`, transform: annotationTransform(selectedAnnotation), transformOrigin: 'center center' }}>
             <button className="annotation-transform-handle resize" aria-label="Resize selection" title="Resize" onPointerDown={(e) => beginAnnotationEdit(e, selectedAnnotation, 'resize')} />
@@ -503,6 +520,17 @@ export function PdfPageCanvas({
               <button className="annotation-transform-handle skew" aria-label="Skew selection" title="Skew" onPointerDown={(e) => beginAnnotationEdit(e, selectedAnnotation, 'skew')} />
             </>}
           </div>
+        )}
+
+        {selectedAnnotation && selectedAnnotation.type !== 'note' && (
+          <SelectionTransformOverlay
+            annotation={selectedAnnotation}
+            pageWidth={size.width}
+            pageHeight={size.height}
+            containerRef={wrapRef}
+            onBegin={onBeginAnnotationEdit}
+            onUpdate={onUpdateAnnotation}
+          />
         )}
 
         {preview && (preview.type === 'ink' || preview.type === 'signature') && renderInk({ id: 'preview', page: pageIndex, type: preview.type, x: 0, y: 0, color, strokeWidth, points: preview.points || [] }, true)}
