@@ -5,8 +5,9 @@
   "type": "module",
   "engines": { "node": ">=20.19.0" },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "prepare:assets": "node scripts/prepare-assets.mjs",
+    "dev": "npm run prepare:assets && vite",
+    "build": "npm run prepare:assets && tsc -b && vite build",
     "preview": "vite preview",
     "test:unit": "node --test --experimental-strip-types unit/*.test.ts",
     "test:browser": "playwright test --project=chromium",
