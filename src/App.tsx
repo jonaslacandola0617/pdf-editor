@@ -1313,6 +1313,7 @@ export default function App() {
       </header>
 
       <section className={`workspace forge-editor-workbench ${navigatorOpen ? 'navigator-open' : 'navigator-closed'} ${inspectorOpen ? 'inspector-open' : 'inspector-closed'}`}>
+        {(navigatorOpen || inspectorOpen) && <button className="forge-mobile-panel-backdrop" aria-label="Close side panel" onClick={() => { setNavigatorOpen(false); setInspectorOpen(false) }} />}
         <aside className="left-panel forge-navigator">
           <div className="forge-navigator-chrome">
             <div>
