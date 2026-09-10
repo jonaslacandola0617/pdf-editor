@@ -1556,3 +1556,390 @@ body[data-pdf-mode="organize"] .thumb-drag-wrap.multi-selected {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
+
+
+/* ---------- Secondary workspaces: keep the design language intact ---------- */
+
+.all-tools-launcher {
+  border-radius: 0 !important;
+  font-family: var(--forge-ui) !important;
+}
+.all-tools-launcher.active,
+.all-tools-launcher:hover { background: rgba(255,255,255,.05) !important; }
+.all-tools-launcher.active::before { border-radius: 0 !important; background: var(--forge-copper) !important; }
+
+.all-tools-drawer { width: min(430px, calc(100vw - 48px)) !important; }
+.all-tools-header {
+  padding: 25px 20px 17px !important;
+  background: var(--forge-paper-hi) !important;
+}
+.all-tools-eyebrow {
+  color: var(--forge-copper) !important;
+  font: 500 7px/1 var(--forge-mono) !important;
+  letter-spacing: .12em !important;
+}
+.all-tools-header h2 { font: 400 27px/1 var(--forge-display) !important; letter-spacing: -.02em; }
+.all-tools-header p { font-size: 9px !important; line-height: 1.55 !important; }
+.all-tools-close {
+  width: 33px !important; height: 33px !important;
+  border-radius: 0 !important;
+  border-color: var(--forge-line-strong) !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+}
+.all-tools-close:hover { background: var(--forge-paper-low) !important; color: var(--forge-text) !important; }
+.all-tools-content { padding: 0 18px 22px !important; }
+.all-tools-search {
+  margin: 14px 0 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  background: transparent !important;
+}
+.all-tools-categories {
+  padding: 12px 0 !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+.all-tools-categories button {
+  min-height: 35px !important;
+  padding: 0 7px !important;
+  border: 0 !important;
+  border-left: 1px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  justify-content: flex-start !important;
+  font-size: 8px !important;
+  text-align: left !important;
+}
+.all-tools-categories button.active {
+  border-left-color: var(--forge-copper) !important;
+  background: var(--forge-copper-soft) !important;
+  color: var(--forge-text) !important;
+}
+.all-tools-section { padding: 20px 0 6px !important; border-bottom-color: var(--forge-line) !important; }
+.all-tools-section-title h3 { font: 400 19px/1.05 var(--forge-display) !important; }
+.all-tools-section-title p { margin-top: 5px !important; font-size: 8px !important; line-height: 1.45 !important; }
+.all-tools-grid { grid-template-columns: 1fr !important; gap: 0 !important; }
+.all-tools-action {
+  min-height: 57px !important;
+  padding: 8px 3px !important;
+  grid-template-columns: 28px minmax(0,1fr) !important;
+  gap: 9px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  transform: none !important;
+}
+.all-tools-action:hover { background: var(--forge-paper-low) !important; }
+.all-tools-action-icon {
+  width: 27px !important; height: 34px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-copper) !important;
+}
+.all-tools-action strong { font-size: 9.5px !important; font-weight: 650 !important; }
+.all-tools-action small { margin-top: 3px !important; font-size: 8px !important; line-height: 1.45 !important; }
+.all-tools-footer {
+  min-height: 40px !important;
+  background: var(--forge-paper) !important;
+  color: var(--forge-faint) !important;
+  font: 400 7px/1 var(--forge-mono) !important;
+}
+
+/* Document tools becomes a technical folio rather than a card dashboard. */
+.advanced-backdrop,
+.native-object-backdrop {
+  background: rgba(18,16,13,.55) !important;
+  backdrop-filter: blur(7px) !important;
+}
+.advanced-modal,
+.native-object-modal {
+  width: min(1160px, calc(100vw - 46px)) !important;
+  max-height: 91vh !important;
+  padding: 0 !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-top: 3px solid var(--forge-ink) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+  box-shadow: 0 35px 100px rgba(11,10,8,.34) !important;
+}
+.advanced-modal > header,
+.native-object-modal > header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  min-height: 94px;
+  margin: 0 !important;
+  padding: 20px 22px 16px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  background: color-mix(in srgb, var(--forge-paper-hi) 94%, transparent) !important;
+  backdrop-filter: blur(14px);
+}
+.advanced-modal > header .eyebrow,
+.native-object-modal > header .eyebrow {
+  color: var(--forge-copper) !important;
+  font: 500 7px/1 var(--forge-mono) !important;
+  letter-spacing: .13em !important;
+}
+.advanced-modal > header h2,
+.native-object-modal > header h2 {
+  margin: 6px 0 5px !important;
+  font: 400 28px/1 var(--forge-display) !important;
+  letter-spacing: -.02em !important;
+}
+.advanced-modal > header p,
+.native-object-modal > header p {
+  color: var(--forge-muted) !important;
+  font-size: 9px !important;
+  line-height: 1.5 !important;
+}
+.advanced-modal > header .icon-btn,
+.native-object-modal > header .icon-btn {
+  width: 34px !important; height: 34px !important;
+  border-radius: 0 !important;
+  border: 1px solid var(--forge-line) !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+}
+.advanced-modal > header .icon-btn:hover,
+.native-object-modal > header .icon-btn:hover { background: var(--forge-paper-low) !important; color: var(--forge-text) !important; }
+
+.advanced-category-nav,
+.object-section-nav {
+  position: sticky;
+  top: 94px;
+  z-index: 14;
+  min-height: 48px;
+  margin: 0 !important;
+  padding: 0 20px !important;
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: color-mix(in srgb, var(--forge-paper) 96%, transparent) !important;
+  backdrop-filter: blur(12px);
+}
+.advanced-category-nav button,
+.object-section-nav button {
+  position: relative;
+  min-height: 47px !important;
+  padding: 0 15px !important;
+  border: 0 !important;
+  border-right: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+}
+.advanced-category-nav button:first-child,
+.object-section-nav button:first-child { border-left: 1px solid var(--forge-line) !important; }
+.advanced-category-nav button::before {
+  display: inline-block;
+  margin-right: 7px;
+  color: var(--forge-copper);
+  font: 400 6.5px/1 var(--forge-mono);
+}
+.advanced-category-nav button:nth-child(1)::before { content: "01"; }
+.advanced-category-nav button:nth-child(2)::before { content: "02"; }
+.advanced-category-nav button:nth-child(3)::before { content: "03"; }
+.advanced-category-nav button:nth-child(4)::before { content: "04"; }
+.advanced-category-nav button:hover,
+.object-section-nav button:hover,
+.object-section-nav button.active {
+  background: var(--forge-paper-low) !important;
+  color: var(--forge-text) !important;
+}
+.object-section-nav button.active::after {
+  content: "";
+  position: absolute;
+  left: 12px; right: 12px; bottom: -1px;
+  height: 2px;
+  background: var(--forge-copper);
+}
+
+.advanced-grid {
+  padding: 0 22px 28px !important;
+  grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  gap: 0 28px !important;
+}
+.advanced-category-marker {
+  grid-column: 1 / -1 !important;
+  min-height: 74px;
+  margin: 0 !important;
+  padding: 22px 0 12px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+.advanced-category-marker > span,
+.object-section-heading > span {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--forge-copper) !important;
+  font: 500 7px/1 var(--forge-mono) !important;
+}
+.advanced-category-marker strong,
+.object-section-heading strong {
+  font: 400 19px/1 var(--forge-display) !important;
+  color: var(--forge-text) !important;
+}
+.advanced-category-marker small,
+.object-section-heading small { color: var(--forge-muted) !important; font-size: 8px !important; }
+
+.advanced-card {
+  min-height: 0 !important;
+  padding: 17px 2px 19px !important;
+  gap: 9px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-text) !important;
+}
+.advanced-card h3 {
+  font: 400 17px/1.1 var(--forge-display) !important;
+  color: var(--forge-text) !important;
+}
+.advanced-card h3 svg { color: var(--forge-copper) !important; width: 15px !important; }
+.advanced-card p { font-size: 8px !important; line-height: 1.5 !important; }
+.advanced-card input:not([type="range"]),
+.advanced-card select,
+.crop-grid input,
+.position-grid input {
+  min-height: 34px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-text) !important;
+  padding: 6px 4px !important;
+}
+.advanced-card button,
+.advanced-row button,
+.stamp-row button {
+  min-height: 34px !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+  font-size: 8px !important;
+}
+.advanced-card button:hover { background: var(--forge-paper-low) !important; border-color: var(--forge-copper) !important; }
+.danger-card {
+  padding-left: 12px !important;
+  border-left: 2px solid color-mix(in srgb, var(--forge-red) 55%, transparent) !important;
+  background: transparent !important;
+}
+.danger-action { background: color-mix(in srgb, var(--forge-red) 8%, var(--forge-paper-hi)) !important; color: var(--forge-red) !important; }
+.crop-grid label,
+.position-grid label,
+.check-row { color: var(--forge-muted) !important; font-size: 8px !important; }
+
+/* PDF Objects: paper hierarchy around technical data. */
+.native-object-modal { background: var(--forge-paper-hi) !important; }
+.native-object-modal .object-section {
+  margin: 0 22px !important;
+  padding: 20px 0 8px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+.object-section-heading {
+  min-height: 51px !important;
+  margin: 0 0 12px !important;
+  display: grid !important;
+  grid-template-columns: 30px minmax(0,1fr) !important;
+  align-items: start !important;
+  gap: 8px !important;
+}
+.native-page-content-manager,
+.native-object-manager,
+.attachment-manager,
+.image-signature-manager,
+.native-comment-detail-manager,
+.native-markup-manager,
+.native-shape-manager,
+.native-extended-manager,
+.form-field-property-manager,
+.advanced-form-widget-manager,
+.document-view-manager {
+  margin-top: 10px !important;
+  padding: 12px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-text) !important;
+}
+.native-page-content-heading strong,
+.native-object-manager h3,
+.attachment-manager-heading strong,
+.image-signature-heading strong { color: var(--forge-text) !important; }
+.native-page-content-heading small,
+.native-object-manager > p,
+.attachment-manager-heading small,
+.image-signature-heading small { color: var(--forge-muted) !important; }
+.native-page-content-summary span,
+.native-object-tabs button {
+  border-radius: 0 !important;
+  border-color: var(--forge-line) !important;
+  background: var(--forge-paper) !important;
+  color: var(--forge-muted) !important;
+}
+.native-object-tabs button.active { border-color: var(--forge-copper) !important; background: var(--forge-copper-soft) !important; color: var(--forge-text) !important; }
+.native-page-content-row,
+.native-object-row,
+.attachment-row {
+  border: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper) !important;
+  color: var(--forge-text) !important;
+}
+.native-page-content-row textarea,
+.native-page-content-row input,
+.native-object-row textarea,
+.native-object-row input,
+.attachment-add-row input,
+.image-signature-name input,
+.image-signature-grid input {
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+}
+.native-page-content-actions button,
+.native-object-actions button,
+.attachment-row > button,
+.attachment-add-row button,
+.image-signature-heading > button,
+.image-signature-place {
+  border-radius: 0 !important;
+  border-color: var(--forge-line-strong) !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+}
+.native-page-content-meta,
+.native-object-meta,
+.native-object-field,
+.native-bookmark-target,
+.native-link-geometry label,
+.native-page-text-fields label,
+.native-page-image-fields label { color: var(--forge-muted) !important; }
+
+@media (max-width: 760px) {
+  .advanced-modal,
+  .native-object-modal { width: calc(100vw - 18px) !important; max-height: 94vh !important; }
+  .advanced-category-nav,
+  .object-section-nav { overflow-x: auto !important; padding: 0 8px !important; }
+  .advanced-category-nav button,
+  .object-section-nav button { flex: 0 0 auto; min-width: 125px; }
+  .advanced-grid { grid-template-columns: 1fr !important; padding: 0 14px 20px !important; }
+  .advanced-category-marker { grid-column: 1 !important; }
+  .native-object-modal .object-section { margin: 0 14px !important; }
+}
