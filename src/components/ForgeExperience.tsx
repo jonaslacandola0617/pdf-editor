@@ -70,13 +70,13 @@ const toolDefinitions: ToolDefinition[] = [
   { name: 'Merge documents', description: 'Append PDFs or images into one ordered document.', group: 'Pages', icon: FileInput, intent: 'merge' },
   { name: 'Image to PDF', description: 'Turn PNG and JPG files into PDF pages locally.', group: 'Build & Convert', icon: FileInput, intent: 'imageToPdf' },
   { name: 'Export pages as images', description: 'Render PDF pages into high-quality local image files.', group: 'Build & Convert', icon: Download, intent: 'objects' },
-  { name: 'Make searchable', description: 'Use local OCR to add searchable text to scanned pages.', group: 'Build & Convert', icon: Search, intent: 'document' },
+  { name: 'Make searchable', description: 'Use local OCR to add searchable text to scanned pages.', group: 'Build & Convert', icon: Search, intent: 'optimize' },
   { name: 'Compress & optimize', description: 'Reduce document overhead while preserving useful quality.', group: 'Finish & Protect', icon: Archive, intent: 'optimize' },
   { name: 'Fill & sign', description: 'Complete form fields and place signatures into the document.', group: 'Finish & Protect', icon: FormInput, intent: 'sign' },
   { name: 'Create form fields', description: 'Prepare and arrange interactive fields on document pages.', group: 'Finish & Protect', icon: FormInput, intent: 'forms' },
   { name: 'Redact content', description: 'Permanently remove sensitive visual content before sharing.', group: 'Finish & Protect', icon: ScanLine, intent: 'redact' },
   { name: 'Protect PDF', description: 'Apply password protection and document security controls.', group: 'Finish & Protect', icon: Bookmark, intent: 'protect' },
-  { name: 'Remove private data', description: 'Clear metadata, scripts, attachments, and unsafe active content.', group: 'Finish & Protect', icon: Trash2, intent: 'document' },
+  { name: 'Remove private data', description: 'Clear metadata, scripts, attachments, and unsafe active content.', group: 'Finish & Protect', icon: Trash2, intent: 'protect' },
 ]
 
 function readFavorites() {
@@ -112,6 +112,24 @@ function activateEditorMode(mode: EditorMode) {
   if (mode === 'pages') findButtonByTitle('Pages')?.click()
 }
 
+function openAdvancedCategory(label: string) {
+  findButtonByTitle('Document tools')?.click()
+  window.setTimeout(() => {
+    Array.from(document.querySelectorAll<HTMLButtonElement>('.advanced-category-nav button'))
+      .find((button) => button.textContent?.trim() === label)
+      ?.click()
+  }, 80)
+}
+
+function openObjectSection(label: string) {
+  findButtonByTitle('Embedded PDF objects')?.click()
+  window.setTimeout(() => {
+    Array.from(document.querySelectorAll<HTMLButtonElement>('.object-section-nav button'))
+      .find((button) => button.textContent?.trim() === label)
+      ?.click()
+  }, 80)
+}
+
 function runEditorIntent(intent: Exclude<ToolIntent, null>) {
   switch (intent) {
     case 'edit':
@@ -126,9 +144,13 @@ function runEditorIntent(intent: Exclude<ToolIntent, null>) {
       findButtonByText('Merge')?.click()
       break
     case 'optimize':
+      openAdvancedCategory('Output & optimize')
+      break
     case 'protect':
+      openAdvancedCategory('Security & privacy')
+      break
     case 'document':
-      findButtonByTitle('Document tools')?.click()
+      openAdvancedCategory('Pages & content')
       break
     case 'redact':
       activateEditorMode('review')
@@ -142,7 +164,7 @@ function runEditorIntent(intent: Exclude<ToolIntent, null>) {
       activateEditorMode('pages')
       break
     case 'objects':
-      findButtonByTitle('Embedded PDF objects')?.click()
+      openObjectSection('View & navigation')
       break
     case 'forms':
       activateEditorMode('sign')
