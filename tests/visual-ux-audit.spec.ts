@@ -153,7 +153,7 @@ test('visual audit — editor desktop hierarchy, density, focus and primary work
   await expectCoreDesktopGeometry(page)
   await expectCriticalTargets(page, 28)
   await expectVisibleFocus(page, '.editor-toolbar button')
-  await expectVisibleFocus(page, '.rail button')
+  await expectVisibleFocus(page, '.forge-navigator-tabs button')
   await expect(page.getByRole('button', { name: 'Export PDF' })).toBeVisible()
 
   const search = page.getByPlaceholder('Find in document')
@@ -241,13 +241,15 @@ test('visual audit — tablet and mobile flows remain discoverable', async ({ pa
   await shot(page, '10-all-tools-mobile')
   const drawer = page.locator('.all-tools-drawer')
   await expect(drawer).toBeVisible()
-  await drawer.getByRole('button', { name: 'Organize pages', exact: true }).click()
-  await drawer.getByRole('button', { name: /^Pages/ }).click()
-  await expect(page.locator('.left-panel')).toBeVisible()
+  await page.getByTitle('Close All Tools').click()
+
+  await page.getByTitle('Toggle navigator').click()
+  await expect(page.locator('.forge-navigator')).toBeVisible()
   await shot(page, '11-mobile-pages-sheet')
+  await page.getByTitle('Hide navigator').click()
 
   await page.getByTitle('Properties').click()
-  await expect(page.locator('.right-panel')).toBeVisible()
+  await expect(page.locator('.forge-inspector')).toBeVisible()
   await shot(page, '12-mobile-properties-sheet')
   assertNoErrors()
 })
