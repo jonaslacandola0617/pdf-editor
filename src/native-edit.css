@@ -11,15 +11,7 @@
   border: 0 !important;
 }
 
-/* Acrobat-style behavior: document text is edited on the page. The properties
-   sidebar must never become a second text editor or an apply/delete workflow. */
-body:has(.editor-toolbar button[title="Edit existing text"].active) .right-panel {
-  display: none !important;
-}
-
-body:has(.editor-toolbar button[title="Edit existing text"].active) .workspace {
-  grid-template-columns: 52px 220px minmax(480px, 1fr) !important;
-}
+/* Native text editing is on-page. Workbench panel geometry is owned by App state. */
 
 .native-inline-text-input {
   position: fixed;
@@ -59,14 +51,6 @@ body.inline-native-edit-active .stage-top-hint::after {
 }
 
 @media (max-width: 760px) {
-  body:has(.editor-toolbar button[title="Edit existing text"].active) .workspace {
-    grid-template-columns: 46px minmax(0, 1fr) !important;
-  }
-
-  body:has(.editor-toolbar button[title="Edit existing text"].active) .left-panel {
-    display: none !important;
-  }
-
   .native-inline-text-input {
     z-index: 188;
   }
