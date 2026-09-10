@@ -6,6 +6,7 @@ export { isRetiredPdfResource, retirePdfDocument } from './pdfjs-lifecycle'
 
 basePdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 
+const STANDARD_FONT_DATA_URL = '/pdfjs-standard-fonts/'
 const patchedDocuments = new WeakSet<PDFDocumentProxy>()
 const patchedPages = new WeakSet<PDFPageProxy>()
 
@@ -88,7 +89,7 @@ function patchDocument(doc: PDFDocumentProxy) {
 
 function getDocument(source: Parameters<typeof basePdfjs.getDocument>[0]) {
   const hardenedSource = source && typeof source === 'object' && !ArrayBuffer.isView(source) && !(source instanceof ArrayBuffer) && !(source instanceof URL)
-    ? { ...source, isEvalSupported: false }
+    ? { ...source, isEvalSupported: false, standardFontDataUrl: STANDARD_FONT_DATA_URL }
     : source
   const task = basePdfjs.getDocument(hardenedSource as Parameters<typeof basePdfjs.getDocument>[0])
   void task.promise.then(patchDocument).catch(() => undefined)
