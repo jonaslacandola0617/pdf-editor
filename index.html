@@ -4,10 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#181713" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="dark light" />
     <meta name="application-name" content="PDF Forge" />
     <meta name="description" content="Edit, organize, merge, compress, sign, redact, and export PDFs in your browser with local-first processing. No account or server upload required." />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+
+    <script>
+      try {
+        const savedTheme = localStorage.getItem('pdf-forge-theme') || 'dark';
+        document.documentElement.dataset.theme = savedTheme;
+        if (!localStorage.getItem('pdf-forge-theme')) localStorage.setItem('pdf-forge-theme', 'dark');
+      } catch {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    </script>
 
     <link rel="canonical" href="https://pdfforge.jonasl.online/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
