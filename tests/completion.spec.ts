@@ -115,7 +115,7 @@ test('page insertion, watermark, page numbers, crop and image insertion modify t
   expect(text).toContain('QA FOOTER')
 })
 
-test('selected annotations can move and box annotations can resize', async ({ page }, testInfo) => {
+test('selected annotations use one blue frame and eight-point resizing', async ({ page }, testInfo) => {
   const source = testInfo.outputPath('annotation-transform.pdf')
   await makePdf(source, ['MOVE AND RESIZE 1234'])
   await openFile(page, source)
@@ -139,11 +139,17 @@ test('selected annotations can move and box annotations can resize', async ({ pa
 
   await box.click()
   await expect(box).toHaveClass(/selected/)
-  const handle = page.locator('.annotation-transform-handle.resize')
+  await expect(page.locator('.selection-transform-frame')).toBeVisible()
+  await expect(page.locator('.selection-transform-handle')).toHaveCount(8)
+  await expect(page.locator('.annotation-transform-box')).toBeHidden()
+  const handle = page.locator('.selection-transform-handle.handle-se')
   await expect(handle).toBeVisible()
   const handleBox = await handle.boundingBox()
   if (!handleBox) throw new Error('Resize handle unavailable')
-  await page.mouse.move(handleBox.x + 5, handleBox.y + 5); await page.mouse.down(); await page.mouse.move(handleBox.x + 70, handleBox.y + 55, { steps: 8 }); await page.mouse.up()
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + 70, handleBox.y + handleBox.height / 2 + 55, { steps: 8 })
+  await page.mouse.up()
   const resized = await box.boundingBox()
   expect((resized?.width || 0) + (resized?.height || 0)).toBeGreaterThan((moved?.width || 0) + (moved?.height || 0) + 20)
 })

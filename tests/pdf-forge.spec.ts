@@ -79,9 +79,16 @@ test('viewer, search, page organization, merge, extract, annotations, undo/redo 
   await expect(stageStatus(page)).toContainText('1 matching page')
   await expect(pageNumber(page)).toHaveValue('3')
 
-  const beforeRotate = await page.locator('.pdf-page').first().boundingBox()
+  const rotatingPageIndex = Number(await pageNumber(page).inputValue()) - 1
+  const rotatingPage = page.locator(`.page-view[data-page="${rotatingPageIndex}"] .pdf-page`)
+  const beforeRotate = await rotatingPage.boundingBox()
+  if (!beforeRotate) throw new Error('Active page was not rendered')
   await page.getByTitle('Rotate left').click()
-  await expect.poll(async () => (await page.locator('.pdf-page').first().boundingBox())?.width || 0).not.toBe(beforeRotate?.width || 0)
+  await expect.poll(async () => {
+    const after = await rotatingPage.boundingBox()
+    if (!after) return 0
+    return Math.abs(after.width - beforeRotate.width) + Math.abs(after.height - beforeRotate.height)
+  }).toBeGreaterThan(10)
   await page.getByTitle('Rotate right').click()
   await page.getByRole('button', { name: 'Duplicate' }).click(); await expect(page.locator('.thumbnail')).toHaveCount(4)
   await page.getByRole('button', { name: 'Delete' }).click(); await expect(page.locator('.thumbnail')).toHaveCount(3)

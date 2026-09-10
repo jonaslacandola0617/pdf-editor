@@ -24,7 +24,10 @@ function selectionBox() {
 }
 
 function clickHiddenAction(selector: string) {
-  document.querySelector<HTMLButtonElement>(selector)?.click()
+  const button = document.querySelector<HTMLButtonElement>(selector)
+  if (!button || button.disabled) return false
+  button.click()
+  return true
 }
 
 export function InlineNativeTextEditor() {
@@ -32,6 +35,7 @@ export function InlineNativeTextEditor() {
   const editorRef = useRef<HTMLTextAreaElement | null>(null)
   const lastSelectionKey = useRef('')
   const originalValue = useRef('')
+  const latestValue = useRef('')
   const finishing = useRef(false)
 
   const finishEdit = (mode: 'apply' | 'cancel') => {
@@ -39,26 +43,32 @@ export function InlineNativeTextEditor() {
     finishing.current = true
 
     if (mode === 'cancel') {
-      clickHiddenAction('.native-edit-actions .soft-btn')
+      if (!clickHiddenAction('.native-edit-actions .soft-btn')) finishing.current = false
       return
     }
 
     const source = sourceEditor()
-    if (!source) return
-    const value = source.value.replace(/[\r\n]+/g, ' ')
+    if (!source) {
+      finishing.current = false
+      return
+    }
+
+    // Use the inline editor's latest value instead of relying on blur/change ordering.
+    // Pointer-down outside the editor commits before the page can clear nativeSelection.
+    const value = latestValue.current.replace(/[\r\n]+/g, ' ')
     setReactTextAreaValue(source, value)
 
     if (value === originalValue.current) {
-      clickHiddenAction('.native-edit-actions .soft-btn')
+      if (!clickHiddenAction('.native-edit-actions .soft-btn')) finishing.current = false
       return
     }
 
     if (!value.length) {
-      clickHiddenAction('.native-delete-button')
+      if (!clickHiddenAction('.native-delete-button')) finishing.current = false
       return
     }
 
-    clickHiddenAction('.native-edit-actions .primary')
+    if (!clickHiddenAction('.native-edit-actions .primary')) finishing.current = false
   }
 
   useEffect(() => {
@@ -74,6 +84,7 @@ export function InlineNativeTextEditor() {
           document.body.classList.remove('inline-native-edit-active')
           lastSelectionKey.current = ''
           originalValue.current = ''
+          latestValue.current = ''
           finishing.current = false
           return
         }
@@ -98,6 +109,7 @@ export function InlineNativeTextEditor() {
         if (lastSelectionKey.current !== key) {
           lastSelectionKey.current = key
           originalValue.current = source.value
+          latestValue.current = source.value
           finishing.current = false
           requestAnimationFrame(() => {
             const editor = editorRef.current
@@ -126,6 +138,20 @@ export function InlineNativeTextEditor() {
     }
   }, [])
 
+  useEffect(() => {
+    const commitBeforeSelectionChanges = (event: PointerEvent) => {
+      const editor = editorRef.current
+      if (!editor || !document.body.classList.contains('inline-native-edit-active')) return
+      if (event.target instanceof Node && editor.contains(event.target)) return
+      finishEdit('apply')
+    }
+
+    // Capture phase is intentional: commit native text before PDF/page handlers can
+    // clear the native selection that the async save operation needs.
+    document.addEventListener('pointerdown', commitBeforeSelectionChanges, true)
+    return () => document.removeEventListener('pointerdown', commitBeforeSelectionChanges, true)
+  }, [])
+
   if (!overlay) return null
 
   return (
@@ -149,6 +175,7 @@ export function InlineNativeTextEditor() {
         if (!source) return
         finishing.current = false
         const value = event.target.value.replace(/[\r\n]+/g, ' ')
+        latestValue.current = value
         setReactTextAreaValue(source, value)
         setOverlay((current) => current ? { ...current, value } : current)
       }}
