@@ -2302,3 +2302,33 @@ body.forge-editor-active .modal-icon {
     animation-duration: .01ms !important;
   }
 }
+
+
+/* Screenshot audit refinements */
+body.forge-editor-active .brand.compact {
+  color: #f2eadf !important;
+}
+body.forge-editor-active .brand.compact > span:last-child {
+  color: #f2eadf !important;
+}
+body.forge-editor-active .brand.compact .brand-mark + span {
+  color: #f2eadf !important;
+}
+
+@media (max-width: 760px) {
+  .forge-mode-switch {
+    height: 38px;
+  }
+  body.forge-editor-active .editor-toolbar .tool-group button {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  body.forge-editor-active .top-actions .primary {
+    min-width: 48px !important;
+    height: 38px !important;
+  }
+  body.forge-editor-active .top-actions .icon-btn {
+    width: 38px !important;
+    height: 38px !important;
+  }
+}
