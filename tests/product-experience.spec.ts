@@ -18,7 +18,7 @@ test('home is a focused PDF workspace with documents and tool navigation', async
   await expect(product.getByRole('heading', { name: /Open a document/i })).toBeVisible()
   await expect(product.getByRole('button', { name: /Open PDF/i }).first()).toBeVisible()
   await expect(product.getByRole('heading', { name: /Pick up where you left off/i })).toBeVisible()
-  await expect(product.getByText('Local-first processing')).toBeVisible()
+  await expect(product.getByText('Processed locally on this device')).toBeVisible()
 
   await product.getByRole('button', { name: 'Use dark appearance' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
