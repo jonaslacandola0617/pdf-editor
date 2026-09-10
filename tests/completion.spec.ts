@@ -17,7 +17,7 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function openDocumentTools(page: Page) {
@@ -26,13 +26,18 @@ async function openDocumentTools(page: Page) {
   return page.locator('.advanced-modal')
 }
 
+async function chooseDocumentTool(tools: ReturnType<Page['locator']>, category: string, tool: string) {
+  await tools.locator('.advanced-category-rail').getByRole('button', { name: new RegExp(category, 'i') }).click()
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: tool, exact: true }).click()
+}
+
 async function closeDocumentTools(page: Page) {
   await page.locator('.advanced-modal > header .icon-btn').click()
   await expect(page.locator('.advanced-modal')).toHaveCount(0)
 }
 
 async function dragOnPdf(page: Page, fromX: number, fromY: number, toX: number, toY: number) {
-  const box = await page.locator('.pdf-page').boundingBox()
+  const box = await page.locator('.pdf-page').first().boundingBox()
   if (!box) throw new Error('PDF page has no bounding box')
   await page.mouse.move(box.x + box.width * fromX, box.y + box.height * fromY)
   await page.mouse.down()
@@ -65,24 +70,29 @@ test('page insertion, watermark, page numbers, crop and image insertion modify t
   await openFile(page, source)
 
   let tools = await openDocumentTools(page)
+  await chooseDocumentTool(tools, 'Pages & content', 'Pages')
   await tools.getByRole('button', { name: 'Blank after' }).click()
   await expect(page.locator('.thumbnail')).toHaveCount(3, { timeout: 20_000 })
 
   tools = page.locator('.advanced-modal')
-  await tools.getByPlaceholder('Watermark text').fill('QA WATERMARK 6622')
-  await tools.getByRole('button', { name: 'All pages' }).click()
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: 'Watermark & stamps', exact: true }).click()
+  await tools.getByLabel('Watermark text').fill('QA WATERMARK 6622')
+  await tools.getByRole('button', { name: 'Apply to all pages' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Applying watermark complete', { timeout: 20_000 })
 
-  await tools.getByPlaceholder(/Header/).fill('HEADER {page}/{pages}')
-  await tools.getByPlaceholder('Footer text').fill('QA FOOTER')
-  await tools.getByRole('button', { name: 'Apply + page numbers' }).click()
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: 'Header, footer & numbers', exact: true }).click()
+  await tools.getByLabel('Header').fill('HEADER {page}/{pages}')
+  await tools.getByLabel('Footer').fill('QA FOOTER')
+  await tools.getByRole('button', { name: 'Apply header, footer & page numbers' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Adding headers and page numbers complete', { timeout: 20_000 })
 
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: 'Insert image', exact: true }).click()
   const imageChooser = page.waitForEvent('filechooser')
-  await tools.getByRole('button', { name: 'Choose image' }).click()
+  await tools.getByRole('button', { name: 'Choose PNG or JPG' }).click()
   await (await imageChooser).setFiles(png)
   await expect(page.locator('.stage-top-hint')).toContainText('Adding image complete', { timeout: 20_000 })
 
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: 'Crop page', exact: true }).click()
   await tools.locator('.crop-grid input').nth(0).fill('5')
   await tools.getByRole('button', { name: 'Apply crop' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Cropping page complete', { timeout: 20_000 })
@@ -129,7 +139,7 @@ test('selected annotations can move and box annotations can resize', async ({ pa
 
   await box.click()
   await expect(box).toHaveClass(/selected/)
-  const handle = box.locator('.annotation-resize-handle')
+  const handle = page.locator('.annotation-transform-handle.resize')
   await expect(handle).toBeVisible()
   const handleBox = await handle.boundingBox()
   if (!handleBox) throw new Error('Resize handle unavailable')
@@ -148,6 +158,7 @@ test('secure redaction removes underlying text from the rebuilt page', async ({ 
   await dragOnPdf(page, .08, .07, .78, .18)
   await expect(page.locator('.box-annotation.redaction')).toHaveCount(1)
   const tools = await openDocumentTools(page)
+  await chooseDocumentTool(tools, 'Security & privacy', 'Secure redaction')
   await tools.getByRole('button', { name: 'Apply marked redactions' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Applying secure redactions complete', { timeout: 60_000 })
   await closeDocumentTools(page)
@@ -168,6 +179,7 @@ test('OCR can be committed as a searchable text layer in the exported PDF', asyn
   await page.screenshot({ path: scan, fullPage: true })
   await openFile(page, scan)
   const tools = await openDocumentTools(page)
+  await chooseDocumentTool(tools, 'Output & optimize', 'OCR searchable PDF')
   await tools.getByRole('button', { name: 'Make PDF searchable' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Creating searchable PDF complete', { timeout: 180_000 })
   await closeDocumentTools(page)
@@ -191,9 +203,11 @@ test('QPDF optimization and AES-256 password protected export run locally', asyn
     }
   })
   const tools = await openDocumentTools(page)
+  await chooseDocumentTool(tools, 'Output & optimize', 'Lossless optimize')
   await tools.getByRole('button', { name: 'Optimize PDF' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Optimizing PDF complete', { timeout: 60_000 })
-  await tools.getByPlaceholder('Open password').fill('ForgeQA!2026')
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: 'Password protect', exact: true }).click()
+  await tools.getByLabel('Open password').fill('ForgeQA!2026')
   const protectedDownload = page.waitForEvent('download')
   await tools.getByRole('button', { name: /Export protected PDF/ }).click()
   const protectedPath = testInfo.outputPath('protected.pdf')
