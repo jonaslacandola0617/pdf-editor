@@ -3256,7 +3256,7 @@ body.pdf-product-editor .floating-nav span {
 .forge-dock-actions {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(7, minmax(82px, 1fr));
+  grid-template-columns: repeat(6, minmax(92px, 1fr));
   align-items: stretch;
 }
 
@@ -3272,7 +3272,7 @@ body.pdf-product-editor .floating-nav span {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 650;
   text-align: center;
 }
