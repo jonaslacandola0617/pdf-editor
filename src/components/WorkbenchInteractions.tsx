@@ -1,8 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import { FileText, Highlighter, MessageSquareText, MousePointer2, PenLine, ScanLine, Settings2, Type, X } from 'lucide-react'
+import {
+  ChevronRight,
+  Clipboard,
+  Copy,
+  FileText,
+  Highlighter,
+  MessageSquareText,
+  MousePointer2,
+  PenLine,
+  Redo2,
+  ScanLine,
+  Scissors,
+  Settings2,
+  Trash2,
+  Type,
+  Undo2,
+} from 'lucide-react'
+import '../context-action-menu.css'
 
 const THEME_KEY = 'pdf-forge-theme'
 const VIEW_KEY = 'pdf-forge-view-mode'
+const ANNOTATION_ACTION_EVENT = 'pdf-forge:annotation-action'
 
 // Dark is the default for first-time visitors. Existing users keep their explicit choice.
 if (typeof window !== 'undefined' && localStorage.getItem(THEME_KEY) === null) {
@@ -10,7 +28,17 @@ if (typeof window !== 'undefined' && localStorage.getItem(THEME_KEY) === null) {
   document.documentElement.dataset.theme = 'dark'
 }
 
-type ContextMenuState = { x: number; y: number; hasSelection: boolean } | null
+type AnnotationAction = 'copy' | 'cut' | 'paste' | 'duplicate' | 'delete' | 'properties'
+
+type ContextMenuState = {
+  x: number
+  y: number
+  pageIndex: number
+  annotationId?: string
+  hasSelection: boolean
+  canPaste: boolean
+  flyoutLeft: boolean
+} | null
 
 function clickTool(...titles: string[]) {
   const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.editor-toolbar button[title]'))
@@ -48,8 +76,33 @@ function isTextEntryTarget(target: EventTarget | null) {
     || (target instanceof HTMLElement && target.isContentEditable)
 }
 
+function currentPageIndex() {
+  const value = Number(document.querySelector<HTMLInputElement>('.floating-nav input')?.value)
+  return Number.isFinite(value) && value > 0 ? value - 1 : 0
+}
+
+function selectedAnnotationId() {
+  return document.querySelector<HTMLElement>('.annotation.selected[data-annotation-id]')?.dataset.annotationId
+}
+
+function dispatchAnnotationAction(action: AnnotationAction, pageIndex: number, annotationId?: string) {
+  window.dispatchEvent(new CustomEvent(ANNOTATION_ACTION_EVENT, { detail: { action, pageIndex, annotationId } }))
+}
+
+function dispatchEditorShortcut(key: string, options: { ctrlKey?: boolean; shiftKey?: boolean } = {}) {
+  window.dispatchEvent(new KeyboardEvent('keydown', {
+    key,
+    bubbles: true,
+    cancelable: true,
+    ctrlKey: options.ctrlKey ?? false,
+    metaKey: options.ctrlKey ?? false,
+    shiftKey: options.shiftKey ?? false,
+  }))
+}
+
 export function WorkbenchInteractions() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null)
+  const [toolsOpen, setToolsOpen] = useState(false)
   const wheelAccumulator = useRef(0)
   const lastPageTurn = useRef(0)
   const lastZoom = useRef(0)
@@ -103,9 +156,17 @@ export function WorkbenchInteractions() {
 
   useEffect(() => {
     const close = (event: PointerEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest('.forge-context-menu')) setContextMenu(null)
+      if (!(event.target instanceof Element) || !event.target.closest('.forge-context-menu')) {
+        setContextMenu(null)
+        setToolsOpen(false)
+      }
     }
-    const onEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setContextMenu(null) }
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setContextMenu(null)
+        setToolsOpen(false)
+      }
+    }
     document.addEventListener('pointerdown', close, true)
     window.addEventListener('keydown', onEscape)
     return () => {
@@ -137,12 +198,57 @@ export function WorkbenchInteractions() {
       if (['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp'].includes(event.key)) markProgrammaticPageNavigation()
     }
 
+    const onClipboardShortcut = (event: KeyboardEvent) => {
+      if (isTextEntryTarget(event.target) || !(event.ctrlKey || event.metaKey)) return
+      const key = event.key.toLowerCase()
+      if (!['c', 'x', 'v', 'd'].includes(key)) return
+
+      const annotationId = selectedAnnotationId()
+      const pageIndex = currentPageIndex()
+      const canPaste = document.documentElement.dataset.forgeAnnotationClipboard === '1'
+      if (key === 'c' && annotationId) {
+        event.preventDefault()
+        dispatchAnnotationAction('copy', pageIndex, annotationId)
+      }
+      if (key === 'x' && annotationId) {
+        event.preventDefault()
+        dispatchAnnotationAction('cut', pageIndex, annotationId)
+      }
+      if (key === 'd' && annotationId) {
+        event.preventDefault()
+        dispatchAnnotationAction('duplicate', pageIndex, annotationId)
+      }
+      if (key === 'v' && canPaste) {
+        event.preventDefault()
+        dispatchAnnotationAction('paste', pageIndex)
+      }
+    }
+
     const onContextMenu = (event: MouseEvent) => {
       const target = event.target as Element | null
       if (!target?.closest('.pdf-page')) return
       event.preventDefault()
-      const selected = Boolean(document.querySelector('.annotation.selected, .annotation-transform-box, .native-text-selection'))
-      setContextMenu({ x: Math.min(event.clientX, window.innerWidth - 250), y: Math.min(event.clientY, window.innerHeight - 360), hasSelection: selected })
+
+      const pageView = target.closest<HTMLElement>('.page-view[data-page]')
+      const pageValue = Number(pageView?.dataset.page)
+      const pageIndex = Number.isFinite(pageValue) ? pageValue : currentPageIndex()
+      const clickedAnnotation = target.closest<HTMLElement>('.annotation[data-annotation-id]')
+      const selectedId = clickedAnnotation?.dataset.annotationId || selectedAnnotationId()
+      const menuWidth = 256
+      const submenuWidth = 238
+      const gap = 8
+      const flyoutLeft = event.clientX + menuWidth + gap + submenuWidth > window.innerWidth - 10
+
+      setToolsOpen(false)
+      setContextMenu({
+        x: Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8)),
+        y: Math.max(8, Math.min(event.clientY, window.innerHeight - 392)),
+        pageIndex,
+        annotationId: selectedId,
+        hasSelection: Boolean(selectedId),
+        canPaste: document.documentElement.dataset.forgeAnnotationClipboard === '1',
+        flyoutLeft,
+      })
     }
 
     // Chrome/Edge expose precision-touchpad pinch as ctrl+wheel. Capture it before
@@ -218,6 +324,7 @@ export function WorkbenchInteractions() {
     document.addEventListener('click', onNavClick, true)
     document.addEventListener('input', onNavInput, true)
     window.addEventListener('keydown', onPageKey, true)
+    window.addEventListener('keydown', onClipboardShortcut, true)
     document.addEventListener('contextmenu', onContextMenu)
     document.addEventListener('wheel', onWheel, { passive: false, capture: true })
     document.addEventListener('scroll', onScroll, true)
@@ -226,6 +333,7 @@ export function WorkbenchInteractions() {
       document.removeEventListener('click', onNavClick, true)
       document.removeEventListener('input', onNavInput, true)
       window.removeEventListener('keydown', onPageKey, true)
+      window.removeEventListener('keydown', onClipboardShortcut, true)
       document.removeEventListener('contextmenu', onContextMenu)
       document.removeEventListener('wheel', onWheel, true)
       document.removeEventListener('scroll', onScroll, true)
@@ -236,22 +344,100 @@ export function WorkbenchInteractions() {
     clickWorkflow(workflow)
     window.setTimeout(() => clickTool(...titles), 0)
     setContextMenu(null)
+    setToolsOpen(false)
   }
 
-  return contextMenu ? (
-    <div className="forge-context-menu" role="menu" aria-label="PDF quick tools" style={{ left: contextMenu.x, top: contextMenu.y }}>
-      <header><span>QUICK TOOLS</span><button aria-label="Close quick tools" onClick={() => setContextMenu(null)}><X size={14} /></button></header>
-      <button role="menuitem" onClick={() => activate('Edit', 'Select')}><MousePointer2 size={16} /><span><strong>Select</strong><small>Move, resize, rotate, or skew</small></span></button>
-      <button role="menuitem" onClick={() => activate('Edit', 'Edit existing text')}><PenLine size={16} /><span><strong>Edit text</strong><small>Edit native PDF text</small></span></button>
-      <button role="menuitem" onClick={() => activate('Edit', 'Add text')}><Type size={16} /><span><strong>Add text</strong><small>Place a new text annotation</small></span></button>
-      <button role="menuitem" onClick={() => activate('Review', 'Sticky note')}><MessageSquareText size={16} /><span><strong>Comment</strong><small>Add a sticky note</small></span></button>
-      <button role="menuitem" onClick={() => activate('Review', 'Highlight')}><Highlighter size={16} /><span><strong>Highlight</strong><small>Mark content for review</small></span></button>
-      <button role="menuitem" onClick={() => activate('Review', 'Draw')}><FileText size={16} /><span><strong>Draw</strong><small>Draw directly on the page</small></span></button>
-      <button role="menuitem" onClick={() => activate('Review', 'Redact')}><ScanLine size={16} /><span><strong>Redact</strong><small>Mark sensitive content</small></span></button>
-      {contextMenu.hasSelection && <>
-        <div className="forge-context-separator" />
-        <button role="menuitem" onClick={() => { document.querySelector<HTMLButtonElement>('.forge-inspector-toggle')?.click(); setContextMenu(null) }}><Settings2 size={16} /><span><strong>Properties</strong><small>Open selection controls</small></span></button>
-      </>}
+  const runAnnotationAction = (action: AnnotationAction) => {
+    if (!contextMenu) return
+    dispatchAnnotationAction(action, contextMenu.pageIndex, contextMenu.annotationId)
+    setContextMenu(null)
+    setToolsOpen(false)
+  }
+
+  const runShortcut = (key: string, options: { ctrlKey?: boolean; shiftKey?: boolean } = {}) => {
+    dispatchEditorShortcut(key, options)
+    setContextMenu(null)
+    setToolsOpen(false)
+  }
+
+  if (!contextMenu) return null
+
+  return (
+    <div
+      className={`forge-context-menu ${contextMenu.flyoutLeft ? 'flyout-left' : ''}`}
+      role="menu"
+      aria-label="PDF actions"
+      style={{ left: contextMenu.x, top: contextMenu.y }}
+    >
+      <div
+        className={`forge-context-submenu-host ${toolsOpen ? 'open' : ''}`}
+        onMouseEnter={() => setToolsOpen(true)}
+        onMouseLeave={() => setToolsOpen(false)}
+      >
+        <button
+          className="forge-context-action has-submenu"
+          role="menuitem"
+          aria-haspopup="menu"
+          aria-expanded={toolsOpen}
+          onClick={() => setToolsOpen((open) => !open)}
+        >
+          <Settings2 size={16} />
+          <span>Tools</span>
+          <ChevronRight className="forge-context-chevron" size={15} />
+        </button>
+
+        {toolsOpen && (
+          <div className="forge-context-submenu" role="menu" aria-label="PDF tools">
+            <div className="forge-context-submenu-title">TOOLS</div>
+            <button role="menuitem" onClick={() => activate('Edit', 'Select')}><MousePointer2 size={16} /><span>Select</span></button>
+            <button role="menuitem" onClick={() => activate('Edit', 'Edit existing text')}><PenLine size={16} /><span>Edit text</span></button>
+            <button role="menuitem" onClick={() => activate('Edit', 'Add text')}><Type size={16} /><span>Add text</span></button>
+            <div className="forge-context-separator" />
+            <button role="menuitem" onClick={() => activate('Review', 'Sticky note')}><MessageSquareText size={16} /><span>Comment</span></button>
+            <button role="menuitem" onClick={() => activate('Review', 'Highlight')}><Highlighter size={16} /><span>Highlight</span></button>
+            <button role="menuitem" onClick={() => activate('Review', 'Draw')}><FileText size={16} /><span>Draw</span></button>
+            <button role="menuitem" onClick={() => activate('Review', 'Redact')}><ScanLine size={16} /><span>Redact</span></button>
+            <div className="forge-context-separator" />
+            <button role="menuitem" onClick={() => activate('Sign', 'Signature')}><PenLine size={16} /><span>Signature</span></button>
+          </div>
+        )}
+      </div>
+
+      <div className="forge-context-separator" />
+
+      <button className="forge-context-action" role="menuitem" disabled={!contextMenu.hasSelection} onClick={() => runAnnotationAction('cut')}>
+        <Scissors size={16} /><span>Cut</span><kbd>Ctrl+X</kbd>
+      </button>
+      <button className="forge-context-action" role="menuitem" disabled={!contextMenu.hasSelection} onClick={() => runAnnotationAction('copy')}>
+        <Copy size={16} /><span>Copy</span><kbd>Ctrl+C</kbd>
+      </button>
+      <button className="forge-context-action" role="menuitem" disabled={!contextMenu.canPaste} onClick={() => runAnnotationAction('paste')}>
+        <Clipboard size={16} /><span>Paste</span><kbd>Ctrl+V</kbd>
+      </button>
+      <button className="forge-context-action" role="menuitem" disabled={!contextMenu.hasSelection} onClick={() => runAnnotationAction('duplicate')}>
+        <Copy size={16} /><span>Duplicate</span><kbd>Ctrl+D</kbd>
+      </button>
+
+      <div className="forge-context-separator" />
+
+      <button className="forge-context-action" role="menuitem" onClick={() => runShortcut('z', { ctrlKey: true })}>
+        <Undo2 size={16} /><span>Undo</span><kbd>Ctrl+Z</kbd>
+      </button>
+      <button className="forge-context-action" role="menuitem" onClick={() => runShortcut('z', { ctrlKey: true, shiftKey: true })}>
+        <Redo2 size={16} /><span>Redo</span><kbd>Ctrl+Shift+Z</kbd>
+      </button>
+
+      {contextMenu.hasSelection && (
+        <>
+          <div className="forge-context-separator" />
+          <button className="forge-context-action" role="menuitem" onClick={() => runAnnotationAction('properties')}>
+            <Settings2 size={16} /><span>Properties</span>
+          </button>
+          <button className="forge-context-action danger" role="menuitem" onClick={() => runAnnotationAction('delete')}>
+            <Trash2 size={16} /><span>Delete</span><kbd>Del</kbd>
+          </button>
+        </>
+      )}
     </div>
-  ) : null
+  )
 }
