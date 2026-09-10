@@ -251,8 +251,8 @@ export default function App() {
   }, [panel])
 
   useEffect(() => {
-    if (selectedId || nativeSelection || tool !== 'select') setInspectorOpen(true)
-  }, [selectedId, nativeSelection, tool])
+    if (selectedId || (tool !== 'select' && tool !== 'editText')) setInspectorOpen(true)
+  }, [selectedId, tool])
 
   useEffect(() => {
     const adaptWorkbench = () => {
