@@ -55,6 +55,7 @@ test('sticky notes persist in editor state and export as native PDF comments', a
   await makePdf(source)
   await openFile(page, source)
 
+  await page.locator('.forge-editor-switch').getByRole('button', { name: 'Review', exact: true }).click()
   await page.getByTitle('Sticky note').click()
   const target = await pointOnPdf(page, 0.42, 0.35)
   await page.mouse.click(target.x, target.y)
@@ -80,6 +81,7 @@ test('drawn signatures can be saved locally and reinserted', async ({ page }, te
   await makePdf(source, 'SIGNATURE QA 6644')
   await openFile(page, source)
 
+  await page.locator('.forge-editor-switch').getByRole('button', { name: 'Sign', exact: true }).click()
   await page.getByTitle('Signature').click()
   await drawOnPdf(page, [[0.30, 0.65], [0.34, 0.62], [0.38, 0.67], [0.43, 0.61], [0.49, 0.65]])
   await expect(page.locator('.ink-hitbox')).toHaveCount(1)
