@@ -74,7 +74,7 @@ export async function rasterCompressPdf(
 ) {
   const scale = Math.max(0.75, Math.min(2, options.scale ?? 1.15))
   const quality = Math.max(0.35, Math.min(0.92, options.quality ?? 0.68))
-  const task = rawPdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) })
+  const task = rawPdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)), isEvalSupported: false })
   const source = await task.promise
   const output = await PDFDocument.create()
 
