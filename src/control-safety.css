@@ -1,0 +1,205 @@
+/* PDF Forge control-safety layer.
+   Loaded last so compact controls never collapse into wrapped fragments. */
+
+/* Native PDF object tabs: icon + single-line label + count badge. */
+.native-object-tabs {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+}
+
+.native-object-tabs > button {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 46px !important;
+  padding: 0 12px !important;
+  display: grid !important;
+  grid-template-columns: 18px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  justify-items: start !important;
+  column-gap: 8px !important;
+  justify-self: stretch !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  text-overflow: ellipsis !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+}
+
+.native-object-tabs > button > svg {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  flex: 0 0 16px !important;
+  color: var(--forge-copper) !important;
+}
+
+.native-object-tabs > button > span {
+  min-width: 20px !important;
+  height: 20px !important;
+  margin-left: 0 !important;
+  padding: 0 6px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  justify-self: end !important;
+  border: 1px solid var(--forge-line) !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--forge-text) 5%, transparent) !important;
+  color: var(--forge-muted) !important;
+  font: 600 10px/1 var(--forge-ui) !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
+.native-object-tabs > button.active > span {
+  border-color: color-mix(in srgb, var(--forge-copper) 42%, var(--forge-line)) !important;
+  background: var(--forge-copper-soft) !important;
+  color: var(--forge-copper-deep) !important;
+}
+
+/* Compact navigation controls throughout the Workbench must stay on one line. */
+.advanced-category-rail > button,
+.object-category-rail > button,
+.advanced-tool-rail > button,
+.object-tool-rail > button,
+.advanced-category-nav > button,
+.object-section-nav > button,
+.all-tools-categories > button,
+.forge-navigator-tabs > button,
+.forge-editor-switch > button,
+.forge-dock-actions > button,
+.native-object-actions > button,
+.page-actions-grid > button,
+.bulk-page-actions > button {
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+.advanced-category-rail strong,
+.object-category-rail strong,
+.advanced-category-rail small,
+.object-category-rail small,
+.advanced-tool-rail > button > span,
+.object-tool-rail > button > span,
+.advanced-category-nav > button > span,
+.object-section-nav > button > span,
+.all-tools-categories > button > span,
+.forge-navigator-tabs > button > span,
+.forge-editor-switch > button > span,
+.forge-dock-actions > button > span,
+.native-object-actions > button {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+/* Tool/category rails are allowed to truncate, never stack words vertically. */
+.advanced-category-rail > button,
+.object-category-rail > button {
+  min-height: 54px !important;
+}
+
+.advanced-category-rail > button > span,
+.object-category-rail > button > span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.advanced-category-rail strong,
+.object-category-rail strong {
+  display: block !important;
+  font-size: 12px !important;
+}
+
+.advanced-category-rail small,
+.object-category-rail small {
+  display: block !important;
+  margin-top: 3px !important;
+  opacity: .78 !important;
+}
+
+.advanced-tool-rail > button,
+.object-tool-rail > button {
+  width: 100% !important;
+  min-height: 44px !important;
+  padding-inline: 10px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+/* Action buttons should size to their content, not shrink to broken text. */
+.native-object-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+}
+
+.native-object-actions > button,
+.advanced-focus-form button,
+.advanced-tool-content button,
+.object-tool-content button {
+  min-height: 38px !important;
+  width: auto !important;
+  max-width: 100% !important;
+  padding-inline: 12px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+/* Keep icon buttons square and immune to inherited text sizing. */
+.icon-btn,
+.forge-theme-switch,
+.forge-editor-theme,
+.forge-panel-collapse,
+.forge-inspector-close {
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+}
+
+/* Narrow layouts scroll tab strips rather than crushing their labels. */
+@media (max-width: 700px) {
+  .native-object-tabs {
+    display: flex !important;
+    overflow-x: auto !important;
+    gap: 7px !important;
+    padding-bottom: 2px !important;
+    scrollbar-width: thin;
+    overscroll-behavior-inline: contain;
+  }
+
+  .native-object-tabs > button {
+    flex: 0 0 132px !important;
+    width: 132px !important;
+    min-width: 132px !important;
+  }
+
+  .advanced-category-nav,
+  .object-section-nav,
+  .all-tools-categories {
+    overflow-x: auto !important;
+    overscroll-behavior-inline: contain;
+  }
+
+  .advanced-category-nav > button,
+  .object-section-nav > button,
+  .all-tools-categories > button {
+    flex: 0 0 auto !important;
+    min-width: max-content !important;
+    white-space: nowrap !important;
+  }
+}
