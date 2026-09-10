@@ -30,9 +30,13 @@ test('production headers block framing and MIME sniffing', () => {
 
 test('content security policy blocks plugins and inline executable scripts', () => {
   const csp = header('Content-Security-Policy')
+  const scriptPolicy = csp.match(/script-src[^;]+/)?.[0] || ''
   assert.match(csp, /object-src 'none'/)
   assert.match(csp, /frame-ancestors 'none'/)
   assert.match(csp, /base-uri 'self'/)
-  assert.match(csp, /script-src 'self' 'wasm-unsafe-eval' 'sha256-/)
-  assert.doesNotMatch(csp.match(/script-src[^;]+/)?.[0] || '', /'unsafe-inline'/)
+  assert.match(scriptPolicy, /script-src 'self'/)
+  assert.match(scriptPolicy, /'wasm-unsafe-eval'/)
+  assert.match(scriptPolicy, /'sha256-[^']+'/)
+  assert.doesNotMatch(scriptPolicy, /'unsafe-inline'/)
+  assert.doesNotMatch(scriptPolicy.replace(/'wasm-unsafe-eval'/g, ''), /'unsafe-eval'/)
 })
