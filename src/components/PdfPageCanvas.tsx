@@ -46,10 +46,18 @@ type AnnotationEdit = {
   startAngle?: number
 }
 
+type AnnotationActionDetail = {
+  action: 'copy' | 'cut' | 'paste' | 'duplicate' | 'delete' | 'properties'
+  pageIndex: number
+  annotationId?: string
+}
+
 type CancelableRenderTask = { promise: Promise<unknown>; cancel: () => void }
 type CancelableTextLayer = { render: () => Promise<unknown>; cancel: () => void; textDivs?: HTMLElement[]; textContentItemsStr?: string[] }
 const EMPTY_FORM_WIDGET_SELECTION = new Set<string>()
 const EMPTY_FORM_WIDGETS: PageFormWidget[] = []
+const ANNOTATION_ACTION_EVENT = 'pdf-forge:annotation-action'
+let annotationClipboard: Annotation | null = null
 
 function currentSearchQuery() {
   return document.querySelector<HTMLInputElement>('.search-box input')?.value.trim() || ''
@@ -167,6 +175,33 @@ function transformPoint(point: Point, ann: Annotation) {
   return { x: cx + dx, y: cy + dy }
 }
 
+function copyAnnotation(annotation: Annotation) {
+  annotationClipboard = structuredClone(annotation)
+  document.documentElement.dataset.forgeAnnotationClipboard = '1'
+  if (annotation.text && navigator.clipboard?.writeText) {
+    void navigator.clipboard.writeText(annotation.text).catch(() => undefined)
+  }
+}
+
+function cloneAnnotationForPage(annotation: Annotation, pageIndex: number) {
+  const copy = structuredClone(annotation)
+  const bounds = annotationBounds(copy)
+  const dx = Math.min(0.025, Math.max(0, 1 - bounds.x - bounds.width))
+  const dy = Math.min(0.025, Math.max(0, 1 - bounds.y - bounds.height))
+  return {
+    ...copy,
+    id: crypto.randomUUID(),
+    page: pageIndex,
+    x: clamp(copy.x + dx),
+    y: clamp(copy.y + dy),
+    points: copy.points?.map((point) => ({ x: clamp(point.x + dx), y: clamp(point.y + dy) })),
+  }
+}
+
+function dispatchDeleteKey() {
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }))
+}
+
 export function PdfPageCanvas({
   pdf, pageIndex, zoom, rotation, annotations, tool, color, strokeWidth, fontSize,
   selectedId, nativeSelection, onSelect, onAdd, onPickNativeText,
@@ -183,6 +218,59 @@ export function PdfPageCanvas({
   const [searchQuery, setSearchQuery] = useState('')
 
   const updatePreview = (next: DragPreview | null) => { previewRef.current = next; setPreview(next) }
+
+  useEffect(() => {
+    const handleAnnotationAction = (event: Event) => {
+      const detail = (event as CustomEvent<AnnotationActionDetail>).detail
+      if (!detail) return
+
+      if (detail.action === 'paste') {
+        if (detail.pageIndex !== pageIndex || !annotationClipboard) return
+        onAdd(cloneAnnotationForPage(annotationClipboard, pageIndex))
+        return
+      }
+
+      const annotation = annotations.find((item) => item.id === detail.annotationId)
+        || annotations.find((item) => item.id === selectedId)
+      if (!annotation) return
+
+      if (detail.action === 'copy') {
+        copyAnnotation(annotation)
+        onSelect(annotation.id)
+        return
+      }
+
+      if (detail.action === 'duplicate') {
+        onAdd(cloneAnnotationForPage(annotation, pageIndex))
+        return
+      }
+
+      if (detail.action === 'cut') {
+        copyAnnotation(annotation)
+        onSelect(annotation.id)
+        window.setTimeout(dispatchDeleteKey, 0)
+        return
+      }
+
+      if (detail.action === 'delete') {
+        onSelect(annotation.id)
+        window.setTimeout(dispatchDeleteKey, 0)
+        return
+      }
+
+      if (detail.action === 'properties') {
+        onSelect(annotation.id)
+        window.setTimeout(() => {
+          if (!document.querySelector('.forge-editor-workbench.inspector-open')) {
+            document.querySelector<HTMLButtonElement>('.forge-inspector-toggle')?.click()
+          }
+        }, 0)
+      }
+    }
+
+    window.addEventListener(ANNOTATION_ACTION_EVENT, handleAnnotationAction as EventListener)
+    return () => window.removeEventListener(ANNOTATION_ACTION_EVENT, handleAnnotationAction as EventListener)
+  }, [annotations, onAdd, onSelect, pageIndex, selectedId])
 
   useEffect(() => {
     const input = document.querySelector<HTMLInputElement>('.search-box input')
@@ -401,10 +489,10 @@ export function PdfPageCanvas({
       <div className="annotation-layer">
         {annotations.map((ann) => {
           const selected = ann.id === selectedId
-          if (ann.type === 'note') return <button key={ann.id} className={`annotation note-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%` }} title={ann.text || 'Note'} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}><span>💬</span></button>
-          if (ann.type === 'text') return <button key={ann.id} className={`annotation text-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, color: ann.color, fontSize: ann.fontSize, transform: annotationTransform(ann), transformOrigin: 'center center' }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{ann.text}</button>
-          if (ann.type === 'highlight' || ann.type === 'rectangle' || ann.type === 'redaction') return <button key={ann.id} className={`annotation box-annotation ${ann.type} ${selected ? 'selected' : ''}`} style={{ ...rectStyle(ann), background: ann.type === 'highlight' ? `${ann.color}55` : ann.type === 'redaction' ? 'rgba(180,30,25,.72)' : 'transparent', borderColor: ann.type === 'rectangle' ? ann.color : ann.type === 'redaction' ? '#ff625a' : 'transparent', borderWidth: ann.type === 'rectangle' || ann.type === 'redaction' ? ann.strokeWidth || 2 : 0 }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')} />
-          return <button key={ann.id} className={`annotation ink-hitbox ${selected ? 'selected' : ''}`} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{renderInk(ann)}</button>
+          if (ann.type === 'note') return <button key={ann.id} data-annotation-id={ann.id} className={`annotation note-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%` }} title={ann.text || 'Note'} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}><span>💬</span></button>
+          if (ann.type === 'text') return <button key={ann.id} data-annotation-id={ann.id} className={`annotation text-annotation ${selected ? 'selected' : ''}`} style={{ left: `${ann.x * 100}%`, top: `${ann.y * 100}%`, color: ann.color, fontSize: ann.fontSize, transform: annotationTransform(ann), transformOrigin: 'center center' }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{ann.text}</button>
+          if (ann.type === 'highlight' || ann.type === 'rectangle' || ann.type === 'redaction') return <button key={ann.id} data-annotation-id={ann.id} className={`annotation box-annotation ${ann.type} ${selected ? 'selected' : ''}`} style={{ ...rectStyle(ann), background: ann.type === 'highlight' ? `${ann.color}55` : ann.type === 'redaction' ? 'rgba(180,30,25,.72)' : 'transparent', borderColor: ann.type === 'rectangle' ? ann.color : ann.type === 'redaction' ? '#ff625a' : 'transparent', borderWidth: ann.type === 'rectangle' || ann.type === 'redaction' ? ann.strokeWidth || 2 : 0 }} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')} />
+          return <button key={ann.id} data-annotation-id={ann.id} className={`annotation ink-hitbox ${selected ? 'selected' : ''}`} onPointerDown={(e) => beginAnnotationEdit(e, ann, 'move')}>{renderInk(ann)}</button>
         })}
 
         {selectedAnnotation && selectedBounds && (
