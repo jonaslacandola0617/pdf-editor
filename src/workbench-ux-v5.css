@@ -1,0 +1,146 @@
+/* PDF Forge Workbench UX v5 — interaction/readability refinements. */
+
+/* Dark is the first-run default. Existing users retain their saved choice. */
+:root:not([data-theme]) {
+  color-scheme: dark;
+  background: #11110f;
+}
+
+/* Readability pass: keep the compact professional density without 8–10px UI copy. */
+body.pdf-product-editor .doc-title input { font-size: 13.5px !important; }
+body.pdf-product-editor .doc-title::before,
+body.pdf-product-editor .doc-title > span,
+body.pdf-product-editor .document-save-state { font-size: 9.5px !important; }
+.forge-editor-switch > button { font-size: 12px !important; }
+.forge-editor-switch > button i { font-size: 8.5px !important; }
+.forge-switch-label { font-size: 7.5px !important; }
+body.pdf-product-editor .forge-context-bar .tool-group button,
+body.pdf-product-editor .forge-context-bar > .soft-btn,
+.forge-navigator-toggle,
+.forge-inspector-toggle { font-size: 12px !important; }
+body.pdf-product-editor .forge-context-bar .search-box input { font-size: 11.5px !important; }
+.forge-navigator-tabs button,
+.forge-navigator-tabs .nav-extras-launcher span { font-size: 12px !important; }
+body.pdf-product-editor .panel-heading h3 { font-size: 22px !important; }
+body.pdf-product-editor .panel-heading .eyebrow { font-size: 8.5px !important; }
+body.pdf-product-editor .panel-supporting-copy,
+body.pdf-product-editor .right-help p,
+body.pdf-product-editor .native-edit-note,
+body.pdf-product-editor .native-edit-meta { font-size: 11.5px !important; }
+body.pdf-product-editor .property-section > span,
+body.pdf-product-editor .property-field,
+body.pdf-product-editor .meta-form label,
+body.pdf-product-editor .form-field { font-size: 11px !important; }
+body.pdf-product-editor .page-actions-grid button,
+body.pdf-product-editor .page-select-toolbar,
+body.pdf-product-editor .bulk-page-actions button { font-size: 11px !important; }
+body.pdf-product-editor .thumb-label { font-size: 11px !important; }
+body.pdf-product-editor .floating-nav span { font-size: 10px !important; }
+
+/* The appearance toggle is a real flex item after the top actions, never an
+   absolutely-positioned overlay on top of Save/Export. */
+body.pdf-product-editor .forge-editor-theme {
+  position: static !important;
+  inset: auto !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+  margin-left: 4px !important;
+  border-left: 1px solid rgba(255,255,255,.09) !important;
+  color: rgba(255,255,255,.52) !important;
+}
+body.pdf-product-editor .forge-editor-theme:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,.055) !important;
+}
+
+/* When the Navigator is closed, its reopen affordance is icon-only. */
+body.pdf-product-editor .forge-editor-workbench.navigator-closed .forge-navigator-toggle {
+  width: 40px !important;
+  min-width: 40px !important;
+  padding: 0 !important;
+  justify-content: center !important;
+}
+body.pdf-product-editor .forge-editor-workbench.navigator-closed .forge-navigator-toggle > span {
+  display: none !important;
+}
+body.pdf-product-editor .forge-editor-workbench.navigator-closed .forge-navigator-toggle svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Context click replaces the browser context menu inside the PDF stage. */
+.forge-context-menu {
+  position: fixed;
+  z-index: 1000;
+  width: 238px;
+  padding: 7px;
+  border: 1px solid var(--forge-line-strong);
+  border-top: 3px solid var(--forge-copper);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--forge-paper-hi) 96%, transparent);
+  color: var(--forge-text);
+  box-shadow: var(--forge-shadow-menu);
+  backdrop-filter: blur(18px);
+}
+.forge-context-menu header {
+  min-height: 31px;
+  padding: 0 5px 5px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--forge-faint);
+  font: 500 8px/1 var(--forge-mono);
+  letter-spacing: .12em;
+}
+.forge-context-menu header button {
+  width: 27px;
+  height: 27px;
+  border: 0;
+  background: transparent;
+  color: var(--forge-muted);
+  display: grid;
+  place-items: center;
+}
+.forge-context-menu > button[role="menuitem"] {
+  width: 100%;
+  min-height: 47px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--forge-text);
+  display: grid;
+  grid-template-columns: 25px minmax(0,1fr);
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+}
+.forge-context-menu > button[role="menuitem"]:hover {
+  background: var(--forge-paper-low);
+}
+.forge-context-menu > button[role="menuitem"] > svg { color: var(--forge-copper); }
+.forge-context-menu > button[role="menuitem"] > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.forge-context-menu strong { font-size: 11px; font-weight: 700; }
+.forge-context-menu small { color: var(--forge-muted); font-size: 9px; line-height: 1.35; }
+.forge-context-separator { height: 1px; margin: 5px 3px; background: var(--forge-line); }
+
+/* Trackpad gestures belong to the document, so prevent accidental text/browser
+   selection while a precision gesture is being interpreted. */
+.page-scroll.view-single { overscroll-behavior: contain; }
+
+@media (max-width: 980px) and (min-width: 761px) {
+  .forge-editor-switch > button { min-width: 61px !important; font-size: 10.5px !important; }
+  body.pdf-product-editor .top-actions .soft-btn { padding-inline: 9px !important; }
+}
+
+@media (max-width: 760px) {
+  body.pdf-product-editor .forge-editor-theme { display: none !important; }
+  .forge-context-menu { width: min(238px, calc(100vw - 20px)); }
+  body.pdf-product-editor .forge-context-bar .tool-group button { font-size: 0 !important; }
+}
