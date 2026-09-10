@@ -23,7 +23,7 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
 }
 
 async function openTools(page: Page) {
@@ -31,6 +31,11 @@ async function openTools(page: Page) {
   const tools = page.locator('.advanced-modal')
   await expect(tools).toBeVisible()
   return tools
+}
+
+async function chooseDocumentTool(tools: ReturnType<Page['locator']>, category: string, tool: string) {
+  await tools.locator('.advanced-category-rail').getByRole('button', { name: new RegExp(category, 'i') }).click()
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: tool, exact: true }).click()
 }
 
 async function closeTools(page: Page) {
@@ -66,6 +71,7 @@ test('authors common AcroForm field types and normal export preserves them as in
   await makePdf(source)
   await openFile(page, source)
   const tools = await openTools(page)
+  await chooseDocumentTool(tools, 'Forms & navigation', 'Create form field')
   const type = tools.getByLabel('Form field type')
   const name = tools.getByLabel('Form field name')
 
@@ -101,6 +107,7 @@ test('explicit form flatten removes interactivity only when requested', async ({
   await makePdf(source)
   await openFile(page, source)
   let tools = await openTools(page)
+  await chooseDocumentTool(tools, 'Forms & navigation', 'Create form field')
   await tools.getByLabel('Form field name').fill('flatten_me')
   await tools.getByRole('button', { name: 'Add form field' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Adding form field complete', { timeout: 20_000 })
@@ -121,14 +128,17 @@ test('creates a native URI link, PDF bookmark and Bates text', async ({ page }, 
   await openFile(page, source)
   const tools = await openTools(page)
 
+  await chooseDocumentTool(tools, 'Forms & navigation', 'Add web link')
   await tools.getByLabel('Link URL').fill('https://example.com/qa-link-9911')
   await tools.getByRole('button', { name: 'Add clickable link' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Adding PDF link complete', { timeout: 20_000 })
 
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: 'Bookmark page', exact: true }).click()
   await tools.getByLabel('Bookmark title').fill('QA Bookmark 9922')
-  await tools.getByRole('button', { name: 'Add bookmark' }).click()
+  await tools.getByRole('button', { name: 'Bookmark current page' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Adding bookmark complete', { timeout: 20_000 })
 
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: 'Bates numbering', exact: true }).click()
   await tools.getByLabel('Bates prefix').fill('QA-')
   await tools.getByLabel('Bates start').fill('42')
   await tools.getByLabel('Bates digits').fill('4')
@@ -175,6 +185,7 @@ test('privacy cleanup clears metadata state and removes an active document open 
   await expect(page.locator('.meta-form input').nth(1)).toHaveValue('PRIVATE AUTHOR 8822')
 
   const tools = await openTools(page)
+  await chooseDocumentTool(tools, 'Security & privacy', 'Privacy cleanup')
   await tools.getByRole('button', { name: 'Remove privacy data & active content' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Cleaning document privacy data complete', { timeout: 20_000 })
   await closeTools(page)
