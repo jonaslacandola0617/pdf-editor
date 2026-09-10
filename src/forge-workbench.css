@@ -1,0 +1,4212 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap');
+
+/*
+ * PDF Forge — Forge Workbench
+ * An editorial document instrument, not a SaaS dashboard.
+ * This file is intentionally loaded last and owns the final product identity.
+ */
+
+:root {
+  --forge-ink: #181713;
+  --forge-ink-2: #25231f;
+  --forge-ink-3: #393630;
+  --forge-paper: #f2ede4;
+  --forge-paper-hi: #fbf8f1;
+  --forge-paper-low: #e7dfd2;
+  --forge-paper-deep: #d9d0c2;
+  --forge-copper: #a95732;
+  --forge-copper-deep: #7e3d23;
+  --forge-copper-soft: rgba(169, 87, 50, .12);
+  --forge-text: #1c1a17;
+  --forge-muted: #6e675e;
+  --forge-faint: #9a9185;
+  --forge-line: rgba(38, 34, 29, .14);
+  --forge-line-strong: rgba(38, 34, 29, .24);
+  --forge-green: #5b715d;
+  --forge-red: #a33c31;
+  --forge-canvas: #2b2a26;
+  --forge-canvas-deep: #24231f;
+  --forge-ui: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+  --forge-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --forge-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --forge-shadow-paper: 0 20px 55px rgba(23, 20, 16, .16), 0 2px 5px rgba(23, 20, 16, .12);
+  --forge-shadow-menu: 0 22px 65px rgba(15, 13, 11, .22), 0 2px 9px rgba(15, 13, 11, .12);
+}
+
+:root[data-theme="dark"] {
+  --forge-ink: #11110f;
+  --forge-ink-2: #1b1a17;
+  --forge-ink-3: #2b2924;
+  --forge-paper: #211f1b;
+  --forge-paper-hi: #292620;
+  --forge-paper-low: #191814;
+  --forge-paper-deep: #302d27;
+  --forge-copper: #d17b50;
+  --forge-copper-deep: #e59a75;
+  --forge-copper-soft: rgba(209, 123, 80, .14);
+  --forge-text: #f0e9dd;
+  --forge-muted: #aea597;
+  --forge-faint: #756e64;
+  --forge-line: rgba(238, 231, 218, .11);
+  --forge-line-strong: rgba(238, 231, 218, .19);
+  --forge-green: #8ea98f;
+  --forge-red: #df8277;
+  --forge-canvas: #11110f;
+  --forge-canvas-deep: #0b0b0a;
+  --forge-shadow-paper: 0 22px 62px rgba(0,0,0,.32), 0 2px 5px rgba(0,0,0,.35);
+  --forge-shadow-menu: 0 28px 75px rgba(0,0,0,.48), 0 2px 10px rgba(0,0,0,.35);
+}
+
+html, body, #root { min-height: 100%; }
+body { font-family: var(--forge-ui); }
+
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--forge-copper) !important;
+  outline-offset: 2px !important;
+}
+
+/* ---------- Product home / archive / tools ---------- */
+
+body.pdf-product-home .welcome {
+  min-height: 100vh !important;
+  overflow: auto !important;
+  background: var(--forge-paper) !important;
+}
+body.pdf-product-home .welcome > :not(.forge-product-root):not(input[type="file"]) {
+  display: none !important;
+}
+body.pdf-product-home .welcome > .forge-product-root {
+  display: grid !important;
+}
+
+.forge-product-root,
+.forge-product-root * { box-sizing: border-box; }
+
+.forge-product-root {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  background: var(--forge-paper);
+  color: var(--forge-text);
+  font-family: var(--forge-ui);
+}
+
+.forge-mast {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 30;
+  padding: 22px 14px 17px;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.025), transparent 18%),
+    var(--forge-ink);
+  color: #eee7dc;
+  border-right: 1px solid rgba(255,255,255,.07);
+}
+
+.forge-brand {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  align-items: flex-start;
+}
+
+.forge-brand-seal {
+  width: 47px;
+  height: 55px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.22);
+  color: #f4ede3;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.05), transparent 58%),
+    #201e1a;
+  box-shadow: inset 0 0 0 3px #181713;
+}
+
+.forge-brand-seal::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  right: -1px;
+  bottom: -1px;
+  background: var(--forge-copper);
+}
+
+.forge-brand-seal b {
+  font: 400 27px/1 var(--forge-display);
+  transform: translateY(-3px);
+}
+.forge-brand-seal i {
+  position: absolute;
+  left: 6px;
+  bottom: 5px;
+  font: 500 6px/1 var(--forge-mono);
+  letter-spacing: .18em;
+  font-style: normal;
+  color: rgba(255,255,255,.5);
+}
+
+.forge-brand-copy { display: flex; flex-direction: column; gap: 2px; }
+.forge-brand-copy strong { font-size: 11px; line-height: 1.2; letter-spacing: -.02em; color: #f0e9de; }
+.forge-brand-copy small { font: 400 7px/1.3 var(--forge-mono); text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.37); }
+
+.forge-mast-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 55px -4px 0;
+}
+.forge-mast-nav button {
+  position: relative;
+  min-height: 59px;
+  padding: 8px 6px 8px 28px;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.46);
+  display: grid;
+  grid-template-columns: 19px minmax(0,1fr);
+  grid-template-rows: auto auto;
+  column-gap: 7px;
+  text-align: left;
+  border-radius: 2px;
+  transition: background .16s ease, color .16s ease;
+}
+.forge-mast-nav button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: rgba(255,255,255,.12);
+}
+.forge-mast-nav button > span {
+  position: absolute;
+  left: 7px;
+  top: 10px;
+  font: 400 7px/1 var(--forge-mono);
+  color: rgba(255,255,255,.28);
+}
+.forge-mast-nav button svg { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+.forge-mast-nav button em {
+  grid-column: 2;
+  align-self: center;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.forge-mast-nav button:hover { background: rgba(255,255,255,.045); color: rgba(255,255,255,.82); }
+.forge-mast-nav button.active { background: rgba(255,255,255,.055); color: #fff; }
+.forge-mast-nav button.active::before { width: 3px; background: var(--forge-copper); }
+.forge-mast-nav button.active > span { color: var(--forge-copper); }
+
+.forge-mast-foot {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 8px minmax(0,1fr);
+  gap: 7px;
+  align-items: center;
+  padding: 12px 5px 2px;
+  border-top: 1px solid rgba(255,255,255,.09);
+}
+.forge-local-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7e9a80;
+  box-shadow: 0 0 0 3px rgba(126,154,128,.1);
+}
+.forge-mast-foot div { display: flex; flex-direction: column; gap: 2px; }
+.forge-mast-foot strong { font-size: 8px; font-weight: 600; color: rgba(255,255,255,.68); }
+.forge-mast-foot small { font: 400 6.5px/1 var(--forge-mono); color: rgba(255,255,255,.3); }
+
+.forge-product-surface {
+  min-width: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(90deg, rgba(56,48,39,.035) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(rgba(56,48,39,.025) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--forge-paper);
+}
+:root[data-theme="dark"] .forge-product-surface {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.017) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--forge-paper);
+}
+
+.forge-product-bar {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  height: 60px;
+  padding: 0 clamp(24px, 3vw, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: color-mix(in srgb, var(--forge-paper) 91%, transparent);
+  border-bottom: 1px solid var(--forge-line);
+  backdrop-filter: blur(18px);
+}
+.forge-product-context {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 500 9px/1 var(--forge-mono);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.forge-product-context span { color: var(--forge-faint); }
+.forge-product-context strong { font-weight: 500; color: var(--forge-text); }
+
+.forge-product-actions { display: flex; align-items: center; gap: 9px; }
+.forge-quiet-action,
+.forge-theme-switch {
+  border: 0;
+  color: var(--forge-muted);
+  background: transparent;
+}
+.forge-quiet-action {
+  min-height: 32px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+}
+.forge-quiet-action:hover,
+.forge-theme-switch:hover { color: var(--forge-text); background: color-mix(in srgb, var(--forge-text) 5%, transparent); }
+.forge-quiet-action kbd {
+  padding: 3px 5px;
+  border: 1px solid var(--forge-line);
+  color: var(--forge-faint);
+  background: var(--forge-paper-hi);
+  font: 500 7px/1 var(--forge-mono);
+}
+.forge-theme-switch { width: 32px; height: 32px; display: grid; place-items: center; }
+
+.forge-product-main {
+  width: min(1370px, calc(100% - clamp(48px, 7vw, 100px)));
+  margin: 0 auto;
+  padding: clamp(38px, 5vw, 70px) 0 54px;
+}
+
+.forge-desk-intro {
+  min-height: 385px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(340px, .78fr);
+  gap: clamp(48px, 7vw, 110px);
+  align-items: end;
+  padding: 12px 0 56px;
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+.forge-folio-label,
+.forge-section-head > div > span,
+.forge-tray-index {
+  font: 500 8px/1.2 var(--forge-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--forge-faint);
+}
+.forge-intro-copy h1,
+.forge-page-title h1 {
+  margin: 15px 0 0;
+  font: 400 clamp(52px, 5.5vw, 78px)/.95 var(--forge-display);
+  letter-spacing: -.035em;
+  color: var(--forge-text);
+}
+.forge-intro-copy h1 em,
+.forge-page-title h1 em {
+  color: var(--forge-copper);
+  font-weight: 400;
+}
+.forge-intro-copy > p,
+.forge-page-title p {
+  max-width: 650px;
+  margin: 23px 0 0;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.8;
+  letter-spacing: -.01em;
+}
+.forge-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 30px; }
+
+.forge-primary-action,
+.forge-secondary-action,
+.forge-empty-ledger button,
+.forge-empty-archive button {
+  min-height: 42px;
+  padding: 0 15px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.forge-primary-action {
+  border: 1px solid var(--forge-ink);
+  background: var(--forge-ink);
+  color: #f4eee3;
+  box-shadow: inset 0 -2px 0 rgba(255,255,255,.04);
+}
+.forge-primary-action:hover { background: var(--forge-copper-deep); border-color: var(--forge-copper-deep); }
+.forge-secondary-action,
+.forge-empty-ledger button,
+.forge-empty-archive button {
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+  color: var(--forge-text);
+}
+.forge-secondary-action:hover,
+.forge-empty-ledger button:hover,
+.forge-empty-archive button:hover { background: var(--forge-paper-low); }
+
+.forge-file-tray {
+  width: 100%;
+  min-height: 214px;
+  position: relative;
+  padding: 23px 22px 20px;
+  border: 1px solid var(--forge-line-strong);
+  border-top: 3px solid var(--forge-ink);
+  border-radius: 0;
+  display: grid;
+  grid-template-columns: 44px minmax(0,1fr) 18px;
+  grid-template-rows: 25px auto;
+  gap: 8px 14px;
+  align-items: center;
+  text-align: left;
+  color: var(--forge-text);
+  background:
+    linear-gradient(135deg, transparent 0 74%, color-mix(in srgb, var(--forge-copper) 6%, transparent) 74% 100%),
+    var(--forge-paper-hi);
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--forge-text) 5%, transparent);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.forge-file-tray:hover {
+  transform: translate(-2px,-2px);
+  box-shadow: 12px 12px 0 color-mix(in srgb, var(--forge-copper) 12%, transparent);
+  border-color: color-mix(in srgb, var(--forge-copper) 50%, var(--forge-line-strong));
+}
+.forge-tray-index { grid-column: 1 / -1; align-self: start; }
+.forge-tray-glyph {
+  width: 42px; height: 54px;
+  display: grid; place-items: center;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper);
+  color: var(--forge-copper);
+}
+.forge-tray-copy { display: flex; flex-direction: column; gap: 7px; }
+.forge-tray-copy strong { font: 400 25px/1.05 var(--forge-display); letter-spacing: -.025em; }
+.forge-tray-copy small { max-width: 390px; color: var(--forge-muted); font-size: 10px; line-height: 1.6; }
+
+.forge-home-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, .72fr);
+  gap: clamp(40px, 6vw, 88px);
+  padding: 50px 0 0;
+}
+.forge-section-head {
+  min-height: 56px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+.forge-section-head.compact { min-height: 56px; }
+.forge-section-head h2 {
+  margin: 7px 0 0;
+  font: 400 24px/1.05 var(--forge-display);
+  letter-spacing: -.018em;
+}
+.forge-section-head > button,
+.forge-all-tools-link {
+  border: 0;
+  background: transparent;
+  color: var(--forge-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 600;
+}
+.forge-section-head > button:hover,
+.forge-all-tools-link:hover { color: var(--forge-copper); }
+
+.forge-ledger { width: 100%; }
+.forge-ledger-head,
+.forge-ledger-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.7fr) 55px 82px 105px 18px;
+  gap: 14px;
+  align-items: center;
+}
+.forge-ledger-head {
+  height: 34px;
+  padding: 0 7px;
+  color: var(--forge-faint);
+  font: 500 7px/1 var(--forge-mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  border-bottom: 1px solid var(--forge-line);
+}
+.forge-ledger-row {
+  width: 100%;
+  min-height: 62px;
+  padding: 0 7px;
+  border: 0;
+  border-bottom: 1px solid var(--forge-line);
+  background: transparent;
+  color: var(--forge-muted);
+  text-align: left;
+  font-size: 9px;
+  transition: background .14s ease, color .14s ease;
+}
+.forge-ledger-row:hover { background: color-mix(in srgb, var(--forge-text) 4%, transparent); color: var(--forge-text); }
+.forge-ledger-row > svg { color: var(--forge-faint); }
+.forge-ledger-doc {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 24px 34px minmax(0,1fr);
+  gap: 9px;
+  align-items: center;
+}
+.forge-ledger-doc > b {
+  font: 400 7px/1 var(--forge-mono);
+  color: var(--forge-faint);
+}
+.forge-ledger-doc > strong {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--forge-text);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.forge-pdf-glyph {
+  width: 30px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+  color: var(--forge-copper);
+  font: 500 6.5px/1 var(--forge-mono);
+  font-style: normal;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--forge-text) 5%, transparent);
+}
+
+.forge-empty-ledger,
+.forge-empty-archive {
+  min-height: 200px;
+  padding: 30px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  border-bottom: 1px solid var(--forge-line);
+}
+.forge-empty-ledger > span { font: 500 7px/1 var(--forge-mono); letter-spacing: .1em; color: var(--forge-faint); }
+.forge-empty-ledger strong,
+.forge-empty-archive strong { margin-top: 8px; font: 400 25px/1.1 var(--forge-display); }
+.forge-empty-ledger p,
+.forge-empty-archive p { max-width: 510px; margin: 8px 0 17px; color: var(--forge-muted); font-size: 10px; line-height: 1.6; }
+
+.forge-task-index {
+  min-width: 0;
+  padding-left: 26px;
+  border-left: 1px solid var(--forge-line-strong);
+}
+.forge-task-list { border-bottom: 1px solid var(--forge-line-strong); }
+.forge-task-list > button {
+  width: 100%;
+  min-height: 69px;
+  padding: 8px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--forge-line);
+  background: transparent;
+  color: var(--forge-text);
+  display: grid;
+  grid-template-columns: 22px 28px minmax(0,1fr) 14px;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+}
+.forge-task-list > button:hover { background: color-mix(in srgb, var(--forge-text) 4%, transparent); }
+.forge-task-number { font: 400 7px/1 var(--forge-mono); color: var(--forge-faint); }
+.forge-task-icon { color: var(--forge-copper); display: grid; place-items: center; }
+.forge-task-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.forge-task-copy strong { font-size: 10px; font-weight: 650; }
+.forge-task-copy small { color: var(--forge-muted); font-size: 8.5px; line-height: 1.45; }
+.forge-task-list > button > svg { color: var(--forge-faint); }
+.forge-all-tools-link { margin-top: 15px; padding: 0; }
+
+.forge-home-footer {
+  margin-top: 55px;
+  padding-top: 16px;
+  border-top: 1px solid var(--forge-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: var(--forge-faint);
+  font: 400 7.5px/1 var(--forge-mono);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.forge-home-footer span { display: inline-flex; align-items: center; gap: 6px; }
+.forge-home-footer svg { color: var(--forge-green); }
+
+/* Archive */
+.forge-page-title {
+  min-height: 235px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 0 0 37px;
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+.forge-page-title h1 { font-size: clamp(45px, 4.5vw, 64px); }
+.forge-page-title p { max-width: 590px; }
+
+.forge-archive-toolbar {
+  min-height: 73px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+.forge-search-field {
+  width: min(430px, 100%);
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--forge-faint);
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+.forge-search-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--forge-text);
+  font-size: 10px;
+}
+.forge-search-field input::placeholder { color: var(--forge-faint); }
+.forge-archive-controls { display: flex; align-items: center; gap: 10px; }
+.forge-filter-set,
+.forge-view-set { display: flex; align-items: center; }
+.forge-filter-set button,
+.forge-view-set button {
+  height: 31px;
+  border: 0;
+  background: transparent;
+  color: var(--forge-faint);
+  font-size: 9px;
+}
+.forge-filter-set button { padding: 0 9px; border-bottom: 1px solid transparent; }
+.forge-filter-set button.active { color: var(--forge-text); border-bottom-color: var(--forge-copper); }
+.forge-view-set { padding-left: 8px; border-left: 1px solid var(--forge-line); }
+.forge-view-set button { width: 29px; display: grid; place-items: center; }
+.forge-view-set button.active { color: var(--forge-copper); }
+.forge-sort {
+  height: 31px;
+  padding: 0 8px;
+  border-left: 1px solid var(--forge-line);
+  color: var(--forge-faint);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 7px/1 var(--forge-mono);
+  text-transform: uppercase;
+}
+.forge-sort select { border: 0; background: transparent; color: var(--forge-text); font: 500 8px/1 var(--forge-ui); }
+
+.forge-document-archive.list { width: 100%; }
+.forge-archive-head {
+  height: 36px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 88px 112px 65px;
+  gap: 12px;
+  align-items: center;
+  padding: 0 7px 0 74px;
+  border-bottom: 1px solid var(--forge-line);
+  color: var(--forge-faint);
+  font: 500 7px/1 var(--forge-mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.forge-archive-item {
+  position: relative;
+  min-height: 67px;
+  border-bottom: 1px solid var(--forge-line);
+}
+.forge-archive-open {
+  width: 100%;
+  min-height: 66px;
+  padding: 7px 72px 7px 7px;
+  border: 0;
+  background: transparent;
+  color: var(--forge-text);
+  display: grid;
+  grid-template-columns: 28px 34px minmax(0,1fr) 64px 88px 112px;
+  gap: 9px;
+  align-items: center;
+  text-align: left;
+}
+.forge-archive-item:hover { background: color-mix(in srgb, var(--forge-text) 4%, transparent); }
+.forge-archive-index { font: 400 7px/1 var(--forge-mono); color: var(--forge-faint); }
+.forge-pdf-sheet {
+  width: 31px;
+  height: 40px;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--forge-text) 5%, transparent);
+}
+.forge-pdf-sheet i { color: var(--forge-copper); font: 500 6px/1 var(--forge-mono); font-style: normal; }
+.forge-pdf-sheet b { color: var(--forge-faint); font: 400 6px/1 var(--forge-mono); }
+.forge-archive-name { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.forge-archive-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; font-weight: 600; }
+.forge-archive-name small { display: none; color: var(--forge-muted); font-size: 8px; }
+.forge-archive-pages,
+.forge-archive-size,
+.forge-archive-date { color: var(--forge-muted); font-size: 9px; }
+.forge-star-action,
+.forge-more-action {
+  position: absolute;
+  top: 18px;
+  width: 29px;
+  height: 29px;
+  border: 0;
+  background: transparent;
+  color: var(--forge-faint);
+  display: grid;
+  place-items: center;
+}
+.forge-star-action { right: 36px; }
+.forge-more-action { right: 4px; }
+.forge-star-action:hover,
+.forge-more-action:hover { color: var(--forge-text); background: color-mix(in srgb, var(--forge-text) 5%, transparent); }
+.forge-star-action.active { color: #ae7b29; }
+.forge-row-menu-wrap { position: static; }
+.forge-row-menu {
+  position: absolute;
+  z-index: 30;
+  right: 3px;
+  top: 51px;
+  width: 190px;
+  padding: 6px;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+  box-shadow: var(--forge-shadow-menu);
+}
+.forge-row-menu button {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 0;
+  background: transparent;
+  color: var(--forge-text);
+  text-align: left;
+  font-size: 9px;
+}
+.forge-row-menu button:hover { background: var(--forge-paper-low); }
+.forge-row-menu button.danger { margin-top: 4px; border-top: 1px solid var(--forge-line); color: var(--forge-red); display: flex; align-items: center; gap: 6px; }
+
+.forge-document-archive.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 16px;
+  padding-top: 24px;
+}
+.forge-document-archive.grid .forge-archive-item {
+  min-height: 180px;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+  box-shadow: 5px 5px 0 color-mix(in srgb, var(--forge-text) 4%, transparent);
+}
+.forge-document-archive.grid .forge-archive-open {
+  min-height: 178px;
+  padding: 20px 46px 20px 20px;
+  grid-template-columns: 30px 50px minmax(0,1fr);
+  grid-template-rows: auto 1fr;
+  align-items: start;
+}
+.forge-document-archive.grid .forge-archive-index { grid-column: 1; }
+.forge-document-archive.grid .forge-pdf-sheet { grid-column: 2; width: 45px; height: 59px; }
+.forge-document-archive.grid .forge-archive-name { grid-column: 1 / -1; grid-row: 2; align-self: end; }
+.forge-document-archive.grid .forge-archive-name strong { font: 400 20px/1.1 var(--forge-display); }
+.forge-document-archive.grid .forge-archive-name small { display: block; margin-top: 6px; }
+.forge-document-archive.grid .forge-archive-pages,
+.forge-document-archive.grid .forge-archive-size,
+.forge-document-archive.grid .forge-archive-date { display: none; }
+.forge-document-archive.grid .forge-star-action,
+.forge-document-archive.grid .forge-more-action { top: 12px; }
+
+/* Tool index */
+.forge-tool-index {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  column-gap: clamp(44px, 6vw, 88px);
+  row-gap: 44px;
+  padding: 45px 0 18px;
+}
+.forge-tool-chapter > header {
+  min-height: 47px;
+  display: grid;
+  grid-template-columns: 32px minmax(0,1fr);
+  align-items: baseline;
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+.forge-tool-chapter > header span { font: 500 8px/1 var(--forge-mono); color: var(--forge-copper); }
+.forge-tool-chapter > header h2 { margin: 0; font: 400 25px/1 var(--forge-display); }
+.forge-tool-chapter > div > button {
+  width: 100%;
+  min-height: 74px;
+  padding: 10px 3px;
+  border: 0;
+  border-bottom: 1px solid var(--forge-line);
+  background: transparent;
+  color: var(--forge-text);
+  display: grid;
+  grid-template-columns: 33px 30px minmax(0,1fr) 14px;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+}
+.forge-tool-chapter > div > button:hover { background: color-mix(in srgb, var(--forge-text) 4%, transparent); }
+.forge-tool-code { font: 400 7px/1 var(--forge-mono); color: var(--forge-faint); }
+.forge-tool-icon { color: var(--forge-copper); display: grid; place-items: center; }
+.forge-tool-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.forge-tool-copy strong { font-size: 10.5px; font-weight: 650; }
+.forge-tool-copy small { color: var(--forge-muted); font-size: 8.5px; line-height: 1.5; }
+.forge-tool-chapter > div > button > svg { color: var(--forge-faint); }
+.forge-capability-rule {
+  margin-top: 24px;
+  padding: 15px 0;
+  border-top: 1px solid var(--forge-line);
+  border-bottom: 1px solid var(--forge-line);
+  color: var(--forge-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+}
+.forge-capability-rule svg { color: var(--forge-green); }
+
+/* ---------- Editor: turn the existing functional shell into an instrument ---------- */
+
+body.pdf-product-editor .app-shell {
+  font-family: var(--forge-ui) !important;
+  background: var(--forge-canvas) !important;
+  color: var(--forge-text) !important;
+}
+
+body.pdf-product-editor .topbar {
+  position: relative !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  padding: 0 13px !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.025), transparent),
+    var(--forge-ink) !important;
+  border-bottom: 1px solid rgba(255,255,255,.08) !important;
+  color: #f2eadf !important;
+  box-shadow: none !important;
+}
+
+body.pdf-product-editor .brand.compact {
+  width: 128px !important;
+  min-width: 128px !important;
+  gap: 8px !important;
+  color: #efe8dd !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+}
+body.pdf-product-editor .brand.compact .brand-mark {
+  width: 34px !important;
+  height: 39px !important;
+  border-radius: 0 !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  background: #201e1a !important;
+  color: #f2eadf !important;
+  box-shadow: inset 0 0 0 2px var(--forge-ink) !important;
+  font: 400 22px/1 var(--forge-display) !important;
+}
+body.pdf-product-editor .doc-title {
+  min-width: 180px !important;
+  padding: 0 0 0 13px !important;
+  border-left: 1px solid rgba(255,255,255,.11) !important;
+}
+body.pdf-product-editor .doc-title::before {
+  content: "ACTIVE DOCUMENT" !important;
+  display: block !important;
+  margin-bottom: 3px !important;
+  color: rgba(255,255,255,.31) !important;
+  font: 500 6.5px/1 var(--forge-mono) !important;
+  letter-spacing: .1em !important;
+}
+body.pdf-product-editor .doc-title input {
+  width: 100%;
+  height: 20px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #f3ece1 !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+body.pdf-product-editor .doc-title > span {
+  position: static !important;
+  display: block;
+  color: rgba(255,255,255,.35) !important;
+  font: 400 7px/1.2 var(--forge-mono) !important;
+}
+
+.forge-editor-switch {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 35;
+  transform: translate(-50%, -50%);
+  height: 42px;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  color: rgba(255,255,255,.55);
+  border-left: 1px solid rgba(255,255,255,.1);
+  border-right: 1px solid rgba(255,255,255,.1);
+}
+.forge-switch-label {
+  display: flex;
+  align-items: center;
+  padding: 0 11px;
+  color: rgba(255,255,255,.26);
+  font: 500 6.5px/1 var(--forge-mono);
+  letter-spacing: .1em;
+}
+.forge-editor-switch > button {
+  position: relative;
+  min-width: 65px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.48);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 9px;
+  font-weight: 600;
+}
+.forge-editor-switch > button i {
+  font: 400 6.5px/1 var(--forge-mono);
+  font-style: normal;
+  color: rgba(255,255,255,.22);
+}
+.forge-editor-switch > button::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: -1px;
+  height: 2px;
+  background: transparent;
+}
+.forge-editor-switch > button:hover { color: rgba(255,255,255,.82); }
+.forge-editor-switch > button.active { color: #fff; }
+.forge-editor-switch > button.active i { color: var(--forge-copper); }
+.forge-editor-switch > button.active::after { background: var(--forge-copper); }
+.forge-editor-switch .forge-command-trigger {
+  min-width: auto;
+  margin-left: 6px;
+  padding: 0 10px;
+  border-left: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.45);
+}
+.forge-command-trigger kbd {
+  padding: 3px 4px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  font: 400 6px/1 var(--forge-mono);
+  color: rgba(255,255,255,.34);
+}
+.forge-editor-theme {
+  position: absolute;
+  right: 171px;
+  top: 18px;
+  z-index: 36;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.4);
+  display: grid;
+  place-items: center;
+}
+.forge-editor-theme:hover { color: #fff; background: rgba(255,255,255,.05); }
+
+body.pdf-product-editor .top-actions {
+  margin-left: auto !important;
+  gap: 4px !important;
+}
+body.pdf-product-editor .document-save-state {
+  min-width: auto !important;
+  margin-right: 4px;
+  color: rgba(255,255,255,.35) !important;
+  font: 400 7px/1 var(--forge-mono) !important;
+}
+body.pdf-product-editor .document-save-state.saved svg { color: #879d83 !important; }
+body.pdf-product-editor .top-actions .icon-btn,
+body.pdf-product-editor .top-actions .soft-btn,
+body.pdf-product-editor .top-actions .primary {
+  height: 34px !important;
+  min-width: 34px !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  font-size: 8.5px !important;
+}
+body.pdf-product-editor .top-actions .icon-btn {
+  border: 0 !important;
+  background: transparent !important;
+  color: rgba(255,255,255,.42) !important;
+}
+body.pdf-product-editor .top-actions .icon-btn:hover { color: #fff !important; background: rgba(255,255,255,.05) !important; }
+body.pdf-product-editor .top-actions .soft-btn {
+  border: 1px solid rgba(255,255,255,.13) !important;
+  background: rgba(255,255,255,.04) !important;
+  color: rgba(255,255,255,.72) !important;
+}
+body.pdf-product-editor .top-actions .primary {
+  border: 1px solid var(--forge-copper) !important;
+  background: var(--forge-copper) !important;
+  color: #fff !important;
+}
+
+body.pdf-product-editor .workspace {
+  grid-template-columns: 48px 216px minmax(520px, 1fr) 270px !important;
+  background: var(--forge-canvas) !important;
+}
+
+body.pdf-product-editor .rail {
+  padding: 10px 6px !important;
+  border-right: 1px solid rgba(255,255,255,.07) !important;
+  background: var(--forge-ink) !important;
+}
+body.pdf-product-editor .rail button {
+  position: relative;
+  width: 35px !important;
+  height: 39px !important;
+  margin: 0 auto 4px !important;
+  border-radius: 0 !important;
+  color: rgba(255,255,255,.34) !important;
+}
+body.pdf-product-editor .rail button::before {
+  content: "" !important;
+  position: absolute !important;
+  left: -6px !important;
+  top: 8px !important;
+  bottom: 8px !important;
+  width: 2px !important;
+  height: auto !important;
+  background: transparent !important;
+}
+body.pdf-product-editor .rail button:hover { color: rgba(255,255,255,.8) !important; background: rgba(255,255,255,.04) !important; }
+body.pdf-product-editor .rail button.active { color: #fff !important; background: rgba(255,255,255,.055) !important; box-shadow: none !important; }
+body.pdf-product-editor .rail button.active::before { background: var(--forge-copper) !important; }
+
+body.pdf-product-editor .left-panel,
+body.pdf-product-editor .right-panel {
+  padding: 17px 13px !important;
+  color: var(--forge-text) !important;
+  background: var(--forge-paper) !important;
+  border-color: var(--forge-line-strong) !important;
+  box-shadow: none !important;
+}
+body.pdf-product-editor .right-panel {
+  background: var(--forge-paper-hi) !important;
+}
+body.pdf-product-editor .panel-heading {
+  position: sticky !important;
+  top: -17px !important;
+  z-index: 8 !important;
+  margin: -17px -2px 13px !important;
+  padding: 17px 2px 12px !important;
+  border-bottom: 1px solid var(--forge-line) !important;
+  background: inherit !important;
+}
+body.pdf-product-editor .panel-heading .eyebrow {
+  color: var(--forge-copper) !important;
+  font: 500 6px/1 var(--forge-mono) !important;
+  letter-spacing: .1em !important;
+}
+body.pdf-product-editor .panel-heading h3 {
+  margin-top: 5px !important;
+  color: var(--forge-text) !important;
+  font: 400 18px/1 var(--forge-display) !important;
+  letter-spacing: -.015em !important;
+}
+body.pdf-product-editor .panel-heading > span {
+  min-width: 24px !important;
+  height: 24px !important;
+  border: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  font: 400 7px/1 var(--forge-mono) !important;
+}
+body.pdf-product-editor .panel-supporting-copy { color: var(--forge-muted) !important; font-size: 9px !important; line-height: 1.55 !important; }
+
+body.pdf-product-editor .editor-column {
+  background: var(--forge-canvas) !important;
+  border-left: 1px solid rgba(0,0,0,.14) !important;
+  border-right: 1px solid rgba(0,0,0,.14) !important;
+}
+body.pdf-product-editor .editor-toolbar {
+  min-height: 50px !important;
+  height: 50px !important;
+  padding: 7px 11px !important;
+  gap: 9px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  background: var(--forge-paper-hi) !important;
+  box-shadow: 0 2px 9px rgba(20,18,15,.07) !important;
+}
+body.pdf-product-editor .editor-toolbar .tool-group {
+  height: 36px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  border: 0 !important;
+  border-right: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+body.pdf-product-editor .editor-toolbar .tool-group button {
+  width: 35px !important;
+  height: 35px !important;
+  padding: 0 9px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-faint) !important;
+  opacity: 1 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 8.5px !important;
+  white-space: nowrap;
+}
+body.pdf-product-editor .editor-toolbar .tool-group button:hover { background: var(--forge-paper-low) !important; color: var(--forge-text) !important; }
+body.pdf-product-editor .editor-toolbar .tool-group button.active {
+  background: var(--forge-ink) !important;
+  color: #f3ece1 !important;
+  box-shadow: none !important;
+}
+body.pdf-product-editor .editor-toolbar .tool-group button svg { width: 15px !important; height: 15px !important; }
+body.pdf-product-editor .editor-toolbar .tool-group button::after { display: none; font-size: 8px; font-weight: 650; }
+
+/* Progressive disclosure: each workflow exposes the tools needed for the current task. */
+body[data-pdf-mode="edit"] .editor-toolbar .tool-group button:not([title="Select"]):not([title="Edit existing text"]):not([title="Add text"]) { display: none !important; }
+body[data-pdf-mode="annotate"] .editor-toolbar .tool-group button:not([title="Select"]):not([title="Sticky note"]):not([title="Highlight"]):not([title="Rectangle"]):not([title="Redact"]):not([title="Draw"]) { display: none !important; }
+body[data-pdf-mode="sign"] .editor-toolbar .tool-group button:not([title="Select"]):not([title="Add text"]):not([title="Signature"]) { display: none !important; }
+
+body[data-pdf-mode="edit"] .editor-toolbar .tool-group button[title="Edit existing text"],
+body[data-pdf-mode="edit"] .editor-toolbar .tool-group button[title="Add text"],
+body[data-pdf-mode="annotate"] .editor-toolbar .tool-group button[title="Sticky note"],
+body[data-pdf-mode="annotate"] .editor-toolbar .tool-group button[title="Highlight"],
+body[data-pdf-mode="annotate"] .editor-toolbar .tool-group button[title="Redact"],
+body[data-pdf-mode="sign"] .editor-toolbar .tool-group button[title="Signature"] {
+  width: auto !important;
+}
+body[data-pdf-mode="edit"] .editor-toolbar .tool-group button[title="Edit existing text"]::after { display: block; content: "Edit text"; }
+body[data-pdf-mode="edit"] .editor-toolbar .tool-group button[title="Add text"]::after { display: block; content: "Add text"; }
+body[data-pdf-mode="annotate"] .editor-toolbar .tool-group button[title="Sticky note"]::after { display: block; content: "Comment"; }
+body[data-pdf-mode="annotate"] .editor-toolbar .tool-group button[title="Highlight"]::after { display: block; content: "Highlight"; }
+body[data-pdf-mode="annotate"] .editor-toolbar .tool-group button[title="Redact"]::after { display: block; content: "Redact"; }
+body[data-pdf-mode="sign"] .editor-toolbar .tool-group button[title="Signature"]::after { display: block; content: "Signature"; }
+
+body.pdf-product-editor .editor-toolbar > .divider { background: var(--forge-line-strong) !important; }
+body.pdf-product-editor .search-box {
+  height: 35px !important;
+  min-width: 190px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-faint) !important;
+}
+body.pdf-product-editor .search-box input { color: var(--forge-text) !important; font-size: 8.5px !important; }
+body.pdf-product-editor .search-box input::placeholder { color: var(--forge-faint) !important; }
+body.pdf-product-editor .editor-toolbar > .soft-btn {
+  height: 35px !important;
+  padding: 0 9px !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  box-shadow: none !important;
+  font-size: 8px !important;
+}
+body.pdf-product-editor .editor-toolbar > .soft-btn:hover { background: var(--forge-paper-low) !important; color: var(--forge-text) !important; }
+
+body.pdf-product-editor .document-stage,
+body.pdf-product-editor .page-scroll {
+  background: var(--forge-canvas) !important;
+}
+body.pdf-product-editor .document-stage {
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px) !important;
+  background-size: 28px 28px !important;
+}
+body.pdf-product-editor .pdf-page {
+  border-radius: 0 !important;
+  box-shadow: var(--forge-shadow-paper) !important;
+}
+body.pdf-product-editor .stage-top-hint {
+  top: 13px !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 0 !important;
+  background: rgba(24,23,19,.88) !important;
+  color: rgba(255,255,255,.62) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(10px);
+  font: 400 7.5px/1 var(--forge-mono) !important;
+  letter-spacing: .02em;
+}
+body.pdf-product-editor .floating-nav {
+  bottom: 16px !important;
+  min-height: 40px !important;
+  padding: 3px 5px !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-top: 2px solid var(--forge-copper) !important;
+  border-radius: 0 !important;
+  background: rgba(20,19,16,.96) !important;
+  color: #eee7dc !important;
+  box-shadow: 0 15px 42px rgba(0,0,0,.28) !important;
+}
+body.pdf-product-editor .floating-nav button {
+  min-width: 30px !important;
+  height: 31px !important;
+  border-radius: 0 !important;
+  color: rgba(255,255,255,.55) !important;
+}
+body.pdf-product-editor .floating-nav button:hover,
+body.pdf-product-editor .floating-nav .view-active { background: rgba(255,255,255,.06) !important; color: #fff !important; }
+body.pdf-product-editor .floating-nav span { font: 400 7.5px/1 var(--forge-mono) !important; }
+body.pdf-product-editor .floating-nav input { color: #fff !important; font: inherit !important; }
+
+body.pdf-product-editor .thumbnail {
+  border-radius: 0 !important;
+  color: var(--forge-muted) !important;
+}
+body.pdf-product-editor .thumbnail:hover { background: var(--forge-paper-low) !important; }
+body.pdf-product-editor .thumbnail.active {
+  border-color: var(--forge-copper) !important;
+  background: var(--forge-copper-soft) !important;
+  box-shadow: inset 3px 0 0 var(--forge-copper) !important;
+}
+body.pdf-product-editor .thumb-sheet { box-shadow: 2px 2px 0 color-mix(in srgb, var(--forge-text) 8%, transparent) !important; }
+
+body.pdf-product-editor .drop-card,
+body.pdf-product-editor .right-help,
+body.pdf-product-editor .signature-preset-panel,
+body.pdf-product-editor .form-layout-tools {
+  border: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-muted) !important;
+  box-shadow: none !important;
+}
+body.pdf-product-editor .drop-card:hover { border-color: var(--forge-copper) !important; background: var(--forge-copper-soft) !important; }
+body.pdf-product-editor .empty-panel { color: var(--forge-muted) !important; }
+
+body.pdf-product-editor .property-section > span,
+body.pdf-product-editor .property-field,
+body.pdf-product-editor .meta-form label {
+  color: var(--forge-muted) !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+}
+body.pdf-product-editor .property-field input,
+body.pdf-product-editor .property-field textarea,
+body.pdf-product-editor .property-field select,
+body.pdf-product-editor .meta-form input,
+body.pdf-product-editor .meta-form textarea,
+body.pdf-product-editor .form-field input,
+body.pdf-product-editor .form-field select {
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-text) !important;
+  box-shadow: none !important;
+}
+body.pdf-product-editor .native-edit-note,
+body.pdf-product-editor .native-edit-meta,
+body.pdf-product-editor .right-help p { color: var(--forge-muted) !important; font-size: 8px !important; line-height: 1.55 !important; }
+
+/* Organize mode becomes a full page table rather than a cramped sidebar. */
+body[data-pdf-mode="organize"] .workspace { grid-template-columns: 48px minmax(0,1fr) !important; }
+body[data-pdf-mode="organize"] .left-panel {
+  grid-column: 2;
+  padding: 30px clamp(28px,4vw,55px) !important;
+  border: 0 !important;
+  background:
+    linear-gradient(90deg, rgba(56,48,39,.025) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--forge-paper) !important;
+}
+body[data-pdf-mode="organize"] .editor-column,
+body[data-pdf-mode="organize"] .right-panel { display: none !important; }
+body[data-pdf-mode="organize"] .left-panel .panel-heading,
+body[data-pdf-mode="organize"] .page-actions-grid,
+body[data-pdf-mode="organize"] .page-select-toolbar,
+body[data-pdf-mode="organize"] .bulk-page-actions,
+body[data-pdf-mode="organize"] .thumbnail-list { max-width: 1280px; margin-left: auto !important; margin-right: auto !important; }
+body[data-pdf-mode="organize"] .left-panel .panel-heading {
+  position: static !important;
+  margin-top: 0 !important;
+  padding: 0 0 18px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+body[data-pdf-mode="organize"] .left-panel .panel-heading h3 { font-size: 31px !important; }
+body[data-pdf-mode="organize"] .page-actions-grid {
+  display: flex !important;
+  gap: 6px !important;
+  padding: 15px 0 !important;
+  border-bottom: 1px solid var(--forge-line) !important;
+}
+body[data-pdf-mode="organize"] .page-actions-grid button,
+body[data-pdf-mode="organize"] .bulk-page-actions button {
+  width: auto !important;
+  min-width: 92px;
+  height: 33px !important;
+  border-radius: 0 !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-muted) !important;
+}
+body[data-pdf-mode="organize"] .thumbnail-list {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(150px,1fr)) !important;
+  gap: 18px !important;
+  padding-top: 20px !important;
+}
+body[data-pdf-mode="organize"] .thumb-drag-wrap {
+  position: relative;
+  min-width: 0;
+  padding: 9px !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--forge-text) 5%, transparent) !important;
+}
+body[data-pdf-mode="organize"] .thumb-drag-wrap:hover {
+  transform: translate(-1px,-1px);
+  box-shadow: 7px 7px 0 color-mix(in srgb, var(--forge-copper) 10%, transparent) !important;
+}
+body[data-pdf-mode="organize"] .thumb-drag-wrap.multi-selected {
+  border-color: var(--forge-copper) !important;
+  background: var(--forge-copper-soft) !important;
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--forge-copper) 20%, transparent) !important;
+}
+
+/* Drawers: technical folios, not rounded SaaS modals. */
+.all-tools-layer { inset: 68px 0 0 !important; }
+.all-tools-drawer {
+  left: 48px !important;
+  border-radius: 0 !important;
+  border-right: 1px solid var(--forge-line-strong) !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+  box-shadow: 25px 0 70px rgba(17,15,12,.18) !important;
+}
+.all-tools-header,
+.all-tools-search,
+.all-tools-categories,
+.all-tools-footer,
+.advanced-modal > header,
+.advanced-category-nav { border-color: var(--forge-line) !important; }
+.all-tools-heading h2,
+.all-tools-section-title h3,
+.advanced-modal h2,
+.advanced-card h3 { font-family: var(--forge-display) !important; font-weight: 400 !important; color: var(--forge-text) !important; }
+.all-tools-heading p,
+.all-tools-section-title p,
+.all-tools-action small,
+.advanced-modal header p,
+.advanced-card p { color: var(--forge-muted) !important; }
+.all-tools-search,
+.all-tools-action-icon,
+.advanced-card {
+  border-radius: 0 !important;
+  border-color: var(--forge-line) !important;
+  background: var(--forge-paper) !important;
+}
+.all-tools-action { border-radius: 0 !important; color: var(--forge-text) !important; }
+.all-tools-action:hover,
+.all-tools-categories button.active,
+.advanced-category-nav button:hover { background: var(--forge-paper-low) !important; color: var(--forge-text) !important; }
+
+/* Command desk */
+.product-command-layer,
+.product-dialog-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(18,16,13,.46) !important;
+  backdrop-filter: blur(7px);
+}
+.product-command-layer { display: grid; place-items: start center; padding-top: min(16vh, 135px); }
+.product-command-palette {
+  width: min(660px, calc(100vw - 30px)) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-top: 3px solid var(--forge-copper) !important;
+  border-radius: 0 !important;
+  background: #1b1a17 !important;
+  color: #f0e9de !important;
+  box-shadow: 0 30px 90px rgba(0,0,0,.4) !important;
+}
+.product-command-search {
+  min-height: 57px;
+  border-bottom: 1px solid rgba(255,255,255,.1) !important;
+  color: rgba(255,255,255,.38) !important;
+}
+.product-command-search input {
+  color: #fff !important;
+  font: 400 20px/1 var(--forge-display) !important;
+  letter-spacing: -.015em;
+}
+.product-command-search input::placeholder { color: rgba(255,255,255,.25) !important; }
+.product-command-search button { color: rgba(255,255,255,.4) !important; }
+.product-command-results > button {
+  min-height: 58px !important;
+  display: grid !important;
+  grid-template-columns: 27px minmax(0,1fr) auto !important;
+  gap: 8px !important;
+  border-radius: 0 !important;
+  color: #eee7dc !important;
+}
+.product-command-results > button > i {
+  color: rgba(255,255,255,.25);
+  font: 400 7px/1 var(--forge-mono);
+  font-style: normal;
+}
+.product-command-results > button:hover { background: rgba(255,255,255,.055) !important; }
+.product-command-results small { color: rgba(255,255,255,.4) !important; }
+.product-command-results kbd,
+.product-command-palette footer kbd {
+  border-radius: 0 !important;
+  border-color: rgba(255,255,255,.12) !important;
+  background: rgba(255,255,255,.04) !important;
+  color: rgba(255,255,255,.45) !important;
+  font: 400 7px/1 var(--forge-mono) !important;
+}
+.product-command-palette footer {
+  border-top-color: rgba(255,255,255,.1) !important;
+  color: rgba(255,255,255,.3) !important;
+  font: 400 7px/1 var(--forge-mono) !important;
+}
+
+/* Dialogs use paper + ink editorial hierarchy. */
+.product-dialog-layer { display: grid; place-items: center; padding: 20px; }
+.product-dialog {
+  width: min(480px, 100%) !important;
+  padding: 23px !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-top: 3px solid var(--forge-ink) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+  box-shadow: var(--forge-shadow-menu) !important;
+}
+.product-dialog header { gap: 13px !important; }
+.product-dialog-icon {
+  width: 38px !important;
+  height: 45px !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper) !important;
+  color: var(--forge-copper) !important;
+}
+.product-dialog h2 { font: 400 25px/1.05 var(--forge-display) !important; letter-spacing: -.02em !important; }
+.product-dialog p { color: var(--forge-muted) !important; font-size: 9px !important; line-height: 1.6 !important; }
+.product-dialog-field { color: var(--forge-muted) !important; font-size: 8px !important; }
+.product-dialog-field input {
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-text) !important;
+}
+.product-dialog .product-primary,
+.product-dialog .product-secondary,
+.product-dialog .product-danger {
+  border-radius: 0 !important;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .forge-product-root { grid-template-columns: 84px minmax(0,1fr); }
+  .forge-mast { padding-left: 10px; padding-right: 10px; }
+  .forge-brand-copy { display: none; }
+  .forge-mast-nav button { padding-left: 22px; grid-template-columns: 19px; }
+  .forge-mast-nav button em { display: none; }
+  .forge-mast-foot div { display: none; }
+  .forge-desk-intro { grid-template-columns: 1fr; gap: 35px; }
+  .forge-file-tray { min-height: 165px; }
+  .forge-home-body { grid-template-columns: 1fr; }
+  .forge-task-index { padding-left: 0; border-left: 0; }
+  .forge-task-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .forge-task-list > button:nth-child(odd) { border-right: 1px solid var(--forge-line); }
+  .forge-tool-index { grid-template-columns: 1fr; }
+  body.pdf-product-editor .workspace { grid-template-columns: 46px 190px minmax(450px,1fr) !important; }
+  body.pdf-product-editor .right-panel { display: none; }
+  .forge-editor-switch { left: 45%; }
+}
+
+@media (max-width: 780px) {
+  .forge-product-root { grid-template-columns: 1fr; }
+  .forge-mast {
+    position: sticky;
+    height: 56px;
+    padding: 0 14px;
+    flex-direction: row;
+    align-items: center;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .forge-brand-seal { width: 32px; height: 36px; }
+  .forge-brand-seal b { font-size: 19px; }
+  .forge-brand-seal i { display: none; }
+  .forge-mast-nav { margin: 0 0 0 auto; flex-direction: row; gap: 2px; }
+  .forge-mast-nav button { width: 42px; min-height: 38px; padding: 0; display: grid; place-items: center; }
+  .forge-mast-nav button > span, .forge-mast-nav button em, .forge-mast-nav button::before { display: none; }
+  .forge-mast-nav button svg { grid-column: auto; grid-row: auto; }
+  .forge-mast-foot { display: none; }
+  .forge-product-bar { top: 56px; height: 50px; padding: 0 18px; }
+  .forge-product-context { font-size: 7px; }
+  .forge-quiet-action span, .forge-quiet-action kbd { display: none; }
+  .forge-product-main { width: calc(100% - 32px); padding-top: 32px; }
+  .forge-intro-copy h1, .forge-page-title h1 { font-size: 45px; }
+  .forge-desk-intro { min-height: auto; padding-bottom: 35px; }
+  .forge-file-tray { grid-template-columns: 38px minmax(0,1fr); }
+  .forge-file-tray > svg { display: none; }
+  .forge-ledger-head { display: none; }
+  .forge-ledger-row { grid-template-columns: minmax(0,1fr) 16px; gap: 8px; }
+  .forge-ledger-row > span:not(.forge-ledger-doc) { display: none; }
+  .forge-task-list { grid-template-columns: 1fr; }
+  .forge-task-list > button:nth-child(odd) { border-right: 0; }
+  .forge-home-footer { flex-direction: column; align-items: flex-start; }
+  .forge-page-title { min-height: 190px; align-items: flex-start; flex-direction: column; justify-content: flex-end; }
+  .forge-archive-toolbar { align-items: stretch; flex-direction: column; padding: 14px 0; }
+  .forge-archive-controls { justify-content: space-between; flex-wrap: wrap; }
+  .forge-archive-head { display: none; }
+  .forge-archive-open { grid-template-columns: 25px 34px minmax(0,1fr); }
+  .forge-archive-pages, .forge-archive-size, .forge-archive-date { display: none; }
+  .forge-archive-name small { display: block; }
+  .forge-document-archive.grid { grid-template-columns: 1fr; }
+  body.pdf-product-editor .workspace { grid-template-columns: 44px minmax(0,1fr) !important; }
+  body.pdf-product-editor .left-panel, body.pdf-product-editor .right-panel { display: none; }
+  body.pdf-product-editor .editor-column { grid-column: 2; }
+  body.pdf-product-editor .doc-title { display: none; }
+  .forge-switch-label, .forge-editor-switch button i, .forge-command-trigger span, .forge-command-trigger kbd { display: none; }
+  .forge-editor-switch { left: 50%; }
+  .forge-editor-switch > button { min-width: 43px; padding: 0 6px; font-size: 7px; }
+  .forge-editor-theme { display: none; }
+  body.pdf-product-editor .editor-toolbar .search-box { min-width: 120px !important; }
+  body.pdf-product-editor .editor-toolbar > .soft-btn { display: none !important; }
+  body.pdf-product-editor .rail button { width: 38px !important; height: 38px !important; }
+  body.pdf-product-editor .editor-toolbar .tool-group button { min-width: 38px !important; height: 38px !important; }
+  body.pdf-product-editor .floating-nav button { min-width: 36px !important; height: 36px !important; }
+  body.pdf-product-editor .top-actions .icon-btn,
+  body.pdf-product-editor .top-actions .soft-btn,
+  body.pdf-product-editor .top-actions .primary { min-width: 38px !important; height: 38px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+}
+
+
+/* ---------- Secondary workspaces: keep the design language intact ---------- */
+
+.all-tools-launcher {
+  border-radius: 0 !important;
+  font-family: var(--forge-ui) !important;
+}
+.all-tools-launcher.active,
+.all-tools-launcher:hover { background: rgba(255,255,255,.05) !important; }
+.all-tools-launcher.active::before { border-radius: 0 !important; background: var(--forge-copper) !important; }
+
+.all-tools-drawer { width: min(430px, calc(100vw - 48px)) !important; }
+.all-tools-header {
+  padding: 25px 20px 17px !important;
+  background: var(--forge-paper-hi) !important;
+}
+.all-tools-eyebrow {
+  color: var(--forge-copper) !important;
+  font: 500 7px/1 var(--forge-mono) !important;
+  letter-spacing: .12em !important;
+}
+.all-tools-header h2 { font: 400 27px/1 var(--forge-display) !important; letter-spacing: -.02em; }
+.all-tools-header p { font-size: 9px !important; line-height: 1.55 !important; }
+.all-tools-close {
+  width: 33px !important; height: 33px !important;
+  border-radius: 0 !important;
+  border-color: var(--forge-line-strong) !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+}
+.all-tools-close:hover { background: var(--forge-paper-low) !important; color: var(--forge-text) !important; }
+.all-tools-content { padding: 0 18px 22px !important; }
+.all-tools-search {
+  margin: 14px 0 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  background: transparent !important;
+}
+.all-tools-categories {
+  padding: 12px 0 !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+.all-tools-categories button {
+  min-height: 35px !important;
+  padding: 0 7px !important;
+  border: 0 !important;
+  border-left: 1px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  justify-content: flex-start !important;
+  font-size: 8px !important;
+  text-align: left !important;
+}
+.all-tools-categories button.active {
+  border-left-color: var(--forge-copper) !important;
+  background: var(--forge-copper-soft) !important;
+  color: var(--forge-text) !important;
+}
+.all-tools-section { padding: 20px 0 6px !important; border-bottom-color: var(--forge-line) !important; }
+.all-tools-section-title h3 { font: 400 19px/1.05 var(--forge-display) !important; }
+.all-tools-section-title p { margin-top: 5px !important; font-size: 8px !important; line-height: 1.45 !important; }
+.all-tools-grid { grid-template-columns: 1fr !important; gap: 0 !important; }
+.all-tools-action {
+  min-height: 57px !important;
+  padding: 8px 3px !important;
+  grid-template-columns: 28px minmax(0,1fr) !important;
+  gap: 9px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  transform: none !important;
+}
+.all-tools-action:hover { background: var(--forge-paper-low) !important; }
+.all-tools-action-icon {
+  width: 27px !important; height: 34px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-copper) !important;
+}
+.all-tools-action strong { font-size: 9.5px !important; font-weight: 650 !important; }
+.all-tools-action small { margin-top: 3px !important; font-size: 8px !important; line-height: 1.45 !important; }
+.all-tools-footer {
+  min-height: 40px !important;
+  background: var(--forge-paper) !important;
+  color: var(--forge-faint) !important;
+  font: 400 7px/1 var(--forge-mono) !important;
+}
+
+/* Document tools becomes a technical folio rather than a card dashboard. */
+.advanced-backdrop,
+.native-object-backdrop {
+  background: rgba(18,16,13,.55) !important;
+  backdrop-filter: blur(7px) !important;
+}
+.advanced-modal,
+.native-object-modal {
+  width: min(1160px, calc(100vw - 46px)) !important;
+  max-height: 91vh !important;
+  padding: 0 !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-top: 3px solid var(--forge-ink) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+  box-shadow: 0 35px 100px rgba(11,10,8,.34) !important;
+}
+.advanced-modal > header,
+.native-object-modal > header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  min-height: 94px;
+  margin: 0 !important;
+  padding: 20px 22px 16px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  background: color-mix(in srgb, var(--forge-paper-hi) 94%, transparent) !important;
+  backdrop-filter: blur(14px);
+}
+.advanced-modal > header .eyebrow,
+.native-object-modal > header .eyebrow {
+  color: var(--forge-copper) !important;
+  font: 500 7px/1 var(--forge-mono) !important;
+  letter-spacing: .13em !important;
+}
+.advanced-modal > header h2,
+.native-object-modal > header h2 {
+  margin: 6px 0 5px !important;
+  font: 400 28px/1 var(--forge-display) !important;
+  letter-spacing: -.02em !important;
+}
+.advanced-modal > header p,
+.native-object-modal > header p {
+  color: var(--forge-muted) !important;
+  font-size: 9px !important;
+  line-height: 1.5 !important;
+}
+.advanced-modal > header .icon-btn,
+.native-object-modal > header .icon-btn {
+  width: 34px !important; height: 34px !important;
+  border-radius: 0 !important;
+  border: 1px solid var(--forge-line) !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+}
+.advanced-modal > header .icon-btn:hover,
+.native-object-modal > header .icon-btn:hover { background: var(--forge-paper-low) !important; color: var(--forge-text) !important; }
+
+.advanced-category-nav,
+.object-section-nav {
+  position: sticky;
+  top: 94px;
+  z-index: 14;
+  min-height: 48px;
+  margin: 0 !important;
+  padding: 0 20px !important;
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: color-mix(in srgb, var(--forge-paper) 96%, transparent) !important;
+  backdrop-filter: blur(12px);
+}
+.advanced-category-nav button,
+.object-section-nav button {
+  position: relative;
+  min-height: 47px !important;
+  padding: 0 15px !important;
+  border: 0 !important;
+  border-right: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+}
+.advanced-category-nav button:first-child,
+.object-section-nav button:first-child { border-left: 1px solid var(--forge-line) !important; }
+.advanced-category-nav button::before {
+  display: inline-block;
+  margin-right: 7px;
+  color: var(--forge-copper);
+  font: 400 6.5px/1 var(--forge-mono);
+}
+.advanced-category-nav button:nth-child(1)::before { content: "01"; }
+.advanced-category-nav button:nth-child(2)::before { content: "02"; }
+.advanced-category-nav button:nth-child(3)::before { content: "03"; }
+.advanced-category-nav button:nth-child(4)::before { content: "04"; }
+.advanced-category-nav button:hover,
+.object-section-nav button:hover,
+.object-section-nav button.active {
+  background: var(--forge-paper-low) !important;
+  color: var(--forge-text) !important;
+}
+.object-section-nav button.active::after {
+  content: "";
+  position: absolute;
+  left: 12px; right: 12px; bottom: -1px;
+  height: 2px;
+  background: var(--forge-copper);
+}
+
+.advanced-grid {
+  padding: 0 22px 28px !important;
+  grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  gap: 0 28px !important;
+}
+.advanced-category-marker {
+  grid-column: 1 / -1 !important;
+  min-height: 74px;
+  margin: 0 !important;
+  padding: 22px 0 12px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+.advanced-category-marker > span,
+.object-section-heading > span {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--forge-copper) !important;
+  font: 500 7px/1 var(--forge-mono) !important;
+}
+.advanced-category-marker strong,
+.object-section-heading strong {
+  font: 400 19px/1 var(--forge-display) !important;
+  color: var(--forge-text) !important;
+}
+.advanced-category-marker small,
+.object-section-heading small { color: var(--forge-muted) !important; font-size: 8px !important; }
+
+.advanced-card {
+  min-height: 0 !important;
+  padding: 17px 2px 19px !important;
+  gap: 9px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-text) !important;
+}
+.advanced-card h3 {
+  font: 400 17px/1.1 var(--forge-display) !important;
+  color: var(--forge-text) !important;
+}
+.advanced-card h3 svg { color: var(--forge-copper) !important; width: 15px !important; }
+.advanced-card p { font-size: 8px !important; line-height: 1.5 !important; }
+.advanced-card input:not([type="range"]),
+.advanced-card select,
+.crop-grid input,
+.position-grid input {
+  min-height: 34px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-text) !important;
+  padding: 6px 4px !important;
+}
+.advanced-card button,
+.advanced-row button,
+.stamp-row button {
+  min-height: 34px !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+  font-size: 8px !important;
+}
+.advanced-card button:hover { background: var(--forge-paper-low) !important; border-color: var(--forge-copper) !important; }
+.danger-card {
+  padding-left: 12px !important;
+  border-left: 2px solid color-mix(in srgb, var(--forge-red) 55%, transparent) !important;
+  background: transparent !important;
+}
+.danger-action { background: color-mix(in srgb, var(--forge-red) 8%, var(--forge-paper-hi)) !important; color: var(--forge-red) !important; }
+.crop-grid label,
+.position-grid label,
+.check-row { color: var(--forge-muted) !important; font-size: 8px !important; }
+
+/* PDF Objects: paper hierarchy around technical data. */
+.native-object-modal { background: var(--forge-paper-hi) !important; }
+.native-object-modal .object-section {
+  margin: 0 22px !important;
+  padding: 20px 0 8px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+.object-section-heading {
+  min-height: 51px !important;
+  margin: 0 0 12px !important;
+  display: grid !important;
+  grid-template-columns: 30px minmax(0,1fr) !important;
+  align-items: start !important;
+  gap: 8px !important;
+}
+.native-page-content-manager,
+.native-object-manager,
+.attachment-manager,
+.image-signature-manager,
+.native-comment-detail-manager,
+.native-markup-manager,
+.native-shape-manager,
+.native-extended-manager,
+.form-field-property-manager,
+.advanced-form-widget-manager,
+.document-view-manager {
+  margin-top: 10px !important;
+  padding: 12px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--forge-text) !important;
+}
+.native-page-content-heading strong,
+.native-object-manager h3,
+.attachment-manager-heading strong,
+.image-signature-heading strong { color: var(--forge-text) !important; }
+.native-page-content-heading small,
+.native-object-manager > p,
+.attachment-manager-heading small,
+.image-signature-heading small { color: var(--forge-muted) !important; }
+.native-page-content-summary span,
+.native-object-tabs button {
+  border-radius: 0 !important;
+  border-color: var(--forge-line) !important;
+  background: var(--forge-paper) !important;
+  color: var(--forge-muted) !important;
+}
+.native-object-tabs button.active { border-color: var(--forge-copper) !important; background: var(--forge-copper-soft) !important; color: var(--forge-text) !important; }
+.native-page-content-row,
+.native-object-row,
+.attachment-row {
+  border: 1px solid var(--forge-line) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper) !important;
+  color: var(--forge-text) !important;
+}
+.native-page-content-row textarea,
+.native-page-content-row input,
+.native-object-row textarea,
+.native-object-row input,
+.attachment-add-row input,
+.image-signature-name input,
+.image-signature-grid input {
+  border: 0 !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  border-radius: 0 !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+}
+.native-page-content-actions button,
+.native-object-actions button,
+.attachment-row > button,
+.attachment-add-row button,
+.image-signature-heading > button,
+.image-signature-place {
+  border-radius: 0 !important;
+  border-color: var(--forge-line-strong) !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+}
+.native-page-content-meta,
+.native-object-meta,
+.native-object-field,
+.native-bookmark-target,
+.native-link-geometry label,
+.native-page-text-fields label,
+.native-page-image-fields label { color: var(--forge-muted) !important; }
+
+@media (max-width: 760px) {
+  .advanced-modal,
+  .native-object-modal { width: calc(100vw - 18px) !important; max-height: 94vh !important; }
+  .advanced-category-nav,
+  .object-section-nav { overflow-x: auto !important; padding: 0 8px !important; }
+  .advanced-category-nav button,
+  .object-section-nav button { flex: 0 0 auto; min-width: 125px; }
+  .advanced-grid { grid-template-columns: 1fr !important; padding: 0 14px 20px !important; }
+  .advanced-category-marker { grid-column: 1 !important; }
+  .native-object-modal .object-section { margin: 0 14px !important; }
+}
+
+
+/* Final navigation normalization: legacy release rules set full-width buttons. */
+.advanced-category-nav > button,
+.object-section-nav > button {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: 1 1 0 !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+.object-section-nav > button span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 8px !important;
+}
+.object-section-nav > button svg { flex: 0 0 auto !important; }
+.forge-secondary-action {
+  color: var(--forge-text) !important;
+  background: var(--forge-paper-hi) !important;
+  border-color: var(--forge-line-strong) !important;
+}
+@media (max-width: 760px) {
+  .advanced-category-nav > button,
+  .object-section-nav > button {
+    width: auto !important;
+    min-width: 126px !important;
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+  }
+}
+
+
+/* Mobile is a dedicated document instrument, not a squeezed desktop shell. */
+@media (max-width: 760px) {
+  body.pdf-product-editor .topbar {
+    height: 56px !important;
+    min-height: 56px !important;
+    flex-basis: 56px !important;
+    padding: 0 6px !important;
+  }
+  body.pdf-product-editor .brand.compact,
+  body.pdf-product-editor .doc-title,
+  body.pdf-product-editor .document-save-state,
+  body.pdf-product-editor .top-actions button[title="Undo"],
+  body.pdf-product-editor .top-actions button[title="Redo"] {
+    display: none !important;
+  }
+  .forge-editor-switch {
+    left: 6px !important;
+    right: 92px !important;
+    top: 0 !important;
+    height: 56px !important;
+    transform: none !important;
+    border: 0 !important;
+  }
+  .forge-editor-switch > button {
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
+    padding: 0 4px !important;
+    font-size: 7.5px !important;
+    letter-spacing: -.01em;
+  }
+  .forge-editor-switch .forge-command-trigger { display: none !important; }
+  .forge-editor-switch > button::after { left: 5px !important; right: 5px !important; }
+  body.pdf-product-editor .top-actions {
+    width: 82px !important;
+    margin-left: auto !important;
+    justify-content: flex-end !important;
+    gap: 3px !important;
+  }
+  body.pdf-product-editor .top-actions .primary {
+    width: 39px !important;
+    min-width: 39px !important;
+    height: 38px !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    border-radius: 0 !important;
+  }
+  body.pdf-product-editor .top-actions .primary svg { width: 16px !important; height: 16px !important; }
+  body.pdf-product-editor .top-actions .icon-btn[title="Close document"] {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    border-left: 1px solid rgba(255,255,255,.09) !important;
+  }
+
+  .mobile-workspace-bar {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 9px !important;
+    height: 48px !important;
+    padding: 0 !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-top: 2px solid var(--forge-copper) !important;
+    border-radius: 0 !important;
+    background: rgba(20,19,16,.96) !important;
+    box-shadow: 0 14px 34px rgba(0,0,0,.28) !important;
+    backdrop-filter: blur(14px) !important;
+  }
+  .mobile-workspace-bar button {
+    min-height: 46px !important;
+    border-radius: 0 !important;
+    color: rgba(255,255,255,.47) !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    border-right: 1px solid rgba(255,255,255,.07) !important;
+  }
+  .mobile-workspace-bar button:last-child { border-right: 0 !important; }
+  .mobile-workspace-bar button:hover,
+  .mobile-workspace-bar button:active {
+    background: rgba(255,255,255,.05) !important;
+    color: #fff !important;
+  }
+  .mobile-workspace-bar svg { width: 15px !important; height: 15px !important; }
+  .mobile-workspace-bar span {
+    font: 500 7px/1 var(--forge-mono) !important;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  body.mobile-left-open .left-panel,
+  body.mobile-right-open .right-panel {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 65px !important;
+    max-height: min(72dvh, 640px) !important;
+    padding: 18px 14px 22px !important;
+    border: 1px solid var(--forge-line-strong) !important;
+    border-top: 3px solid var(--forge-copper) !important;
+    border-radius: 0 !important;
+    background: var(--forge-paper-hi) !important;
+    color: var(--forge-text) !important;
+    box-shadow: 0 -18px 55px rgba(0,0,0,.27) !important;
+  }
+  .mobile-sheet-backdrop {
+    inset: 56px 0 58px !important;
+    background: rgba(18,16,13,.48) !important;
+    backdrop-filter: blur(3px) !important;
+  }
+  .mobile-sheet-close {
+    right: 19px !important;
+    width: 36px !important;
+    height: 36px !important;
+    border: 1px solid var(--forge-line-strong) !important;
+    border-radius: 0 !important;
+    background: var(--forge-ink) !important;
+    color: #eee7dc !important;
+  }
+  body.mobile-left-open .left-panel .panel-heading,
+  body.mobile-right-open .right-panel .panel-heading {
+    background: var(--forge-paper-hi) !important;
+  }
+}
+
+
+/* =======================================================================
+   WORKBENCH UX V2
+   Task-first, recognition-first, readable. Keeps the Forge visual identity.
+   ======================================================================= */
+
+@media (min-width: 781px) {
+  .forge-product-root {
+    grid-template-columns: 172px minmax(0, 1fr) !important;
+  }
+
+  .forge-mast {
+    padding: 26px 18px 20px !important;
+  }
+
+  .forge-brand {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  .forge-brand-seal {
+    width: 44px !important;
+    height: 50px !important;
+    flex: 0 0 auto;
+  }
+
+  .forge-brand-copy strong {
+    font-size: 14px !important;
+  }
+
+  .forge-brand-copy small {
+    margin-top: 3px;
+    font-size: 8px !important;
+  }
+
+  .forge-mast-nav {
+    margin-top: 48px !important;
+    gap: 4px !important;
+  }
+
+  .forge-mast-nav button {
+    min-height: 52px !important;
+    padding: 8px 8px 8px 35px !important;
+    grid-template-columns: 22px minmax(0, 1fr) !important;
+    column-gap: 8px !important;
+  }
+
+  .forge-mast-nav button > span {
+    left: 9px !important;
+    top: 11px !important;
+    font-size: 8px !important;
+  }
+
+  .forge-mast-nav button em {
+    display: block !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+  }
+
+  .forge-mast-foot strong {
+    font-size: 10px !important;
+  }
+
+  .forge-mast-foot small {
+    font-size: 8px !important;
+  }
+}
+
+.forge-product-bar {
+  height: 66px !important;
+}
+
+.forge-product-context {
+  font-size: 10px !important;
+}
+
+.forge-quiet-action {
+  min-height: 38px !important;
+  font-size: 11px !important;
+}
+
+.forge-quiet-action kbd {
+  font-size: 8px !important;
+}
+
+.forge-theme-switch {
+  width: 38px !important;
+  height: 38px !important;
+}
+
+.forge-product-main {
+  width: min(1280px, calc(100% - clamp(42px, 6vw, 88px))) !important;
+  padding-top: clamp(30px, 4vw, 50px) !important;
+}
+
+.forge-launchpad {
+  min-width: 0;
+}
+
+.forge-launch-header {
+  min-height: 128px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 42px;
+  padding: 4px 0 30px;
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+
+.forge-launch-header > div:first-child {
+  max-width: 760px;
+}
+
+.forge-launch-header h1 {
+  margin: 8px 0 0;
+  color: var(--forge-text);
+  font: 400 clamp(34px, 3.5vw, 48px)/1 var(--forge-display);
+  letter-spacing: -.025em;
+}
+
+.forge-launch-header p {
+  max-width: 690px;
+  margin: 13px 0 0;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.forge-folio-label,
+.forge-station-heading span,
+.forge-jobs-heading > div > span {
+  font-size: 10px !important;
+  letter-spacing: .1em !important;
+}
+
+.forge-local-status {
+  min-width: 210px;
+  padding: 11px 0 11px 14px;
+  display: grid;
+  grid-template-columns: 10px minmax(0,1fr);
+  column-gap: 9px;
+  border-left: 2px solid var(--forge-green);
+}
+
+.forge-local-status .forge-local-dot {
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+.forge-local-status strong {
+  color: var(--forge-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.forge-local-status small {
+  margin-top: 3px;
+  color: var(--forge-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.forge-start-area {
+  display: grid;
+  grid-template-columns: minmax(360px, .95fr) minmax(420px, 1.25fr);
+  gap: 0;
+  margin-top: 34px;
+  border: 1px solid var(--forge-line-strong);
+  border-top: 3px solid var(--forge-ink);
+  background: var(--forge-paper-hi);
+  box-shadow: 7px 7px 0 color-mix(in srgb, var(--forge-text) 5%, transparent);
+}
+
+.forge-open-station {
+  min-height: 300px;
+  padding: 34px;
+  border: 0;
+  border-right: 1px solid var(--forge-line-strong);
+  background:
+    linear-gradient(145deg, transparent 0 72%, var(--forge-copper-soft) 72% 100%),
+    var(--forge-paper-hi);
+  color: var(--forge-text);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  transition: background .15s ease;
+}
+
+.forge-open-station:hover {
+  background:
+    linear-gradient(145deg, transparent 0 66%, color-mix(in srgb, var(--forge-copper) 17%, transparent) 66% 100%),
+    var(--forge-paper-low);
+}
+
+.forge-open-file-icon {
+  width: 64px;
+  height: 78px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper);
+  color: var(--forge-copper);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--forge-text) 6%, transparent);
+}
+
+.forge-open-file-icon i {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  font: 500 8px/1 var(--forge-mono);
+  font-style: normal;
+  letter-spacing: .08em;
+  color: var(--forge-copper);
+}
+
+.forge-open-copy {
+  margin-top: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.forge-open-copy strong {
+  font: 400 32px/1 var(--forge-display);
+  letter-spacing: -.02em;
+}
+
+.forge-open-copy small {
+  max-width: 430px;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.forge-open-cta {
+  margin-top: auto;
+  padding-top: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--forge-copper-deep);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.forge-continue-station {
+  min-height: 300px;
+  padding: 24px 27px 20px;
+  min-width: 0;
+}
+
+.forge-station-heading {
+  min-height: 58px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+
+.forge-station-heading h2 {
+  margin: 7px 0 0;
+  font: 400 24px/1 var(--forge-display);
+  letter-spacing: -.015em;
+}
+
+.forge-station-heading > button {
+  min-height: 34px;
+  padding: 0 3px;
+  border: 0;
+  background: transparent;
+  color: var(--forge-copper-deep);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.forge-recent-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.forge-recent-document {
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--forge-line);
+  background: transparent;
+  color: var(--forge-text);
+  display: grid;
+  grid-template-columns: 38px minmax(0,1fr) auto;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+}
+
+.forge-recent-document.featured {
+  min-height: 76px;
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+.forge-recent-document:hover {
+  background: color-mix(in srgb, var(--forge-text) 4%, transparent);
+}
+
+.forge-recent-sheet {
+  width: 34px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper);
+}
+
+.forge-recent-sheet i {
+  color: var(--forge-copper);
+  font: 500 7px/1 var(--forge-mono);
+  font-style: normal;
+}
+
+.forge-recent-sheet b {
+  color: var(--forge-faint);
+  font: 500 7px/1 var(--forge-mono);
+}
+
+.forge-recent-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.forge-recent-copy strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.forge-recent-copy small {
+  color: var(--forge-muted);
+  font-size: 10.5px;
+}
+
+.forge-recent-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--forge-muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.forge-recent-document.featured .forge-recent-action {
+  color: var(--forge-copper-deep);
+}
+
+.forge-recent-empty {
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.forge-recent-empty strong {
+  font: 400 24px/1.1 var(--forge-display);
+}
+
+.forge-recent-empty p {
+  max-width: 460px;
+  margin: 8px 0 0;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.forge-jobs {
+  margin-top: 45px;
+}
+
+.forge-jobs-heading {
+  min-height: 92px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--forge-line-strong);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.forge-jobs-heading h2 {
+  margin: 8px 0 0;
+  font: 400 26px/1 var(--forge-display);
+  letter-spacing: -.015em;
+}
+
+.forge-jobs-heading p {
+  max-width: 670px;
+  margin: 7px 0 0;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.forge-jobs-heading > button {
+  min-height: 38px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--forge-copper-deep);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.forge-job-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  column-gap: 34px;
+}
+
+.forge-job {
+  min-height: 88px;
+  padding: 14px 3px;
+  border: 0;
+  border-bottom: 1px solid var(--forge-line);
+  background: transparent;
+  color: var(--forge-text);
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr) 18px;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+}
+
+.forge-job:hover {
+  background: color-mix(in srgb, var(--forge-text) 4%, transparent);
+}
+
+.forge-job-icon {
+  width: 40px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-left: 2px solid var(--forge-copper);
+  background: var(--forge-copper-soft);
+  color: var(--forge-copper-deep);
+}
+
+.forge-job-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.forge-job-copy strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.forge-job-copy small {
+  color: var(--forge-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.forge-job > svg {
+  color: var(--forge-faint);
+}
+
+.forge-launch-footer {
+  margin-top: 42px;
+  padding: 17px 0 2px;
+  border-top: 1px solid var(--forge-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: var(--forge-muted);
+  font: 500 9px/1 var(--forge-mono);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.forge-launch-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.forge-launch-footer svg {
+  color: var(--forge-green);
+}
+
+/* Readability pass across the editor and secondary workspaces. */
+body.pdf-product-editor .doc-title input {
+  font-size: 12px !important;
+}
+
+body.pdf-product-editor .doc-title::before,
+body.pdf-product-editor .doc-title > span,
+body.pdf-product-editor .document-save-state {
+  font-size: 8px !important;
+}
+
+.forge-editor-switch > button {
+  font-size: 10.5px !important;
+}
+
+.forge-editor-switch > button i {
+  font-size: 7.5px !important;
+}
+
+body.pdf-product-editor .top-actions .icon-btn,
+body.pdf-product-editor .top-actions .soft-btn,
+body.pdf-product-editor .top-actions .primary {
+  font-size: 10px !important;
+}
+
+body.pdf-product-editor .panel-heading .eyebrow {
+  font-size: 7.5px !important;
+}
+
+body.pdf-product-editor .panel-heading h3 {
+  font-size: 20px !important;
+}
+
+body.pdf-product-editor .panel-heading > span {
+  font-size: 8px !important;
+}
+
+body.pdf-product-editor .panel-supporting-copy,
+body.pdf-product-editor .native-edit-note,
+body.pdf-product-editor .native-edit-meta,
+body.pdf-product-editor .right-help p {
+  font-size: 10px !important;
+}
+
+body.pdf-product-editor .property-section > span,
+body.pdf-product-editor .property-field,
+body.pdf-product-editor .meta-form label {
+  font-size: 9.5px !important;
+}
+
+body.pdf-product-editor .editor-toolbar .tool-group button,
+body.pdf-product-editor .editor-toolbar > .soft-btn,
+body.pdf-product-editor .search-box input {
+  font-size: 10px !important;
+}
+
+body.pdf-product-editor .floating-nav span {
+  font-size: 8.5px !important;
+}
+
+.all-tools-header p,
+.advanced-modal > header p,
+.native-object-modal > header p {
+  font-size: 10.5px !important;
+}
+
+.all-tools-action strong {
+  font-size: 11px !important;
+}
+
+.all-tools-action small,
+.all-tools-section-title p,
+.advanced-card p,
+.advanced-category-marker small,
+.object-section-heading small {
+  font-size: 9.5px !important;
+}
+
+.all-tools-categories button,
+.advanced-category-nav button,
+.object-section-nav button,
+.advanced-card button,
+.advanced-row button,
+.stamp-row button {
+  font-size: 9.5px !important;
+}
+
+@media (max-width: 1100px) and (min-width: 781px) {
+  .forge-product-root {
+    grid-template-columns: 145px minmax(0,1fr) !important;
+  }
+
+  .forge-mast-nav button em {
+    font-size: 11px !important;
+  }
+
+  .forge-start-area {
+    grid-template-columns: 1fr !important;
+  }
+
+  .forge-open-station {
+    min-height: 245px;
+    border-right: 0;
+    border-bottom: 1px solid var(--forge-line-strong);
+  }
+}
+
+@media (max-width: 780px) {
+  .forge-product-main {
+    width: calc(100% - 32px) !important;
+    padding-top: 24px !important;
+  }
+
+  .forge-launch-header {
+    min-height: 0;
+    padding-bottom: 22px;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .forge-launch-header h1 {
+    font-size: 36px;
+  }
+
+  .forge-launch-header p {
+    font-size: 12px;
+  }
+
+  .forge-local-status {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .forge-start-area {
+    grid-template-columns: 1fr;
+    margin-top: 24px;
+  }
+
+  .forge-open-station {
+    min-height: 238px;
+    padding: 25px 22px;
+    border-right: 0;
+    border-bottom: 1px solid var(--forge-line-strong);
+  }
+
+  .forge-open-file-icon {
+    width: 52px;
+    height: 64px;
+  }
+
+  .forge-open-copy {
+    margin-top: 18px;
+  }
+
+  .forge-open-copy strong {
+    font-size: 28px;
+  }
+
+  .forge-open-copy small {
+    font-size: 12px;
+  }
+
+  .forge-open-cta {
+    padding-top: 20px;
+    font-size: 12px;
+  }
+
+  .forge-continue-station {
+    min-height: 0;
+    padding: 20px 18px 14px;
+  }
+
+  .forge-recent-document {
+    grid-template-columns: 36px minmax(0,1fr) 16px;
+  }
+
+  .forge-recent-action {
+    font-size: 0;
+  }
+
+  .forge-recent-copy strong {
+    font-size: 12px;
+  }
+
+  .forge-recent-copy small {
+    font-size: 9.5px;
+  }
+
+  .forge-jobs {
+    margin-top: 34px;
+  }
+
+  .forge-jobs-heading {
+    min-height: 0;
+    padding-bottom: 14px;
+    align-items: flex-start;
+  }
+
+  .forge-jobs-heading h2 {
+    font-size: 23px;
+  }
+
+  .forge-jobs-heading p {
+    font-size: 11px;
+  }
+
+  .forge-job-board {
+    grid-template-columns: 1fr;
+  }
+
+  .forge-job {
+    min-height: 82px;
+  }
+
+  .forge-job-copy strong {
+    font-size: 13px;
+  }
+
+  .forge-job-copy small {
+    font-size: 10.5px;
+  }
+
+  .forge-launch-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    font-size: 8px;
+  }
+
+  .forge-product-context {
+    font-size: 8px !important;
+  }
+}
+
+
+/* =======================================================================
+   WORKBENCH UX V3 — single-stage launch surface
+   Same Forge identity, completely different home composition.
+   ======================================================================= */
+
+.forge-product-root.home-stage {
+  display: block !important;
+  min-height: 100vh;
+}
+
+.forge-product-root.home-stage .forge-product-surface {
+  min-height: 100vh;
+}
+
+.forge-home-bar {
+  height: 72px !important;
+  padding: 0 clamp(24px, 3.8vw, 58px) !important;
+  background: color-mix(in srgb, var(--forge-paper-hi) 94%, transparent) !important;
+}
+
+.forge-home-bar .forge-brand {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.forge-home-bar .forge-brand-seal {
+  width: 38px !important;
+  height: 44px !important;
+  color: #f4ede3 !important;
+  background: var(--forge-ink) !important;
+  box-shadow: inset 0 0 0 2px var(--forge-ink) !important;
+}
+
+.forge-home-bar .forge-brand-seal b {
+  font-size: 23px !important;
+}
+
+.forge-home-bar .forge-brand-copy {
+  display: flex !important;
+}
+
+.forge-home-bar .forge-brand-copy strong {
+  color: var(--forge-text) !important;
+  font-size: 15px !important;
+}
+
+.forge-home-bar .forge-brand-copy small {
+  color: var(--forge-muted) !important;
+  font-size: 9px !important;
+}
+
+.forge-home-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.forge-home-nav button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--forge-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.forge-home-nav button:hover {
+  background: color-mix(in srgb, var(--forge-text) 5%, transparent);
+  color: var(--forge-text);
+}
+
+.forge-home-bar .forge-product-actions {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--forge-line);
+}
+
+.home-stage .forge-product-main {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.forge-workbench-stage {
+  min-height: calc(100vh - 72px);
+  display: grid;
+  grid-template-rows: minmax(420px, 1fr) auto auto;
+  color: var(--forge-text);
+}
+
+.forge-focus-zone {
+  min-height: 420px;
+  padding: clamp(42px, 6vh, 72px) 24px 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-bottom: 1px solid var(--forge-line-strong);
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--forge-copper) 8%, transparent), transparent 28%),
+    linear-gradient(90deg, rgba(56,48,39,.025) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(rgba(56,48,39,.02) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--forge-paper);
+}
+
+.forge-focus-visual {
+  position: relative;
+  width: 94px;
+  height: 116px;
+  margin-bottom: 24px;
+}
+
+.forge-paper-back,
+.forge-paper-front {
+  position: absolute;
+  width: 72px;
+  height: 92px;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+}
+
+.forge-paper-back.back-two {
+  left: 2px;
+  top: 2px;
+  transform: rotate(-7deg);
+  background: var(--forge-paper-low);
+}
+
+.forge-paper-back.back-one {
+  right: 3px;
+  top: 6px;
+  transform: rotate(5deg);
+  background: var(--forge-paper-deep);
+}
+
+.forge-paper-front {
+  left: 11px;
+  top: 10px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: var(--forge-copper);
+  box-shadow: 7px 8px 0 color-mix(in srgb, var(--forge-text) 7%, transparent);
+}
+
+.forge-paper-front i {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  color: var(--forge-copper);
+  font: 500 8px/1 var(--forge-mono);
+  font-style: normal;
+  letter-spacing: .09em;
+}
+
+.forge-focus-zone > .forge-folio-label {
+  font-size: 11px !important;
+}
+
+.forge-focus-zone h1 {
+  margin: 10px 0 0;
+  color: var(--forge-text);
+  font: 400 clamp(48px, 5.6vw, 72px)/.96 var(--forge-display);
+  letter-spacing: -.035em;
+}
+
+.forge-focus-zone > p {
+  max-width: 560px;
+  margin: 16px 0 0;
+  color: var(--forge-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.forge-focus-actions {
+  margin-top: 26px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.forge-main-open,
+.forge-image-build {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.forge-main-open {
+  border: 1px solid var(--forge-ink);
+  background: var(--forge-ink);
+  color: #f5eee4;
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--forge-copper) 22%, transparent);
+}
+
+.forge-main-open:hover {
+  border-color: var(--forge-copper-deep);
+  background: var(--forge-copper-deep);
+}
+
+.forge-image-build {
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+  color: var(--forge-text);
+}
+
+.forge-image-build:hover {
+  background: var(--forge-paper-low);
+}
+
+.forge-focus-note {
+  margin-top: 17px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--forge-muted);
+  font-size: 11px;
+}
+
+.forge-focus-note svg {
+  color: var(--forge-green);
+}
+
+.forge-recent-shelf {
+  padding: 24px clamp(24px, 4vw, 58px) 28px;
+  border-bottom: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+}
+
+.forge-shelf-heading {
+  min-height: 48px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.forge-shelf-heading > div > span {
+  color: var(--forge-faint);
+  font: 500 10px/1 var(--forge-mono);
+  letter-spacing: .1em;
+}
+
+.forge-shelf-heading h2 {
+  margin: 6px 0 0;
+  color: var(--forge-text);
+  font: 400 24px/1 var(--forge-display);
+  letter-spacing: -.018em;
+}
+
+.forge-shelf-heading > button {
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--forge-copper-deep);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.forge-shelf-track {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid var(--forge-line-strong);
+  border-left: 1px solid var(--forge-line-strong);
+}
+
+.forge-shelf-file {
+  min-width: 0;
+  min-height: 94px;
+  padding: 14px 13px;
+  border: 0;
+  border-right: 1px solid var(--forge-line-strong);
+  border-bottom: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper);
+  color: var(--forge-text);
+  display: grid;
+  grid-template-columns: 36px minmax(0,1fr) 16px;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+}
+
+.forge-shelf-file:hover {
+  background: var(--forge-paper-low);
+}
+
+.forge-shelf-paper {
+  width: 34px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+}
+
+.forge-shelf-paper i {
+  color: var(--forge-copper);
+  font: 500 7px/1 var(--forge-mono);
+  font-style: normal;
+}
+
+.forge-shelf-paper b {
+  color: var(--forge-faint);
+  font: 500 7px/1 var(--forge-mono);
+}
+
+.forge-shelf-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.forge-shelf-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--forge-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.forge-shelf-copy small {
+  color: var(--forge-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.forge-shelf-file > svg {
+  color: var(--forge-faint);
+}
+
+.forge-shelf-empty {
+  min-height: 82px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: 1px dashed var(--forge-line-strong);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+}
+
+.forge-shelf-empty span {
+  color: var(--forge-text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.forge-shelf-empty small {
+  color: var(--forge-muted);
+  font-size: 11px;
+}
+
+.forge-task-dock {
+  min-height: 112px;
+  padding: 15px clamp(24px, 4vw, 58px);
+  display: grid;
+  grid-template-columns: 195px minmax(0,1fr);
+  gap: 18px;
+  align-items: stretch;
+  background: var(--forge-ink);
+  color: #efe8dc;
+}
+
+.forge-dock-label {
+  padding: 9px 17px 9px 0;
+  border-right: 1px solid rgba(255,255,255,.10);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.forge-dock-label span {
+  color: var(--forge-copper);
+  font: 500 9px/1 var(--forge-mono);
+  letter-spacing: .1em;
+}
+
+.forge-dock-label small {
+  color: rgba(255,255,255,.50);
+  font-size: 11px;
+}
+
+.forge-dock-actions {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(92px, 1fr));
+  align-items: stretch;
+}
+
+.forge-dock-actions > button {
+  min-width: 0;
+  padding: 9px 8px;
+  border: 0;
+  border-right: 1px solid rgba(255,255,255,.08);
+  background: transparent;
+  color: rgba(255,255,255,.68);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.forge-dock-actions > button:hover {
+  background: rgba(255,255,255,.05);
+  color: #fff;
+}
+
+.forge-dock-actions > button svg {
+  color: var(--forge-copper);
+}
+
+.forge-dock-actions > button span {
+  max-width: 92px;
+  line-height: 1.2;
+}
+
+.forge-dock-actions > .forge-dock-more {
+  border-right: 0;
+  color: #fff;
+}
+
+@media (max-width: 1100px) {
+  .forge-home-nav button {
+    padding: 0 9px;
+  }
+
+  .forge-shelf-track {
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }
+
+  .forge-shelf-file:nth-child(n+4) {
+    display: none;
+  }
+
+  .forge-task-dock {
+    grid-template-columns: 150px minmax(0,1fr);
+  }
+
+  .forge-dock-actions {
+    grid-template-columns: repeat(4, minmax(72px,1fr));
+  }
+
+  .forge-dock-actions > button:nth-child(4) {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 780px) {
+  .forge-home-bar {
+    top: 0 !important;
+    height: 62px !important;
+    padding: 0 14px !important;
+  }
+
+  .forge-home-bar .forge-brand-seal {
+    width: 32px !important;
+    height: 37px !important;
+  }
+
+  .forge-home-bar .forge-brand-copy strong {
+    font-size: 13px !important;
+  }
+
+  .forge-home-bar .forge-brand-copy small {
+    display: none;
+  }
+
+  .forge-home-nav {
+    display: none;
+  }
+
+  .forge-home-bar .forge-product-actions {
+    margin-left: auto;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .forge-home-bar .forge-quiet-action span,
+  .forge-home-bar .forge-quiet-action kbd {
+    display: none;
+  }
+
+  .forge-workbench-stage {
+    min-height: calc(100vh - 62px);
+    display: block;
+  }
+
+  .forge-focus-zone {
+    min-height: 430px;
+    padding: 44px 18px 36px;
+  }
+
+  .forge-focus-visual {
+    width: 78px;
+    height: 98px;
+    margin-bottom: 20px;
+  }
+
+  .forge-paper-back,
+  .forge-paper-front {
+    width: 61px;
+    height: 78px;
+  }
+
+  .forge-focus-zone h1 {
+    font-size: 48px;
+  }
+
+  .forge-focus-zone > p {
+    max-width: 330px;
+    font-size: 14px;
+  }
+
+  .forge-focus-actions {
+    width: 100%;
+    max-width: 330px;
+    flex-direction: column;
+  }
+
+  .forge-main-open,
+  .forge-image-build {
+    width: 100%;
+    min-height: 50px;
+    font-size: 14px;
+  }
+
+  .forge-focus-note {
+    font-size: 10.5px;
+  }
+
+  .forge-recent-shelf {
+    padding: 24px 16px 28px;
+  }
+
+  .forge-shelf-heading h2 {
+    font-size: 22px;
+  }
+
+  .forge-shelf-heading > button {
+    font-size: 11px;
+  }
+
+  .forge-shelf-track {
+    display: flex;
+    overflow-x: auto;
+    border-left: 0;
+    gap: 10px;
+    scrollbar-width: none;
+  }
+
+  .forge-shelf-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .forge-shelf-file,
+  .forge-shelf-file:nth-child(n+4) {
+    display: grid;
+    flex: 0 0 min(290px, 82vw);
+    min-height: 88px;
+    border: 1px solid var(--forge-line-strong);
+  }
+
+  .forge-task-dock {
+    min-height: 0;
+    padding: 20px 16px 26px;
+    display: block;
+  }
+
+  .forge-dock-label {
+    padding: 0 0 14px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,.10);
+  }
+
+  .forge-dock-label span {
+    font-size: 9px;
+  }
+
+  .forge-dock-label small {
+    font-size: 11px;
+  }
+
+  .forge-dock-actions {
+    margin-top: 9px;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .forge-dock-actions > button {
+    min-height: 70px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    font-size: 11px;
+  }
+
+  .forge-dock-actions > button:nth-child(even) {
+    border-right: 0;
+  }
+}
+
+
+/* Home must escape the legacy two-column product grid completely. */
+body.pdf-product-home .welcome > .forge-product-root.home-stage {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+body.pdf-product-home .welcome > .forge-product-root.home-stage > .forge-product-surface {
+  width: 100% !important;
+  grid-column: 1 / -1 !important;
+}
+
+
+/* =======================================================================
+   EDITOR WORKBENCH UX V4
+   This is the actual loaded-PDF workbench: simpler, contextual, readable.
+   ======================================================================= */
+
+@media (min-width: 761px) {
+  body.pdf-product-editor .topbar {
+    height: 72px !important;
+    min-height: 72px !important;
+    padding: 0 18px !important;
+    gap: 14px !important;
+  }
+
+  body.pdf-product-editor .brand.compact {
+    width: 140px !important;
+    min-width: 140px !important;
+  }
+
+  body.pdf-product-editor .doc-title {
+    flex: 0 1 290px !important;
+    width: min(27vw, 290px) !important;
+    max-width: 290px !important;
+    min-width: 190px !important;
+    padding-left: 14px !important;
+  }
+
+  body.pdf-product-editor .doc-title input {
+    max-width: 100% !important;
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+  }
+
+  body.pdf-product-editor .doc-title > span {
+    margin-top: 2px;
+    font-size: 9px !important;
+  }
+
+  .forge-editor-switch {
+    height: 46px !important;
+  }
+
+  .forge-editor-switch > button {
+    min-width: 72px !important;
+    padding: 0 11px !important;
+    font-size: 11px !important;
+  }
+
+  .forge-editor-switch > button i {
+    font-size: 8px !important;
+  }
+
+  body.pdf-product-editor .top-actions .soft-btn,
+  body.pdf-product-editor .top-actions .primary {
+    height: 38px !important;
+    font-size: 11px !important;
+    padding-inline: 12px !important;
+  }
+
+  body.pdf-product-editor .top-actions .icon-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench {
+    display: grid !important;
+    min-width: 0;
+    background: var(--forge-canvas) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-open.inspector-open {
+    grid-template-columns: 258px minmax(0, 1fr) 302px !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-open.inspector-closed {
+    grid-template-columns: 258px minmax(0, 1fr) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-closed.inspector-open {
+    grid-template-columns: minmax(0, 1fr) 302px !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-closed.inspector-closed {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-closed .forge-navigator,
+  body.pdf-product-editor .forge-editor-workbench.inspector-closed .forge-inspector {
+    display: none !important;
+  }
+}
+
+/* One navigator, no separate mystery-icon rail. */
+body.pdf-product-editor .forge-navigator {
+  grid-column: auto !important;
+  min-width: 0 !important;
+  padding: 0 14px 18px !important;
+  border-right: 1px solid var(--forge-line-strong) !important;
+  background: var(--forge-paper) !important;
+  overflow-y: auto;
+}
+
+.forge-navigator-chrome {
+  min-height: 57px;
+  margin: 0 -14px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+}
+
+.forge-navigator-chrome > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.forge-navigator-chrome span {
+  color: var(--forge-copper);
+  font: 500 8px/1 var(--forge-mono);
+  letter-spacing: .12em;
+}
+
+.forge-navigator-chrome strong {
+  color: var(--forge-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.forge-panel-collapse {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--forge-line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--forge-muted);
+  display: grid;
+  place-items: center;
+}
+
+.forge-panel-collapse:hover {
+  background: var(--forge-paper-low);
+  color: var(--forge-text);
+}
+
+.forge-navigator-tabs {
+  margin: 0 -14px 16px;
+  padding: 10px 10px 11px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  border-bottom: 1px solid var(--forge-line-strong);
+  background: color-mix(in srgb, var(--forge-paper-hi) 65%, var(--forge-paper));
+}
+
+.forge-navigator-tabs button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--forge-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 650;
+}
+
+.forge-navigator-tabs button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.forge-navigator-tabs button:hover {
+  background: var(--forge-paper-low);
+  color: var(--forge-text);
+}
+
+.forge-navigator-tabs button.active {
+  border-color: var(--forge-line-strong);
+  background: var(--forge-paper-hi);
+  color: var(--forge-text);
+  box-shadow: inset 0 -2px 0 var(--forge-copper);
+}
+
+body.pdf-product-editor .forge-navigator .panel-heading {
+  position: static !important;
+  top: auto !important;
+  min-height: 50px !important;
+  margin: 0 0 14px !important;
+  padding: 0 0 12px !important;
+  border-bottom: 1px solid var(--forge-line) !important;
+  background: transparent !important;
+}
+
+body.pdf-product-editor .forge-navigator .panel-heading .eyebrow {
+  font-size: 8.5px !important;
+}
+
+body.pdf-product-editor .forge-navigator .panel-heading h3 {
+  margin-top: 5px !important;
+  font-size: 22px !important;
+}
+
+body.pdf-product-editor .forge-navigator .panel-heading > span {
+  min-width: 28px !important;
+  height: 28px !important;
+  font-size: 9px !important;
+}
+
+body.pdf-product-editor .forge-navigator .page-actions-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+  margin-bottom: 10px;
+}
+
+body.pdf-product-editor .forge-navigator .page-actions-grid button {
+  min-height: 40px !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-radius: 2px !important;
+  background: var(--forge-paper-hi) !important;
+  color: var(--forge-text) !important;
+  font-size: 11px !important;
+}
+
+body.pdf-product-editor .forge-navigator .page-actions-grid button:hover {
+  border-color: var(--forge-copper) !important;
+  background: var(--forge-copper-soft) !important;
+}
+
+body.pdf-product-editor .forge-navigator .page-select-toolbar {
+  min-height: 38px;
+  font-size: 11px !important;
+}
+
+body.pdf-product-editor .forge-navigator .thumbnail-list {
+  gap: 12px !important;
+}
+
+body.pdf-product-editor .forge-navigator .thumbnail {
+  padding: 9px !important;
+}
+
+/* Context bar: tool names are visible, advanced actions are secondary. */
+body.pdf-product-editor .forge-context-bar {
+  min-height: 58px !important;
+  height: 58px !important;
+  padding: 8px 12px !important;
+  gap: 9px !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+  background: var(--forge-paper-hi) !important;
+  overflow: visible !important;
+}
+
+.forge-navigator-toggle,
+.forge-inspector-toggle {
+  min-height: 40px !important;
+  padding: 0 11px !important;
+  border: 1px solid var(--forge-line-strong) !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  font-size: 11px !important;
+  font-weight: 650;
+}
+
+.forge-navigator-toggle:hover,
+.forge-inspector-toggle:hover,
+.forge-navigator-toggle.active,
+.forge-inspector-toggle.active {
+  background: var(--forge-paper-low) !important;
+  color: var(--forge-text) !important;
+}
+
+.forge-navigator-toggle.active,
+.forge-inspector-toggle.active {
+  box-shadow: inset 0 -2px 0 var(--forge-copper) !important;
+}
+
+.forge-navigator-toggle svg,
+.forge-inspector-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.forge-context-divider {
+  width: 1px;
+  height: 28px;
+  flex: 0 0 auto;
+  background: var(--forge-line-strong);
+}
+
+body.pdf-product-editor .forge-context-bar .tool-group {
+  height: 40px !important;
+  padding-right: 9px !important;
+  border-right: 1px solid var(--forge-line-strong) !important;
+  background: transparent !important;
+}
+
+body.pdf-product-editor .forge-context-bar .tool-group button {
+  width: auto !important;
+  min-width: 42px !important;
+  height: 40px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 7px !important;
+  font-size: 11px !important;
+  font-weight: 650;
+}
+
+body.pdf-product-editor .forge-context-bar .tool-group button > span:not(.signature-icon) {
+  display: inline !important;
+}
+
+body.pdf-product-editor .forge-context-bar .tool-group button::after {
+  display: none !important;
+  content: none !important;
+}
+
+body.pdf-product-editor .forge-context-bar .tool-group button:hover {
+  background: var(--forge-paper-low) !important;
+  color: var(--forge-text) !important;
+}
+
+body.pdf-product-editor .forge-context-bar .tool-group button.active {
+  background: var(--forge-ink) !important;
+  color: #f5eee4 !important;
+  box-shadow: inset 0 -2px 0 var(--forge-copper) !important;
+}
+
+body.pdf-product-editor .forge-context-bar .search-box {
+  flex: 0 1 250px !important;
+  width: min(23vw, 250px) !important;
+  min-width: 150px !important;
+  height: 40px !important;
+  padding: 0 9px !important;
+  border: 1px solid var(--forge-line) !important;
+  border-radius: 2px !important;
+  background: var(--forge-paper) !important;
+}
+
+body.pdf-product-editor .forge-context-bar .search-box input {
+  font-size: 11px !important;
+}
+
+body.pdf-product-editor .forge-context-bar > .soft-btn,
+body.pdf-product-editor .forge-context-bar > .advanced-tools-button,
+body.pdf-product-editor .forge-context-bar > .native-objects-button {
+  min-height: 40px !important;
+  height: 40px !important;
+  padding: 0 10px !important;
+  border-radius: 2px !important;
+  font-size: 10.5px !important;
+}
+
+body.pdf-product-editor .forge-context-bar .forge-page-command {
+  background: transparent !important;
+}
+
+/* The document is the visual center. */
+body.pdf-product-editor .forge-editor-workbench .editor-column {
+  min-width: 0;
+  grid-column: auto !important;
+  background: var(--forge-canvas) !important;
+}
+
+body.pdf-product-editor .forge-editor-workbench .document-stage {
+  min-width: 0;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255,255,255,.035), transparent 28%),
+    linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px),
+    var(--forge-canvas) !important;
+  background-size: auto, 30px 30px, 30px 30px, auto !important;
+}
+
+body.pdf-product-editor .forge-editor-workbench .page-scroll {
+  padding-top: 66px !important;
+  padding-left: clamp(34px, 5vw, 86px) !important;
+  padding-right: clamp(34px, 5vw, 86px) !important;
+}
+
+body.pdf-product-editor .stage-top-hint {
+  top: 16px !important;
+  min-height: 30px !important;
+  padding: 0 11px !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  font-size: 9px !important;
+}
+
+/* Inspector only exists when needed. */
+body.pdf-product-editor .forge-inspector {
+  grid-column: auto !important;
+  min-width: 0;
+  padding: 0 16px 22px !important;
+  border-left: 1px solid var(--forge-line-strong) !important;
+  background: var(--forge-paper-hi) !important;
+  overflow-y: auto;
+}
+
+body.pdf-product-editor .forge-inspector.closed {
+  display: none !important;
+}
+
+body.pdf-product-editor .forge-inspector-heading {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 8 !important;
+  min-height: 69px !important;
+  margin: 0 -16px 18px !important;
+  padding: 14px 16px 12px !important;
+  background: var(--forge-paper-hi) !important;
+  border-bottom: 1px solid var(--forge-line-strong) !important;
+}
+
+body.pdf-product-editor .forge-inspector-heading h3 {
+  font-size: 22px !important;
+}
+
+.forge-inspector-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.forge-inspector-head-actions .icon-btn {
+  width: 34px !important;
+  height: 34px !important;
+}
+
+body.pdf-product-editor .forge-inspector .property-section > span,
+body.pdf-product-editor .forge-inspector .property-field,
+body.pdf-product-editor .forge-inspector .meta-form label {
+  font-size: 11px !important;
+}
+
+body.pdf-product-editor .forge-inspector .right-help {
+  padding: 16px !important;
+}
+
+body.pdf-product-editor .forge-inspector .right-help strong {
+  font-size: 13px !important;
+}
+
+body.pdf-product-editor .forge-inspector .right-help p,
+body.pdf-product-editor .forge-inspector .native-edit-note,
+body.pdf-product-editor .forge-inspector .native-edit-meta {
+  font-size: 11px !important;
+  line-height: 1.6 !important;
+}
+
+/* Make the bottom page controls readable without looking like a floating gadget. */
+body.pdf-product-editor .floating-nav {
+  min-height: 44px !important;
+  height: 44px !important;
+  padding: 4px 6px !important;
+  border-top: 2px solid var(--forge-copper) !important;
+  border-radius: 2px !important;
+}
+
+body.pdf-product-editor .floating-nav button {
+  min-width: 34px !important;
+  height: 34px !important;
+}
+
+body.pdf-product-editor .floating-nav span {
+  font-size: 9.5px !important;
+}
+
+/* Narrow desktop: collapse optional inspector before making the canvas cramped. */
+@media (max-width: 1240px) and (min-width: 761px) {
+  body.pdf-product-editor .forge-editor-workbench.navigator-open.inspector-open {
+    grid-template-columns: 232px minmax(0, 1fr) 270px !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-open.inspector-closed {
+    grid-template-columns: 232px minmax(0, 1fr) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-closed.inspector-open {
+    grid-template-columns: minmax(0, 1fr) 270px !important;
+  }
+
+  .forge-navigator-tabs button {
+    min-height: 42px;
+    font-size: 9px;
+  }
+
+  body.pdf-product-editor .forge-context-bar .search-box {
+    flex-basis: 190px !important;
+    max-width: 190px !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar > .soft-btn {
+    padding-inline: 8px !important;
+  }
+}
+
+/* Mobile keeps the existing sheet behavior but uses the new navigator controls. */
+@media (max-width: 760px) {
+  body.pdf-product-editor .forge-editor-workbench {
+    display: block !important;
+  }
+
+  body.pdf-product-editor .forge-navigator {
+    display: none !important;
+  }
+
+  body.mobile-left-open .forge-navigator {
+    display: block !important;
+  }
+
+  body.pdf-product-editor .forge-inspector {
+    display: none !important;
+  }
+
+  body.mobile-right-open .forge-inspector {
+    display: block !important;
+  }
+
+  .forge-navigator-chrome,
+  .forge-navigator-tabs {
+    display: none;
+  }
+
+  .forge-navigator-toggle,
+  .forge-inspector-toggle {
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+
+  .forge-navigator-toggle > span,
+  .forge-inspector-toggle {
+    font-size: 0 !important;
+  }
+
+  .forge-navigator-toggle svg,
+  .forge-inspector-toggle svg {
+    width: 17px !important;
+    height: 17px !important;
+  }
+}
+
+
+/* Editor Workbench V4.1 — remove redundant controls and keep task context clean. */
+@media (min-width: 761px) {
+  body.pdf-product-editor .forge-editor-workbench.navigator-open .forge-navigator-toggle {
+    display: none !important;
+  }
+}
+
+.forge-navigator-tabs button {
+  font-size: 11px !important;
+}
+
+body.pdf-product-editor:not([data-pdf-mode="organize"]) .forge-context-bar .forge-page-command {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  body.pdf-product-editor .floating-nav button {
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+  }
+}
+
+
+/* Editor Workbench V4.2 — mobile sheets and Navigator integrations. */
+.forge-mobile-panel-backdrop {
+  display: none;
+}
+
+.forge-navigator-tabs .nav-extras-launcher {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 6px 4px !important;
+  border: 1px solid transparent !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: var(--forge-muted) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.forge-navigator-tabs .nav-extras-launcher::before {
+  display: none !important;
+}
+
+.forge-navigator-tabs .nav-extras-launcher span {
+  display: inline !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+}
+
+.forge-navigator-tabs .nav-extras-launcher:hover,
+.forge-navigator-tabs .nav-extras-launcher.active {
+  background: var(--forge-paper-low) !important;
+  color: var(--forge-text) !important;
+}
+
+@media (max-width: 760px) {
+  body.pdf-product-editor .forge-editor-workbench.navigator-open .forge-navigator,
+  body.pdf-product-editor .forge-editor-workbench.inspector-open .forge-inspector {
+    display: block !important;
+    position: fixed !important;
+    z-index: 205 !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 64px !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(72dvh, 640px) !important;
+    overflow-y: auto !important;
+    padding: 0 14px 20px !important;
+    border: 1px solid var(--forge-line-strong) !important;
+    border-top: 3px solid var(--forge-copper) !important;
+    border-radius: 0 !important;
+    background: var(--forge-paper-hi) !important;
+    color: var(--forge-text) !important;
+    box-shadow: 0 -18px 55px rgba(0,0,0,.30) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-open .forge-navigator-chrome {
+    display: flex !important;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    margin: 0 -14px !important;
+    background: var(--forge-paper-hi) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.navigator-open .forge-navigator-tabs {
+    display: grid !important;
+    position: sticky;
+    top: 57px;
+    z-index: 2;
+    margin: 0 -14px 16px !important;
+    background: var(--forge-paper) !important;
+  }
+
+  body.pdf-product-editor .forge-editor-workbench.inspector-open .forge-inspector-heading {
+    top: 0 !important;
+  }
+
+  .forge-mobile-panel-backdrop {
+    display: block !important;
+    position: fixed;
+    inset: 56px 0 58px;
+    z-index: 200;
+    border: 0;
+    background: rgba(17,15,12,.48);
+    backdrop-filter: blur(3px);
+  }
+
+  body.pdf-product-editor .forge-context-bar {
+    padding-inline: 7px !important;
+    gap: 5px !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .forge-navigator-toggle,
+  body.pdf-product-editor .forge-context-bar .forge-inspector-toggle {
+    display: inline-flex !important;
+    flex: 0 0 38px !important;
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .forge-navigator-toggle > span,
+  body.pdf-product-editor .forge-context-bar .forge-inspector-toggle {
+    font-size: 0 !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .tool-group button > span:not(.signature-icon) {
+    display: none !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .tool-group button {
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+    padding: 0 !important;
+  }
+
+  body.pdf-product-editor .forge-context-bar .search-box,
+  body.pdf-product-editor .forge-context-bar .forge-page-command,
+  body.pdf-product-editor .forge-context-bar > .advanced-tools-button,
+  body.pdf-product-editor .forge-context-bar > .native-objects-button {
+    display: none !important;
+  }
+}

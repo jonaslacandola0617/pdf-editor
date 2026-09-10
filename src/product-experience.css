@@ -39,7 +39,7 @@ body.pdf-product-home .welcome {
   background: var(--pf-bg) !important;
   overflow: auto !important;
 }
-body.pdf-product-home .welcome > :not(.product-home-root):not(input[type="file"]) { display: none !important; }
+body.pdf-product-home .welcome > :not(.product-home-root):not(.forge-product-root):not(input[type="file"]) { display: none !important; }
 .product-home-root { min-height: 100vh; color: var(--pf-text); background: var(--pf-bg); }
 .product-home-bar {
   position: sticky; top: 0; z-index: 20;
@@ -244,9 +244,7 @@ body[data-pdf-mode="organize"] .thumbnail { width: 100% !important; padding: 8px
 body[data-pdf-mode="organize"] .thumb-sheet canvas { max-width: 100% !important; max-height: 230px !important; }
 body[data-pdf-mode="organize"] .page-select-check { z-index: 3; }
 
-/* Keep native text content editing on the page. The inspector is not a second editor. */
-body:has(.editor-toolbar button[title="Edit existing text"].active) .right-panel { display: none !important; }
-body:has(.editor-toolbar button[title="Edit existing text"].active) .workspace { grid-template-columns: 52px 220px minmax(480px,1fr) !important; }
+/* Native text editing stays on-page. Workbench panel visibility is controlled by React state. */
 
 /* Quick Actions */
 .product-command-layer { position: fixed; inset: 0; z-index: 300; display: grid; place-items: start center; padding-top: min(18vh, 150px); background: rgba(5,6,8,.53); backdrop-filter: blur(4px); }

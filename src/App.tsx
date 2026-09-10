@@ -200,6 +200,8 @@ export default function App() {
   const [zoom, setZoom] = useState(1.05)
   const [viewMode, setViewMode] = useState<ViewMode>('single')
   const [panel, setPanel] = useState<Panel>('pages')
+  const [navigatorOpen, setNavigatorOpen] = useState(() => window.innerWidth > 760)
+  const [inspectorOpen, setInspectorOpen] = useState(false)
   const [metadata, setMetadata] = useState<PdfMetadata>(EMPTY_META)
   const [formFields, setFormFields] = useState<FormFieldState[]>([])
   const [advancedFormFields, setAdvancedFormFields] = useState<AdvancedFormFieldInfo[]>([])
@@ -247,6 +249,21 @@ export default function App() {
       setSelectedFormWidgets(new Set())
     }
   }, [panel])
+
+  useEffect(() => {
+    if (selectedId || (tool !== 'select' && tool !== 'editText')) setInspectorOpen(true)
+  }, [selectedId, tool])
+
+  useEffect(() => {
+    const adaptWorkbench = () => {
+      if (window.innerWidth <= 760) {
+        setNavigatorOpen(false)
+        setInspectorOpen(false)
+      }
+    }
+    window.addEventListener('resize', adaptWorkbench)
+    return () => window.removeEventListener('resize', adaptWorkbench)
+  }, [])
 
   useEffect(() => {
     if (!bytes) {
@@ -1295,16 +1312,23 @@ export default function App() {
         </div>
       </header>
 
-      <section className="workspace">
-        <nav className="rail" aria-label="Workspace panels">
-          <button className={panel === 'library' ? 'active' : ''} onClick={() => setPanel('library')} title="Library"><Library /></button>
-          <button className={panel === 'pages' ? 'active' : ''} onClick={() => setPanel('pages')} title="Pages"><Files /></button>
-          <button className={panel === 'forms' ? 'active' : ''} onClick={() => setPanel('forms')} title="Form fields"><FormInput /></button>
-          <button className={panel === 'comments' ? 'active' : ''} onClick={() => setPanel('comments')} title="Comments"><StickyNote /></button>
-          <button className={panel === 'info' ? 'active' : ''} onClick={() => setPanel('info')} title="Document info"><Info /></button>
-        </nav>
-
-        <aside className="left-panel">
+      <section className={`workspace forge-editor-workbench ${navigatorOpen ? 'navigator-open' : 'navigator-closed'} ${inspectorOpen ? 'inspector-open' : 'inspector-closed'}`}>
+        {(navigatorOpen || inspectorOpen) && <button className="forge-mobile-panel-backdrop" aria-label="Close side panel" onClick={() => { setNavigatorOpen(false); setInspectorOpen(false) }} />}
+        <aside className="left-panel forge-navigator">
+          <div className="forge-navigator-chrome">
+            <div>
+              <span>NAVIGATOR</span>
+              <strong>Document</strong>
+            </div>
+            <button className="forge-panel-collapse" title="Hide navigator" aria-label="Hide navigator" onClick={() => setNavigatorOpen(false)}><ChevronLeft /></button>
+          </div>
+          <nav className="forge-navigator-tabs" aria-label="Document navigator">
+            <button className={panel === 'pages' ? 'active' : ''} title="Pages" onClick={() => { setPanel('pages'); setNavigatorOpen(true) }}><Files /><span>Pages</span></button>
+            <button className={panel === 'comments' ? 'active' : ''} title="Comments" onClick={() => { setPanel('comments'); setNavigatorOpen(true) }}><StickyNote /><span>Comments</span></button>
+            <button className={panel === 'forms' ? 'active' : ''} title="Form fields" onClick={() => { setPanel('forms'); setNavigatorOpen(true) }}><FormInput /><span>Forms</span></button>
+            <button className={panel === 'library' ? 'active' : ''} title="Library" onClick={() => { setPanel('library'); setNavigatorOpen(true) }}><Library /><span>Library</span></button>
+            <button className={panel === 'info' ? 'active' : ''} title="Document info" onClick={() => { setPanel('info'); setNavigatorOpen(true) }}><Info /><span>Info</span></button>
+          </nav>
           {panel === 'pages' && (
             <>
               <div className="panel-heading">
@@ -1518,17 +1542,19 @@ export default function App() {
         </aside>
 
         <section className="editor-column">
-          <div className="editor-toolbar">
+          <div className="editor-toolbar forge-context-bar">
+            <button className={`forge-navigator-toggle ${navigatorOpen ? 'active' : ''}`} onClick={() => setNavigatorOpen((open) => !open)} title="Toggle navigator"><Files /><span>Navigator</span></button>
+            <span className="forge-context-divider" />
             <div className="tool-group">
-              <button className={tool === 'select' ? 'active' : ''} onClick={() => chooseTool('select')} title="Select"><MousePointer2 /></button>
-              <button className={tool === 'editText' ? 'active' : ''} onClick={() => chooseTool('editText')} title="Edit existing text"><PenLine /></button>
-              <button className={tool === 'text' ? 'active' : ''} onClick={() => chooseTool('text')} title="Add text"><Type /></button>
-              <button className={tool === 'note' ? 'active' : ''} onClick={() => chooseTool('note')} title="Sticky note"><StickyNote /></button>
-              <button className={tool === 'highlight' ? 'active' : ''} onClick={() => chooseTool('highlight')} title="Highlight"><Highlighter /></button>
-              <button className={tool === 'rectangle' ? 'active' : ''} onClick={() => chooseTool('rectangle')} title="Rectangle"><Shapes /></button>
-              <button className={tool === 'redaction' ? 'active' : ''} onClick={() => chooseTool('redaction')} title="Redact"><ScanLine /></button>
-              <button className={tool === 'ink' ? 'active' : ''} onClick={() => chooseTool('ink')} title="Draw"><PenLine /></button>
-              <button className={tool === 'signature' ? 'active' : ''} onClick={() => chooseTool('signature')} title="Signature"><span className="signature-icon">⌁</span></button>
+              <button className={tool === 'select' ? 'active' : ''} onClick={() => chooseTool('select')} title="Select"><MousePointer2 /><span>Select</span></button>
+              <button className={tool === 'editText' ? 'active' : ''} onClick={() => chooseTool('editText')} title="Edit existing text"><PenLine /><span>Edit text</span></button>
+              <button className={tool === 'text' ? 'active' : ''} onClick={() => chooseTool('text')} title="Add text"><Type /><span>Add text</span></button>
+              <button className={tool === 'note' ? 'active' : ''} onClick={() => chooseTool('note')} title="Sticky note"><StickyNote /><span>Comment</span></button>
+              <button className={tool === 'highlight' ? 'active' : ''} onClick={() => chooseTool('highlight')} title="Highlight"><Highlighter /><span>Highlight</span></button>
+              <button className={tool === 'rectangle' ? 'active' : ''} onClick={() => chooseTool('rectangle')} title="Rectangle"><Shapes /><span>Shape</span></button>
+              <button className={tool === 'redaction' ? 'active' : ''} onClick={() => chooseTool('redaction')} title="Redact"><ScanLine /><span>Redact</span></button>
+              <button className={tool === 'ink' ? 'active' : ''} onClick={() => chooseTool('ink')} title="Draw"><PenLine /><span>Draw</span></button>
+              <button className={tool === 'signature' ? 'active' : ''} onClick={() => chooseTool('signature')} title="Signature"><span className="signature-icon">⌁</span><span>Signature</span></button>
             </div>
             <span className="divider" />
             <div className="search-box">
@@ -1548,8 +1574,9 @@ export default function App() {
               )}
             </div>
             <div className="toolbar-spacer" />
-            <button className="soft-btn" onClick={() => mergeInput.current?.click()}><FileInput /> Merge</button>
-            <button className="soft-btn" onClick={() => { setExtractRange(String(currentPage + 1)); setExtractOpen(true) }}><Split /> Extract</button>
+            <button className="soft-btn forge-page-command" onClick={() => mergeInput.current?.click()}><FileInput /> Merge</button>
+            <button className="soft-btn forge-page-command" onClick={() => { setExtractRange(String(currentPage + 1)); setExtractOpen(true) }}><Split /> Extract</button>
+            <button className={`soft-btn forge-inspector-toggle ${inspectorOpen ? 'active' : ''}`} title="Properties" onClick={() => setInspectorOpen((open) => !open)}><Info /> Properties</button>
             <AdvancedTools
               bytes={bytes}
               name={name}
@@ -1623,15 +1650,18 @@ export default function App() {
           </div>
         </section>
 
-        <aside className="right-panel">
-          <div className="panel-heading">
+        <aside className={`right-panel forge-inspector ${inspectorOpen ? 'open' : 'closed'}`}>
+          <div className="panel-heading forge-inspector-heading">
             <div>
               <span className="eyebrow">{nativeSelection ? 'PDF TEXT' : selected ? 'SELECTION' : 'TOOLS'}</span>
               <h3>{nativeSelection ? 'Edit existing text' : selected ? selected.type[0].toUpperCase() + selected.type.slice(1) : 'Appearance'}</h3>
             </div>
-            {selected && !nativeSelection && (
-              <button className="icon-btn small danger" onClick={deleteSelected}><Trash2 /></button>
-            )}
+            <div className="forge-inspector-head-actions">
+              {selected && !nativeSelection && (
+                <button className="icon-btn small danger" title="Delete selection" onClick={deleteSelected}><Trash2 /></button>
+              )}
+              <button className="icon-btn small forge-inspector-close" title="Hide properties" aria-label="Hide properties" onClick={() => setInspectorOpen(false)}><X /></button>
+            </div>
           </div>
 
           {nativeSelection ? (

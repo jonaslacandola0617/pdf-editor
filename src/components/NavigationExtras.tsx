@@ -56,7 +56,7 @@ function clickLibraryDocument(name: string) {
     library.click()
     return true
   }
-  document.querySelector<HTMLButtonElement>('.rail button[title="Library"]')?.click()
+  document.querySelector<HTMLButtonElement>('.forge-navigator-tabs button[title="Library"]')?.click()
   window.setTimeout(() => {
     Array.from(document.querySelectorAll<HTMLButtonElement>('.library-item > button:first-child'))
       .find((button) => button.textContent?.includes(name))?.click()
@@ -80,7 +80,7 @@ export function NavigationExtras() {
     const sync = () => {
       const shell = document.querySelector('.app-shell')
       setEditorVisible(Boolean(shell))
-      setRailHost(document.querySelector<HTMLElement>('.rail'))
+      setRailHost(document.querySelector<HTMLElement>('.forge-navigator-tabs'))
       const nextName = document.querySelector<HTMLInputElement>('.doc-title input')?.value || ''
       setDocumentName(nextName)
       if (!shell) setOpen(false)
@@ -185,7 +185,8 @@ export function NavigationExtras() {
   return <>
     {createPortal(
       <button className={`nav-extras-launcher ${open ? 'active' : ''}`} type="button" title="Bookmarks & favorites" aria-label="Bookmarks & favorites" onClick={() => setOpen((value) => !value)}>
-        <Bookmark size={18} />
+        <Bookmark size={16} />
+        <span>Bookmarks</span>
       </button>,
       railHost,
     )}

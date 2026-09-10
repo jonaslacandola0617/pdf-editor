@@ -74,7 +74,7 @@ async function expectCoreDesktopGeometry(page: Page) {
       const r = node?.getBoundingClientRect()
       return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height } : null
     }
-    const rail = rect('.rail')
+    const navigator = rect('.forge-navigator')
     const left = rect('.left-panel')
     const editor = rect('.editor-column')
     const right = rect('.right-panel')
@@ -82,15 +82,14 @@ async function expectCoreDesktopGeometry(page: Page) {
     const floating = rect('.floating-nav')
     const stage = rect('.document-stage')
     return {
-      rail, left, editor, right, floating, stage,
+      navigator, left, editor, right, floating, stage,
       toolbarOverflow: toolbar ? toolbar.scrollWidth - toolbar.clientWidth : 999,
     }
   })
-  expect(result.rail).not.toBeNull()
+  expect(result.navigator).not.toBeNull()
   expect(result.editor).not.toBeNull()
   expect(result.toolbarOverflow).toBeLessThanOrEqual(1)
-  if (result.rail && result.left) expect(result.rail.right).toBeLessThanOrEqual(result.left.left + 1)
-  if (result.left && result.editor) expect(result.left.right).toBeLessThanOrEqual(result.editor.left + 1)
+  if (result.navigator && result.editor) expect(result.navigator.right).toBeLessThanOrEqual(result.editor.left + 1)
   if (result.editor && result.right && result.right.width > 0) expect(result.editor.right).toBeLessThanOrEqual(result.right.left + 1)
   if (result.floating && result.stage) {
     expect(result.floating.left).toBeGreaterThanOrEqual(result.stage.left)
@@ -101,7 +100,7 @@ async function expectCoreDesktopGeometry(page: Page) {
 async function expectCriticalTargets(page: Page, min: number) {
   const failures = await page.evaluate(({ min }) => {
     const selectors = [
-      '.top-actions button:not([disabled])', '.rail button', '.tool-group button',
+      '.top-actions button:not([disabled])', '.forge-navigator-tabs button', '.tool-group button',
       '.floating-nav button', '.all-tools-launcher', '.all-tools-close', '.mobile-workspace-bar button',
     ]
     const nodes = selectors.flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)))
@@ -124,19 +123,20 @@ test('visual audit — welcome hierarchy at desktop and mobile widths', async ({
   await expect(page.locator('.welcome')).toBeVisible()
   await shot(page, '01-welcome-desktop')
   await expectNoViewportOverflow(page)
-  await expect(page.getByRole('button', { name: /Open PDF or images/i })).toBeVisible()
-  await expectVisibleFocus(page, '.primary.large')
+  await expect(page.getByRole('button', { name: /Open PDF/i }).first()).toBeVisible()
+  await expectVisibleFocus(page, '.forge-main-open')
 
   await page.getByRole('button', { name: 'Use dark appearance' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.waitForTimeout(250)
   await shot(page, '01b-welcome-dark')
   await page.getByRole('button', { name: 'Use light appearance' }).click()
+  await page.waitForTimeout(200)
 
   await page.setViewportSize({ width: 390, height: 844 })
   await shot(page, '02-welcome-mobile')
   await expectNoViewportOverflow(page)
-  const cta = await page.getByRole('button', { name: /Open PDF or images/i }).boundingBox()
+  const cta = await page.getByRole('button', { name: /Open PDF/i }).first().boundingBox()
   expect(cta?.width ?? 0).toBeLessThan(360)
   assertNoErrors()
 })
@@ -153,7 +153,7 @@ test('visual audit — editor desktop hierarchy, density, focus and primary work
   await expectCoreDesktopGeometry(page)
   await expectCriticalTargets(page, 28)
   await expectVisibleFocus(page, '.editor-toolbar button')
-  await expectVisibleFocus(page, '.rail button')
+  await expectVisibleFocus(page, '.forge-navigator-tabs button')
   await expect(page.getByRole('button', { name: 'Export PDF' })).toBeVisible()
 
   const search = page.getByPlaceholder('Find in document')
@@ -241,13 +241,15 @@ test('visual audit — tablet and mobile flows remain discoverable', async ({ pa
   await shot(page, '10-all-tools-mobile')
   const drawer = page.locator('.all-tools-drawer')
   await expect(drawer).toBeVisible()
-  await drawer.getByRole('button', { name: 'Organize pages', exact: true }).click()
-  await drawer.getByRole('button', { name: /^Pages/ }).click()
-  await expect(page.locator('.left-panel')).toBeVisible()
-  await shot(page, '11-mobile-pages-sheet')
+  await page.getByTitle('Close All Tools').click()
 
-  await page.getByTitle('Properties').click()
-  await expect(page.locator('.right-panel')).toBeVisible()
+  await page.getByTitle('Toggle navigator').click()
+  await expect(page.locator('.forge-navigator')).toBeVisible()
+  await shot(page, '11-mobile-pages-sheet')
+  await page.getByTitle('Hide navigator').click()
+
+  await page.locator('.forge-context-bar .forge-inspector-toggle').click()
+  await expect(page.locator('.forge-inspector')).toBeVisible()
   await shot(page, '12-mobile-properties-sheet')
   assertNoErrors()
 })

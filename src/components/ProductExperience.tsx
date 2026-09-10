@@ -11,7 +11,6 @@ import {
   Files,
   FormInput,
   Grid2X2,
-  Highlighter,
   Library,
   List,
   Menu,
@@ -21,10 +20,8 @@ import {
   Plus,
   ScanLine,
   Search,
-  Shapes,
   Split,
   Star,
-  StickyNote,
   Sun,
   Trash2,
   Type,
@@ -69,6 +66,8 @@ const toolDefinitions: ToolDefinition[] = [
   { name: 'Create Form Fields', description: 'Add and arrange interactive fields directly on document pages.', group: 'Forms & Signatures', icon: FormInput, intent: 'forms' },
 ]
 
+const quickTools = ['Edit PDF', 'Organize Pages', 'Merge PDFs', 'Compress & Optimize', 'Fill & Sign']
+
 function readFavorites() {
   try {
     const parsed = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]')
@@ -99,9 +98,7 @@ function openStoredDocument(id: string) {
 
 function activateEditorMode(mode: EditorMode) {
   document.body.dataset.pdfMode = mode
-  if (mode === 'organize') {
-    findButtonByTitle('Pages')?.click()
-  }
+  if (mode === 'organize') findButtonByTitle('Pages')?.click()
 }
 
 function runEditorIntent(intent: Exclude<ToolIntent, null>) {
@@ -114,6 +111,8 @@ function runEditorIntent(intent: Exclude<ToolIntent, null>) {
       findButtonByText('Merge')?.click()
       break
     case 'optimize':
+    case 'protect':
+    case 'document':
       findButtonByTitle('Document tools')?.click()
       break
     case 'redact':
@@ -126,12 +125,6 @@ function runEditorIntent(intent: Exclude<ToolIntent, null>) {
       break
     case 'organize':
       activateEditorMode('organize')
-      break
-    case 'protect':
-      findButtonByTitle('Document tools')?.click()
-      break
-    case 'document':
-      findButtonByTitle('Document tools')?.click()
       break
     case 'objects':
       findButtonByTitle('Embedded PDF objects')?.click()
@@ -149,17 +142,22 @@ function runEditorIntent(intent: Exclude<ToolIntent, null>) {
 function formatUpdatedAt(value: number) {
   const elapsed = Math.max(0, Date.now() - value)
   const minutes = Math.floor(elapsed / 60_000)
-  if (minutes < 1) return 'Edited just now'
-  if (minutes < 60) return `Edited ${minutes} min ago`
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes} min ago`
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `Edited ${hours} hr${hours === 1 ? '' : 's'} ago`
+  if (hours < 24) return `${hours} hr${hours === 1 ? '' : 's'} ago`
   const days = Math.floor(hours / 24)
-  if (days < 7) return `Edited ${days} day${days === 1 ? '' : 's'} ago`
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: value < Date.now() - 31_536_000_000 ? 'numeric' : undefined }).format(value)
 }
 
 function ProductBrand() {
-  return <div className="product-brand"><span>PF</span><div><strong>PDF Forge</strong><small>Professional PDF workspace</small></div></div>
+  return (
+    <div className="forge-brand">
+      <span className="forge-brand-seal"><b>F</b><i>PDF</i></span>
+      <span className="forge-brand-copy"><strong>PDF Forge</strong><small>Document workshop</small></span>
+    </div>
+  )
 }
 
 export function ProductExperience() {
@@ -353,137 +351,225 @@ export function ProductExperience() {
     return () => window.removeEventListener('keydown', keyboard)
   }, [editorVisible, paletteOpen])
 
+  const recentDocuments = documents.slice(0, 6)
+  const currentLabel = view === 'home' ? 'Workbench' : view === 'documents' ? 'Document archive' : 'Tool index'
+
   const homePortal = welcomeHost && createPortal(
-    <div className="product-home-root">
-      <header className="product-home-bar">
+    <div className={`forge-product-root ${view === 'home' ? 'home-stage' : ''}`}>
+      {view !== 'home' && <aside className="forge-mast">
         <ProductBrand />
-        <nav aria-label="PDF Forge sections">
-          <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')}><Clock3 size={16} />Home</button>
-          <button className={view === 'documents' ? 'active' : ''} onClick={() => setView('documents')}><Library size={16} />Documents</button>
-          <button className={view === 'tools' ? 'active' : ''} onClick={() => setView('tools')}><Menu size={16} />Tools</button>
+        <nav className="forge-mast-nav" aria-label="PDF Forge sections">
+          <button onClick={() => setView('home')} title="Workbench" aria-label="Workbench">
+            <span>01</span><Clock3 size={17} /><em>Workbench</em>
+          </button>
+          <button className={view === 'documents' ? 'active' : ''} onClick={() => setView('documents')} title="Documents" aria-label="Documents">
+            <span>02</span><Library size={17} /><em>Documents</em>
+          </button>
+          <button className={view === 'tools' ? 'active' : ''} onClick={() => setView('tools')} title="Tool index" aria-label="Tools">
+            <span>03</span><Menu size={17} /><em>Tools</em>
+          </button>
         </nav>
-        <div className="product-home-utilities">
-          <button className="product-theme-toggle" type="button" aria-label={`Use ${theme === 'light' ? 'dark' : 'light'} appearance`} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}</button>
-          <button className="product-local-status" type="button" title="Files stay in this browser"><Check size={14} /> Local workspace</button>
+        <div className="forge-mast-foot">
+          <span className="forge-local-dot" />
+          <div><strong>Local desk</strong><small>Files stay here</small></div>
         </div>
-      </header>
+      </aside>}
 
-      <main className="product-home-content">
-        {view === 'home' && <>
-          <section className="product-home-hero">
-            <div className="product-hero-copy">
-              <span className="product-greeting">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}</span>
-              <h1>Your PDF workspace</h1>
-              <p>Edit, organize, convert, sign, and manage documents from one beautifully focused workspace.</p>
-              <div className="product-hero-actions">
-                <button className="product-primary" aria-label="Open PDF or images" onClick={openFilePicker}><Upload size={17} /> Open PDF</button>
-                <button className="product-secondary" onClick={openFilePicker}><Plus size={17} /> Create PDF</button>
-              </div>
-              <div className="product-trust-line"><Check size={14} /><span>Private by design. Your files remain on this device.</span></div>
-            </div>
-            <button className="product-drop-zone" onClick={openFilePicker}>
-              <span className="product-drop-icon"><Upload size={22} /></span>
-              <strong>Open a document</strong>
-              <small>Drag and drop a PDF here, or choose a file from your computer.</small>
-              <span className="product-drop-action">Choose File</span>
-              <span className="product-drop-support">PDF, PNG, and JPG · Processed locally</span>
+      <section className="forge-product-surface">
+        <header className={`forge-product-bar ${view === 'home' ? 'forge-home-bar' : ''}`}>
+          {view === 'home' ? (
+            <>
+              <ProductBrand />
+              <nav className="forge-home-nav" aria-label="PDF Forge">
+                <button onClick={() => setView('documents')}><Library size={17} /> Documents</button>
+                <button onClick={() => setView('tools')}><Menu size={17} /> All tools</button>
+              </nav>
+            </>
+          ) : (
+            <div className="forge-product-context"><span>PDF FORGE /</span><strong>{currentLabel}</strong></div>
+          )}
+          <div className="forge-product-actions">
+            <button className="forge-quiet-action" onClick={() => { setPaletteOpen(true); setPaletteQuery('') }}><Search size={15} /><span>Quick actions</span><kbd>⌘K</kbd></button>
+            <button className="forge-theme-switch" type="button" aria-label={`Use ${theme === 'light' ? 'dark' : 'light'} appearance`} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+              {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
             </button>
-          </section>
-
-          <section className="product-section">
-            <div className="product-section-heading">
-              <div><span className="product-kicker">CONTINUE WORKING</span><h2>{documents.length ? 'Pick up where you left off' : 'Your documents'}</h2></div>
-              {documents.length > 3 && <button onClick={() => setView('documents')}>View all <ChevronRight size={14} /></button>}
-            </div>
-            {documents.length ? <div className="product-recent-grid">
-              {documents.slice(0, 4).map((document) => <button key={document.id} className="product-document-card" onClick={() => openStoredDocument(document.id)}>
-                <span className="product-pdf-sheet"><span>PDF</span></span>
-                <span className="product-document-copy"><strong>{document.name}</strong><small>{document.pageCount} pages · {fileSize(document.size)}</small><small>{formatUpdatedAt(document.updatedAt)}</small></span>
-                <ChevronRight size={16} />
-              </button>)}
-            </div> : <div className="product-empty-state">
-              <Files size={26} />
-              <div><strong>No documents yet</strong><p>Open your first PDF and it will appear here for quick access later.</p></div>
-              <button onClick={openFilePicker}>Open PDF</button>
-            </div>}
-          </section>
-
-          <section className="product-section product-quick-tools">
-            <div className="product-section-heading"><div><span className="product-kicker">QUICK TOOLS</span><h2>Finish common PDF work faster</h2></div><button onClick={() => setView('tools')}>View all tools <ChevronRight size={14} /></button></div>
-            <div className="product-tool-strip">
-              {toolDefinitions.filter((item) => ['Edit PDF', 'Merge PDFs', 'Compress & Optimize', 'Image to PDF', 'Fill & Sign'].includes(item.name)).map((item) => {
-                const Icon = item.icon
-                return <button key={item.name} onClick={() => startIntent(item.intent)}><Icon size={18} /><span><strong>{item.name}</strong><small>{item.description}</small></span><ChevronRight size={14} /></button>
-              })}
-            </div>
-          </section>
-        </>}
-
-        {view === 'documents' && <section className="product-library-view">
-          <div className="product-page-heading"><div><span className="product-kicker">LOCAL LIBRARY</span><h1>Documents</h1><p>Find, organize, and return to every PDF you have worked on in PDF Forge.</p></div><button className="product-primary" onClick={openFilePicker}><Upload size={16} /> Open PDF</button></div>
-          <div className="product-library-toolbar">
-            <div className="product-search"><Search size={16} /><input value={documentQuery} onChange={(event) => setDocumentQuery(event.target.value)} placeholder="Search documents" /></div>
-            <div className="product-library-controls">
-              <div className="product-filter-tabs" aria-label="Document filters">
-                <button className={documentFilter === 'all' ? 'active' : ''} onClick={() => setDocumentFilter('all')}>All</button>
-                <button className={documentFilter === 'recent' ? 'active' : ''} onClick={() => setDocumentFilter('recent')}>Recent</button>
-                <button className={documentFilter === 'favorites' ? 'active' : ''} onClick={() => setDocumentFilter('favorites')}>Favorites</button>
-              </div>
-              <label className="product-sort">Sort by<select aria-label="Sort documents" value={documentSort} onChange={(event) => setDocumentSort(event.target.value as typeof documentSort)}><option value="updated">Last edited</option><option value="name">Name</option><option value="pages">Page count</option></select></label>
-              <div className="product-layout-toggle" aria-label="Document layout">
-                <button aria-label="List view" className={libraryLayout === 'list' ? 'active' : ''} onClick={() => setLibraryLayout('list')}><List size={15} /></button>
-                <button aria-label="Grid view" className={libraryLayout === 'grid' ? 'active' : ''} onClick={() => setLibraryLayout('grid')}><Grid2X2 size={15} /></button>
-              </div>
-            </div>
           </div>
-          {filteredDocuments.length ? <div className={`product-document-list ${libraryLayout}`}>
-            {filteredDocuments.map((document) => <div className="product-document-row" key={document.id}>
-              <button className="product-document-open" onClick={() => openStoredDocument(document.id)}>
-                <span className="product-pdf-sheet compact"><span>PDF</span></span>
-                <span><strong>{document.name}</strong><small>{document.pageCount} pages · {fileSize(document.size)} · {formatUpdatedAt(document.updatedAt)}</small></span>
-              </button>
-              <button className={`product-icon-button ${favorites.has(document.id) ? 'active' : ''}`} aria-label={favorites.has(document.id) ? 'Remove from favorites' : 'Add to favorites'} onClick={() => toggleFavorite(document.id)}><Star size={16} fill={favorites.has(document.id) ? 'currentColor' : 'none'} /></button>
-              <div className="product-row-menu-wrap">
-                <button className="product-icon-button" aria-label={`More actions for ${document.name}`} onClick={() => setMenuDocumentId((id) => id === document.id ? null : document.id)}><MoreHorizontal size={17} /></button>
-                {menuDocumentId === document.id && <div className="product-row-menu">
-                  <button onClick={() => openStoredDocument(document.id)}>Open document</button>
-                  <button onClick={() => { setRenameDraft(document.name); setDocumentDialog({ type: 'rename', document }); setMenuDocumentId(null) }}>Rename</button>
-                  <button onClick={() => void duplicateStoredDocument(document)}>Duplicate</button>
-                  <button className="danger" onClick={() => { setDocumentDialog({ type: 'remove', document }); setMenuDocumentId(null) }}><Trash2 size={14} /> Remove from library</button>
-                </div>}
-              </div>
-            </div>)}
-          </div> : <div className="product-empty-state large"><Search size={28} /><div><strong>{documents.length ? 'No matching documents' : 'No documents yet'}</strong><p>{documents.length ? 'Try adjusting your search or changing the current filter.' : 'Open your first PDF and it will appear here for quick access later.'}</p></div>{documents.length ? <button onClick={() => { setDocumentQuery(''); setDocumentFilter('all') }}>Clear filters</button> : <button onClick={openFilePicker}>Open PDF</button>}</div>}
-        </section>}
+        </header>
 
-        {view === 'tools' && <section className="product-tools-view">
-          <div className="product-page-heading"><div><span className="product-kicker">TOOL LIBRARY</span><h1>Tools</h1><p>Professional PDF actions, grouped around the result you need.</p></div><button className="product-primary" onClick={openFilePicker}><Upload size={16} /> Open a document</button></div>
-          <div className="product-tool-groups">
-            {(['Edit', 'Organize', 'Convert', 'Optimize', 'Protect', 'Forms & Signatures'] as const).map((group) => <section key={group}>
-              <h2>{group}</h2>
-              <div>{toolDefinitions.filter((item) => item.group === group).map((item) => {
-                const Icon = item.icon
-                return <button key={item.name} onClick={() => startIntent(item.intent)}><span className="product-tool-icon"><Icon size={18} /></span><span><strong>{item.name}</strong><small>{item.description}</small></span><ChevronRight size={15} /></button>
-              })}</div>
-            </section>)}
-          </div>
-          <div className="product-capability-note"><Check size={16} /><span><strong>Only working capabilities are listed.</strong> PDF Forge will not advertise conversions or cloud workflows that the current app does not actually perform.</span></div>
-        </section>}
-      </main>
+        <main className="forge-product-main">
+          {view === 'home' && (
+            <section className="forge-workbench-stage">
+              <section className="forge-focus-zone" aria-label="Open a document">
+                <div className="forge-focus-visual" aria-hidden="true">
+                  <span className="forge-paper-back back-two" />
+                  <span className="forge-paper-back back-one" />
+                  <span className="forge-paper-front"><i>PDF</i><Upload size={30} /></span>
+                </div>
+                <span className="forge-folio-label">START HERE</span>
+                <h1>Open a document</h1>
+                <p>Choose a PDF and start working immediately. You can also drop a PDF anywhere on this screen.</p>
+                <div className="forge-focus-actions">
+                  <button className="forge-main-open" onClick={openFilePicker}><Upload size={19} /> Open PDF</button>
+                  <button className="forge-image-build" onClick={openFilePicker}><Plus size={17} /> Create from images</button>
+                </div>
+                <span className="forge-focus-note"><Check size={14} /> Processed locally on this device</span>
+              </section>
+
+              <section className="forge-recent-shelf" aria-label="Recent documents">
+                <div className="forge-shelf-heading">
+                  <div><span>RECENT</span><h2>Pick up where you left off</h2></div>
+                  {documents.length > 5 && <button onClick={() => setView('documents')}>See all documents <ChevronRight size={15} /></button>}
+                </div>
+                {recentDocuments.length ? (
+                  <div className="forge-shelf-track">
+                    {recentDocuments.slice(0, 5).map((document) => (
+                      <button key={document.id} className="forge-shelf-file" onClick={() => openStoredDocument(document.id)}>
+                        <span className="forge-shelf-paper"><i>PDF</i><b>{document.pageCount}</b></span>
+                        <span className="forge-shelf-copy">
+                          <strong>{document.name}</strong>
+                          <small>{fileSize(document.size)} · {formatUpdatedAt(document.updatedAt)}</small>
+                        </span>
+                        <ChevronRight size={16} />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="forge-shelf-empty">
+                    <span>No recent files yet.</span>
+                    <small>Your recently opened PDFs will appear here automatically.</small>
+                  </div>
+                )}
+              </section>
+
+              <section className="forge-task-dock" aria-label="Start with a task">
+                <div className="forge-dock-label">
+                  <span>OR START WITH A TASK</span>
+                  <small>Choose the result you want.</small>
+                </div>
+                <div className="forge-dock-actions">
+                  {toolDefinitions.filter((tool) => quickTools.includes(tool.name)).map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <button key={item.name} onClick={() => startIntent(item.intent)} title={item.description}>
+                        <Icon size={19} />
+                        <span>{item.name.replace(' & Optimize', '').replace(' Content', '')}</span>
+                      </button>
+                    )
+                  })}
+                  <button className="forge-dock-more" onClick={() => setView('tools')}><Menu size={19} /><span>All tools</span></button>
+                </div>
+              </section>
+            </section>
+          )}
+
+          {view === 'documents' && (
+            <section className="forge-archive-view">
+              <div className="forge-page-title">
+                <div><span className="forge-folio-label">DOCUMENT ARCHIVE · 02</span><h1>Every document,<br /><em>within reach.</em></h1><p>Search, sort, favorite, reopen, duplicate, or remove documents kept in this local browser workspace.</p></div>
+                <button className="forge-primary-action" onClick={openFilePicker}><Upload size={16} /> Open PDF</button>
+              </div>
+
+              <div className="forge-archive-toolbar">
+                <div className="forge-search-field"><Search size={16} /><input value={documentQuery} onChange={(event) => setDocumentQuery(event.target.value)} placeholder="Search document names" /></div>
+                <div className="forge-archive-controls">
+                  <div className="forge-filter-set" aria-label="Document filters">
+                    <button className={documentFilter === 'all' ? 'active' : ''} onClick={() => setDocumentFilter('all')}>All</button>
+                    <button className={documentFilter === 'recent' ? 'active' : ''} onClick={() => setDocumentFilter('recent')}>Recent</button>
+                    <button className={documentFilter === 'favorites' ? 'active' : ''} onClick={() => setDocumentFilter('favorites')}>Starred</button>
+                  </div>
+                  <label className="forge-sort">Order<select aria-label="Sort documents" value={documentSort} onChange={(event) => setDocumentSort(event.target.value as typeof documentSort)}><option value="updated">Last worked</option><option value="name">Name</option><option value="pages">Page count</option></select></label>
+                  <div className="forge-view-set" aria-label="Document layout">
+                    <button aria-label="List view" className={libraryLayout === 'list' ? 'active' : ''} onClick={() => setLibraryLayout('list')}><List size={15} /></button>
+                    <button aria-label="Grid view" className={libraryLayout === 'grid' ? 'active' : ''} onClick={() => setLibraryLayout('grid')}><Grid2X2 size={15} /></button>
+                  </div>
+                </div>
+              </div>
+
+              {filteredDocuments.length ? (
+                <div className={`forge-document-archive ${libraryLayout}`}>
+                  {libraryLayout === 'list' && <div className="forge-archive-head"><span>Document</span><span>Pages</span><span>Size</span><span>Last worked</span><span /></div>}
+                  {filteredDocuments.map((document, index) => (
+                    <article className="forge-archive-item" key={document.id}>
+                      <button className="forge-archive-open" onClick={() => openStoredDocument(document.id)}>
+                        <span className="forge-archive-index">{String(index + 1).padStart(2, '0')}</span>
+                        <span className="forge-pdf-sheet"><i>PDF</i><b>{document.pageCount}</b></span>
+                        <span className="forge-archive-name"><strong>{document.name}</strong><small>{document.pageCount} pages · {fileSize(document.size)}</small></span>
+                        <span className="forge-archive-pages">{document.pageCount}</span>
+                        <span className="forge-archive-size">{fileSize(document.size)}</span>
+                        <span className="forge-archive-date">{formatUpdatedAt(document.updatedAt)}</span>
+                      </button>
+                      <button className={`forge-star-action ${favorites.has(document.id) ? 'active' : ''}`} aria-label={favorites.has(document.id) ? 'Remove from favorites' : 'Add to favorites'} onClick={() => toggleFavorite(document.id)}><Star size={15} fill={favorites.has(document.id) ? 'currentColor' : 'none'} /></button>
+                      <div className="forge-row-menu-wrap">
+                        <button className="forge-more-action" aria-label={`More actions for ${document.name}`} onClick={() => setMenuDocumentId((id) => id === document.id ? null : document.id)}><MoreHorizontal size={17} /></button>
+                        {menuDocumentId === document.id && (
+                          <div className="forge-row-menu">
+                            <button onClick={() => openStoredDocument(document.id)}>Open document</button>
+                            <button onClick={() => { setRenameDraft(document.name); setDocumentDialog({ type: 'rename', document }); setMenuDocumentId(null) }}>Rename</button>
+                            <button onClick={() => void duplicateStoredDocument(document)}>Duplicate</button>
+                            <button className="danger" onClick={() => { setDocumentDialog({ type: 'remove', document }); setMenuDocumentId(null) }}><Trash2 size={14} /> Remove from archive</button>
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="forge-empty-archive">
+                  <Search size={24} />
+                  <strong>{documents.length ? 'Nothing matches that search.' : 'Your archive is empty.'}</strong>
+                  <p>{documents.length ? 'Change the search or filter and the archive will update instantly.' : 'Open a PDF and it will be kept here for quick return.'}</p>
+                  {documents.length ? <button onClick={() => { setDocumentQuery(''); setDocumentFilter('all') }}>Clear search</button> : <button onClick={openFilePicker}>Open PDF</button>}
+                </div>
+              )}
+            </section>
+          )}
+
+          {view === 'tools' && (
+            <section className="forge-tools-view">
+              <div className="forge-page-title">
+                <div><span className="forge-folio-label">TOOL INDEX · 03</span><h1>Choose the job.<br /><em>Not the jargon.</em></h1><p>Every working PDF Forge capability, organized by what you are trying to accomplish.</p></div>
+                <button className="forge-primary-action" onClick={openFilePicker}><Upload size={16} /> Open a document</button>
+              </div>
+              <div className="forge-tool-index">
+                {(['Edit', 'Organize', 'Convert', 'Optimize', 'Protect', 'Forms & Signatures'] as const).map((group, groupIndex) => (
+                  <section key={group} className="forge-tool-chapter">
+                    <header><span>{String(groupIndex + 1).padStart(2, '0')}</span><h2>{group}</h2></header>
+                    <div>
+                      {toolDefinitions.filter((item) => item.group === group).map((item, itemIndex) => {
+                        const Icon = item.icon
+                        return (
+                          <button key={item.name} onClick={() => startIntent(item.intent)}>
+                            <span className="forge-tool-code">{groupIndex + 1}.{itemIndex + 1}</span>
+                            <span className="forge-tool-icon"><Icon size={17} /></span>
+                            <span className="forge-tool-copy"><strong>{item.name}</strong><small>{item.description}</small></span>
+                            <ChevronRight size={14} />
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+              <div className="forge-capability-rule"><Check size={14} /><span>Only capabilities backed by the current PDF Forge engine are listed here.</span></div>
+            </section>
+          )}
+        </main>
+      </section>
     </div>,
     welcomeHost,
   )
 
   const editorPortal = topbarHost && createPortal(
     <>
-      <div className="product-editor-modes" role="navigation" aria-label="Editor modes">
-        <button className={mode === 'edit' ? 'active' : ''} onClick={() => setEditorMode('edit')}>Edit</button>
-        <button className={mode === 'annotate' ? 'active' : ''} onClick={() => setEditorMode('annotate')}>Annotate</button>
-        <button className={mode === 'sign' ? 'active' : ''} onClick={() => setEditorMode('sign')}>Fill & Sign</button>
-        <button className={mode === 'organize' ? 'active' : ''} onClick={() => setEditorMode('organize')}>Organize</button>
-        <button className="product-command-trigger" title="Quick Actions · Ctrl/Cmd + K" onClick={() => { setPaletteOpen(true); setPaletteQuery('') }}><Search size={14} /><span>Quick Actions</span><kbd>⌘K</kbd></button>
+      <div className="forge-editor-switch" role="navigation" aria-label="Editor modes">
+        <span className="forge-switch-label">WORKFLOW</span>
+        <button className={mode === 'edit' ? 'active' : ''} aria-label="Edit" onClick={() => setEditorMode('edit')}><i>01</i>Edit</button>
+        <button className={mode === 'annotate' ? 'active' : ''} aria-label="Review" onClick={() => setEditorMode('annotate')}><i>02</i>Review</button>
+        <button className={mode === 'sign' ? 'active' : ''} aria-label="Sign" onClick={() => setEditorMode('sign')}><i>03</i>Sign</button>
+        <button className={mode === 'organize' ? 'active' : ''} aria-label="Pages" onClick={() => setEditorMode('organize')}><i>04</i>Pages</button>
+        <button className="forge-command-trigger" title="Quick Actions · Ctrl/Cmd + K" onClick={() => { setPaletteOpen(true); setPaletteQuery('') }}><Search size={13} /><span>Actions</span><kbd>⌘K</kbd></button>
       </div>
-      <button className="product-editor-theme" type="button" aria-label={`Use ${theme === 'light' ? 'dark' : 'light'} appearance`} title="Change appearance" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</button>
+      <button className="forge-editor-theme" type="button" aria-label={`Use ${theme === 'light' ? 'dark' : 'light'} appearance`} title="Change appearance" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</button>
     </>,
     topbarHost,
   )
@@ -515,12 +601,12 @@ export function ProductExperience() {
   const palettePortal = paletteOpen && createPortal(
     <div className="product-command-layer" role="presentation" onMouseDown={() => setPaletteOpen(false)}>
       <section className="product-command-palette" role="dialog" aria-modal="true" aria-label="Quick Actions" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="product-command-search"><Search size={18} /><input autoFocus value={paletteQuery} onChange={(event) => setPaletteQuery(event.target.value)} placeholder="What would you like to do?" /><button aria-label="Close Quick Actions" onClick={() => setPaletteOpen(false)}><X size={16} /></button></div>
+        <div className="product-command-search"><Search size={18} /><input autoFocus value={paletteQuery} onChange={(event) => setPaletteQuery(event.target.value)} placeholder="Name the task…" /><button aria-label="Close Quick Actions" onClick={() => setPaletteOpen(false)}><X size={16} /></button></div>
         <div className="product-command-results">
-          {filteredCommands.map((command) => <button key={command.label} onClick={() => { command.run(); setPaletteOpen(false) }}><span><strong>{command.label}</strong><small>{command.hint}</small></span>{command.shortcut && <kbd>{command.shortcut}</kbd>}</button>)}
-          {!filteredCommands.length && <div className="product-command-empty"><Search size={20} /><strong>No matching actions</strong><span>Try a tool name such as “merge”, “signature”, or “export”.</span></div>}
+          {filteredCommands.map((command, index) => <button key={command.label} onClick={() => { command.run(); setPaletteOpen(false) }}><i>{String(index + 1).padStart(2, '0')}</i><span><strong>{command.label}</strong><small>{command.hint}</small></span>{command.shortcut && <kbd>{command.shortcut}</kbd>}</button>)}
+          {!filteredCommands.length && <div className="product-command-empty"><Search size={20} /><strong>No matching action</strong><span>Try “merge”, “signature”, “pages”, or “export”.</span></div>}
         </div>
-        <footer><span>Navigate with search</span><span><kbd>Esc</kbd> Close</span></footer>
+        <footer><span>PDF Forge command desk</span><span><kbd>Esc</kbd> Close</span></footer>
       </section>
     </div>,
     document.body,
