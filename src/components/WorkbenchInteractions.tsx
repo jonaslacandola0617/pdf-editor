@@ -46,7 +46,7 @@ export function WorkbenchInteractions() {
   const wheelAccumulator = useRef(0)
   const lastPageTurn = useRef(0)
   const lastZoom = useRef(0)
-  const scrollFrame = useRef(0)
+  const scrollTimer = useRef(0)
 
   useEffect(() => {
     replaceUserFacingEditTextLabels()
@@ -154,12 +154,13 @@ export function WorkbenchInteractions() {
     }
 
     // Keep the page indicator/current-page state in sync while the user scrolls
-    // through Continuous view. The closest page to the viewport center wins.
+    // through Continuous view. Debounce until scrolling settles so a smooth
+    // programmatic jump does not immediately overwrite its requested target.
     const onScroll = (event: Event) => {
       const target = event.target as HTMLElement | null
       if (!target?.matches('.page-scroll.view-continuous')) return
-      cancelAnimationFrame(scrollFrame.current)
-      scrollFrame.current = requestAnimationFrame(() => {
+      window.clearTimeout(scrollTimer.current)
+      scrollTimer.current = window.setTimeout(() => {
         const scrollerRect = target.getBoundingClientRect()
         const center = scrollerRect.top + scrollerRect.height / 2
         const pages = Array.from(target.querySelectorAll<HTMLElement>('.page-view[data-page]'))
@@ -173,14 +174,14 @@ export function WorkbenchInteractions() {
         if (!closest) return
         const input = document.querySelector<HTMLInputElement>('.floating-nav input')
         if (input && Number(input.value) !== closest.page + 1) setReactPageInput(input, String(closest.page + 1))
-      })
+      }, 90)
     }
 
     document.addEventListener('contextmenu', onContextMenu)
     document.addEventListener('wheel', onWheel, { passive: false, capture: true })
     document.addEventListener('scroll', onScroll, true)
     return () => {
-      cancelAnimationFrame(scrollFrame.current)
+      window.clearTimeout(scrollTimer.current)
       document.removeEventListener('contextmenu', onContextMenu)
       document.removeEventListener('wheel', onWheel, true)
       document.removeEventListener('scroll', onScroll, true)
