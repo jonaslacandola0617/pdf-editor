@@ -15,9 +15,9 @@ test('home is a focused PDF workspace with documents and tool navigation', async
   await page.goto('/')
   const product = page.locator('.forge-product-root')
   await expect(product).toBeVisible()
-  await expect(product.getByRole('heading', { name: /Shape the document/i })).toBeVisible()
+  await expect(product.getByRole('heading', { name: /What do you need to do/i })).toBeVisible()
   await expect(product.getByRole('button', { name: /Open a PDF/i }).first()).toBeVisible()
-  await expect(product.getByText('Bring a document to the desk')).toBeVisible()
+  await expect(product.getByText('Recent documents')).toBeVisible()
   await expect(product.getByText('Local-first processing')).toBeVisible()
 
   await product.getByRole('button', { name: 'Use dark appearance' }).click()
