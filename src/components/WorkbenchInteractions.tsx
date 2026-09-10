@@ -41,12 +41,21 @@ function setReactPageInput(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
+function isTextEntryTarget(target: EventTarget | null) {
+  return target instanceof HTMLInputElement
+    || target instanceof HTMLTextAreaElement
+    || target instanceof HTMLSelectElement
+    || (target instanceof HTMLElement && target.isContentEditable)
+}
+
 export function WorkbenchInteractions() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null)
   const wheelAccumulator = useRef(0)
   const lastPageTurn = useRef(0)
   const lastZoom = useRef(0)
   const scrollTimer = useRef(0)
+  const programmaticPageUntil = useRef(0)
+  const scrollSyncDispatching = useRef(false)
 
   useEffect(() => {
     replaceUserFacingEditTextLabels()
@@ -106,6 +115,28 @@ export function WorkbenchInteractions() {
   }, [])
 
   useEffect(() => {
+    const markProgrammaticPageNavigation = () => {
+      programmaticPageUntil.current = performance.now() + 750
+      window.clearTimeout(scrollTimer.current)
+    }
+
+    const onNavClick = (event: MouseEvent) => {
+      const target = event.target as Element | null
+      if (!target?.closest('.floating-nav')) return
+      if (target.closest('button, input')) markProgrammaticPageNavigation()
+    }
+
+    const onNavInput = (event: Event) => {
+      if (scrollSyncDispatching.current) return
+      const target = event.target as Element | null
+      if (target?.matches('.floating-nav input')) markProgrammaticPageNavigation()
+    }
+
+    const onPageKey = (event: KeyboardEvent) => {
+      if (isTextEntryTarget(event.target)) return
+      if (['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp'].includes(event.key)) markProgrammaticPageNavigation()
+    }
+
     const onContextMenu = (event: MouseEvent) => {
       const target = event.target as Element | null
       if (!target?.closest('.pdf-page')) return
@@ -148,19 +179,22 @@ export function WorkbenchInteractions() {
       const direction = Math.sign(wheelAccumulator.current)
       wheelAccumulator.current = 0
       lastPageTurn.current = now
+      markProgrammaticPageNavigation()
       const buttons = directNavButtons()
       const pageButton = direction > 0 ? buttons[1] : buttons[0]
       if (pageButton && !pageButton.disabled) pageButton.click()
     }
 
     // Keep the page indicator/current-page state in sync while the user scrolls
-    // through Continuous view. Debounce until scrolling settles so a smooth
-    // programmatic jump does not immediately overwrite its requested target.
+    // through Continuous view. Programmatic page jumps get a short lock so their
+    // own smooth scroll cannot immediately overwrite the requested destination.
     const onScroll = (event: Event) => {
       const target = event.target as HTMLElement | null
       if (!target?.matches('.page-scroll.view-continuous')) return
+      if (performance.now() < programmaticPageUntil.current) return
       window.clearTimeout(scrollTimer.current)
       scrollTimer.current = window.setTimeout(() => {
+        if (performance.now() < programmaticPageUntil.current) return
         const scrollerRect = target.getBoundingClientRect()
         const center = scrollerRect.top + scrollerRect.height / 2
         const pages = Array.from(target.querySelectorAll<HTMLElement>('.page-view[data-page]'))
@@ -173,15 +207,25 @@ export function WorkbenchInteractions() {
         }
         if (!closest) return
         const input = document.querySelector<HTMLInputElement>('.floating-nav input')
-        if (input && Number(input.value) !== closest.page + 1) setReactPageInput(input, String(closest.page + 1))
+        if (input && Number(input.value) !== closest.page + 1) {
+          scrollSyncDispatching.current = true
+          setReactPageInput(input, String(closest.page + 1))
+          queueMicrotask(() => { scrollSyncDispatching.current = false })
+        }
       }, 90)
     }
 
+    document.addEventListener('click', onNavClick, true)
+    document.addEventListener('input', onNavInput, true)
+    window.addEventListener('keydown', onPageKey, true)
     document.addEventListener('contextmenu', onContextMenu)
     document.addEventListener('wheel', onWheel, { passive: false, capture: true })
     document.addEventListener('scroll', onScroll, true)
     return () => {
       window.clearTimeout(scrollTimer.current)
+      document.removeEventListener('click', onNavClick, true)
+      document.removeEventListener('input', onNavInput, true)
+      window.removeEventListener('keydown', onPageKey, true)
       document.removeEventListener('contextmenu', onContextMenu)
       document.removeEventListener('wheel', onWheel, true)
       document.removeEventListener('scroll', onScroll, true)
