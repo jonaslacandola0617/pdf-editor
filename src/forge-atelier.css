@@ -2895,3 +2895,23 @@ body.forge-editor-active .native-object-modal button:not(.icon-btn):not(.object-
     margin-inline: 10px !important;
   }
 }
+
+
+/* Keep the six PDF-structure destinations legible at desktop widths. */
+@media (min-width: 761px) {
+  body.forge-editor-active .object-section-nav {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+  body.forge-editor-active .object-section-nav button {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+  body.forge-editor-active .object-section-nav button span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
