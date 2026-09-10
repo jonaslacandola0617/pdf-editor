@@ -1943,3 +1943,39 @@ body[data-pdf-mode="organize"] .thumb-drag-wrap.multi-selected {
   .advanced-category-marker { grid-column: 1 !important; }
   .native-object-modal .object-section { margin: 0 14px !important; }
 }
+
+
+/* Final navigation normalization: legacy release rules set full-width buttons. */
+.advanced-category-nav > button,
+.object-section-nav > button {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: 1 1 0 !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+.object-section-nav > button span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 8px !important;
+}
+.object-section-nav > button svg { flex: 0 0 auto !important; }
+.forge-secondary-action {
+  color: var(--forge-text) !important;
+  background: var(--forge-paper-hi) !important;
+  border-color: var(--forge-line-strong) !important;
+}
+@media (max-width: 760px) {
+  .advanced-category-nav > button,
+  .object-section-nav > button {
+    width: auto !important;
+    min-width: 126px !important;
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+  }
+}
