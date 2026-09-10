@@ -17,7 +17,12 @@ async function openFile(page: Page, path: string) {
   await page.goto('/')
   await page.locator('input[type="file"]').first().setInputFiles(path)
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.pdf-page canvas')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.pdf-page canvas').first()).toBeVisible({ timeout: 20_000 })
+}
+
+async function chooseDocumentTool(tools: ReturnType<Page['locator']>, category: string, tool: string) {
+  await tools.locator('.advanced-category-rail').getByRole('button', { name: new RegExp(category, 'i') }).click()
+  await tools.locator('.advanced-tool-rail').getByRole('button', { name: tool, exact: true }).click()
 }
 
 async function textPages(path: string) {
@@ -47,6 +52,7 @@ test('insert file before/after puts external PDF pages at the requested position
   await page.getByTitle('Document tools').click()
   const tools = page.locator('.advanced-modal')
   await expect(tools).toBeVisible()
+  await chooseDocumentTool(tools, 'Pages & content', 'Pages')
 
   const chooser = page.waitForEvent('filechooser')
   await tools.getByRole('button', { name: 'Insert file after' }).click()
@@ -75,6 +81,8 @@ test('strong compression rebuilds the PDF as raster pages and exports a valid do
 
   await page.getByTitle('Document tools').click()
   const tools = page.locator('.advanced-modal')
+  await expect(tools).toBeVisible()
+  await chooseDocumentTool(tools, 'Output & optimize', 'Strong compression')
   await tools.getByRole('button', { name: 'Compress aggressively' }).click()
   await expect(page.locator('.stage-top-hint')).toContainText('Strong compression complete', { timeout: 60_000 })
   await tools.locator('header .icon-btn').click()
